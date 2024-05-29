@@ -1,10 +1,18 @@
-export default function TopBar() {
+import Image from 'next/image'
+import BreadCrumbs, { BreadCrumbsProps } from './BreadCrumbs'
+
+import logo from '@/public/logo.png'
+
+export type TopBarProps = Partial<BreadCrumbsProps>
+
+export default function TopBar({ breadcrumbs }: TopBarProps) {
   return (
-    <div className="bg-black rounded-b-lg text-white w-screen py-5 px-10 flex flex-row text-lg">
+    <div className="bg-black rounded-b-lg items-center text-white w-screen py-5 px-10 flex flex-row text-lg">
       <div className="">
-        Breadcrumps
+        <BreadCrumbs breadcrumbs={breadcrumbs ? breadcrumbs : []} />
       </div>
-      <div className="ml-auto uppercase font-bold">
+      <div className="flex flex-row items-center ml-auto uppercase font-bold italic gap-x-1.5 tracking-wide">
+        <Image src={logo} alt="logo" width={40} height={40} />
         scystream
       </div>
     </div>

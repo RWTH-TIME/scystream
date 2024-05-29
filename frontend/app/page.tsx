@@ -1,7 +1,11 @@
+import "./globals.css"
+
+import PageWithHeader from "@/components/layout/PageWithHeader";
+
 export default function Home() {
   return (
-    <div>
+    <PageWithHeader breadcrumbs={[{ text: "Home", link: "/" }]}>
       Hello
-    </div>
+    </PageWithHeader>
   );
 }
