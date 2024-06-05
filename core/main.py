@@ -1,8 +1,12 @@
 from fastapi import FastAPI
+from utils.connection.database import Base, engine
 
-app = FastAPI()
+from contextlib import asynccontextmanager
 
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
+
+app = FastAPI(title="scystream-core", lifespan=lifespan)
