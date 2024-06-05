@@ -17,7 +17,7 @@ export default function Register() {
   const [showPass, setShowPass] = useState<boolean>(false)
 
   return (
-    <PageWithHeader breadcrumbs={[{ text: "LogIn", link: "/login" }]}>
+    <PageWithHeader breadcrumbs={[{ text: "Signup", link: "/sign-up" }]}>
       <div className="w-1/4 bg-slate-50 m-auto p-10 min-h-96 rounded-lg flex flex-col gap-5 drop-shadow justify-center">
         <Input
           type="text"
@@ -42,7 +42,7 @@ export default function Register() {
           leftAdornment={<InputAdornment type="password" />}
         />
         <Button>Create Account</Button>
-        <Link href="login"><u>Already have an account? - LogIn here</u></Link>
+        <Link href="login"><u>Already have an account? - Login here</u></Link>
       </div>
     </PageWithHeader>
   )

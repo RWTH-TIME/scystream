@@ -14,7 +14,7 @@ export default function Login() {
   const [showPass, setShowPass] = useState<boolean>(false)
 
   return (
-    <PageWithHeader breadcrumbs={[{ text: "LogIn", link: "/login" }]}>
+    <PageWithHeader breadcrumbs={[{ text: "Login", link: "/login" }]}>
       <div className="w-1/4 bg-slate-50 m-auto p-10 min-h-96 rounded-lg flex flex-col gap-5 drop-shadow justify-center">
         <Input
           type="text"
@@ -32,7 +32,7 @@ export default function Login() {
           rightAdornment={<InputAdornment type={showPass ? "visibility" : "visibilityOff"} onClick={() => setShowPass(!showPass)} />}
         />
         <Button>LogIn</Button>
-        <Link href="register"><u>No account? - Register here</u></Link>
+        <Link href="sign-up"><u>Dont't have an account? - Sign up here</u></Link>
       </div>
     </PageWithHeader>
   )
