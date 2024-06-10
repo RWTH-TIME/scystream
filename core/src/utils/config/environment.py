@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from typing import List
 
 class Settings(BaseSettings):
     DATABASE_HOST: str = "core-postgres"
@@ -7,6 +8,7 @@ class Settings(BaseSettings):
     DATABASE_USER: str = "core"
     DATABASE_PASSWORD: str = "core"
     DATABASE_PORT: int = 5432
+    EMAIL_WHITELIST: List[str] = ["time.rwth-aachen.de"]
 
     LOG_LEVEL: str = "INFO"
 
