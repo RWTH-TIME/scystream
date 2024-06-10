@@ -30,4 +30,4 @@ COPY . /app
 
 WORKDIR /app
 
-ENTRYPOINT ["uvicorn", "main:app", "--proxy-headers"]
+ENTRYPOINT ["uvicorn", "src.main:app", "--proxy-headers"]
