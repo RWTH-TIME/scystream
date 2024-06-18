@@ -1,11 +1,11 @@
 import bcrypt
-import jwt
 
 from typing import Tuple
 from fastapi import HTTPException
 from datetime import datetime, timezone, timedelta
 
 from src.utils.config.environment import ENV
+from src.utils.helper.jwt import create_token
 
 from src.utils.database.session_injector import get_database
 from src.services.user_service.models.user import User
@@ -25,23 +25,17 @@ def login(email: str, password: str) -> Tuple[str, str]:
     if bcrypt.checkpw(password.encode("utf-8"), user.password):
         # create tokens
         now: datetime = datetime.now(tz=timezone.utc)
-
-        access_token = jwt.encode({
-                    "email": user.email,
-                    "iat": now,
-                    "exp": now + timedelta(minutes=ENV.JWT_ACCESS_TOKEN_EXPIRE_MIN)
-                },
-                ENV.JWT_SECRET,
-                algorithm=ENV.JWT_ALGORITHM
-            )
         
-        refresh_token = jwt.encode({
-                    "iat": now,
-                    "exp": now + timedelta(days=ENV.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
-                },
-                ENV.JWT_SECRET,
-                algorithm=ENV.JWT_ALGORITHM
-        )
+        access_token = create_token({
+                "email": user.email,
+                "iat": now,
+                "exp": now + timedelta(minutes=ENV.JWT_ACCESS_TOKEN_EXPIRE_MIN)
+            }) 
+       
+        refresh_token = create_token({
+                "iat": now,
+                "exp": now + timedelta(days=ENV.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+            })
     else:
         raise HTTPException(401, detail="wrong password")
 
