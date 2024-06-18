@@ -6,4 +6,5 @@ pydantic_core==2.18.4
 SQLAlchemy==2.0.30
 psycopg2-binary==2.9.9
 alembic==1.13.1
-bycrypt==4.1.3
+bcrypt==4.1.3
+pyjwt==2.8.0

@@ -12,6 +12,11 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
 
+    JWT_ALGORITHM: str = "HS256"
+    JWT_SECRET: str = "secret"
+    JWT_ACCESS_TOKEN_EXPIRE_MIN: int = 15
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8", case_sensitive=True)
     
