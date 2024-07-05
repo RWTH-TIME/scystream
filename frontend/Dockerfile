@@ -23,12 +23,14 @@ RUN npm run build
 FROM node:lts-alpine
 WORKDIR /app
 
-ENV PORT=80
+ARG PORT=80
+
+ENV PORT ${PORT}
 
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-EXPOSE 80
+EXPOSE ${PORT}
 
 CMD npm start -- -p $PORT
