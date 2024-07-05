@@ -17,23 +17,6 @@ To setup all services just run the following command in the root directory
 docker compose up -d
 ```
 
-This will setup these containers:
-
-| container         | port |
-|-------------------|------|
-| frontend          | 8000 |
-| core              | 4000 |
-| core-postgres     | 5433 |
-| spark-worker      |      |
-| spark-master      | 8080 |
-| airflow-webserver | 3333 |
-| airflow-cli       |      |
-| airflow-triggerer |      |
-| airflow-worker    |      |
-| airflow-scheduler |      |
-| postgres-airflow  |      |
-| redis-airflow     |      |
-
 ## Development
 
 You can find the development READMEs in the according directories
