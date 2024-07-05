@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from src.services.user_service.views import user as user_view
 
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
@@ -13,5 +14,3 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="scystream-core", lifespan=lifespan)
 
 app.include_router(user_view.router)
-
-

@@ -238,7 +238,7 @@ services:
     ports:
       - "4000:4000"
   
-  core-postgres: 
+  core-postgres:
     image: postgres:13
     ports:
       - "5433:5432"
