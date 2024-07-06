@@ -36,12 +36,16 @@ alembic upgrade head
 
 ### Environment Variables
 
-| NAME              | DEFAULT VALUE | DESCRIPTION         |
-| ----------------- | ------------- | ------------------- |
-| DATABASE_HOST     | core-postgres | PostgresDB host     |
-| DATABASE_NAME     | core          | PostgresDB name     |
-| DATABASE_USER     | core          | PostgresDB user     |
-| DATABASE_PASSWORD | core          | PostgresDB password |
-| DATABASE_PORT     | 5432          | PostgreDB port      |
-| LOG_LEVEL         | INFO          | log-level           |
-
+| NAME                              | DEFAULT VALUE             | DESCRIPTION                               |
+| ----------------------------------| --------------------------| ------------------------------------------|
+| DATABASE_HOST                     | core-postgres             | PostgresDB host                           |
+| DATABASE_NAME                     | core                      | PostgresDB name                           |
+| DATABASE_USER                     | core                      | PostgresDB user                           |
+| DATABASE_PASSWORD                 | core                      | PostgresDB password                       |
+| DATABASE_PORT                     | 5432                      | PostgreDB port                            |
+| LOG_LEVEL                         | INFO                      | log-level                                 |
+| EMAIL_DOMAIN_WHITELIST            | ["time.rwth-aachen.de"]   | only these domains are allowed to sign up |
+| JWT_ALGORITHM                     | HS256                     | algorithm for jwt token generation        |
+| JWT_SECRET                        | secret                    | secret for jwt token generation           |
+| JWT_ACCES_TOKEN_EXPIRE_MIN        | 15                        | access token expire time in minutes       |
+| JWT_REFRESH_TOKEN_EXPIRE_DAYS     | 30                        | refresh token expire time in days         |
