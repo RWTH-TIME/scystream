@@ -5,11 +5,11 @@ from fastapi import HTTPException
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 
-from src.utils.config.environment import ENV
-from src.utils.helper.jwt import create_token
+from utils.config.environment import ENV
+from utils.helper.jwt import create_token
 
-from src.utils.database.session_injector import get_database
-from src.services.user_service.models.user import User
+from utils.database.session_injector import get_database
+from services.user_service.models.user import User
 
 
 def login(email: str, password: str) -> Tuple[str, str]:

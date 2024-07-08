@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
-from src.utils.helper.validators import validate_email, validate_password
+from utils.helper.validators import validate_email, validate_password
 
 
 class EmailValidatorMixin(BaseModel):

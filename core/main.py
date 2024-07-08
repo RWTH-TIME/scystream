@@ -1,9 +1,9 @@
 from fastapi import FastAPI
-from src.utils.database.connection import Base, engine
+from utils.database.connection import Base, engine
 
 from contextlib import asynccontextmanager
 
-from src.services.user_service.views import user as user_view
+from services.user_service.views import user as user_view
 
 
 @asynccontextmanager

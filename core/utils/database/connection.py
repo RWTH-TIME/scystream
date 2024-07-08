@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from src.utils.config.environment import ENV
+from utils.config.environment import ENV
 
 SQLALCHEMY_DATABASE_URL = (
     f"postgresql://{ENV.DATABASE_USER}:{ENV.DATABASE_PASSWORD}"

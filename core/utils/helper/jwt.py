@@ -1,5 +1,5 @@
 import jwt
-from src.utils.config.environment import ENV
+from utils.config.environment import ENV
 
 
 def create_token(payload: dict) -> str:

@@ -1,11 +1,11 @@
-import src.services.user_service.controllers.auth_controller as auth_controller
+import services.user_service.controllers.auth_controller as auth_controller
 from fastapi import APIRouter
-from src.utils.errors.error import handle_error
+from utils.errors.error import handle_error
 
-from src.services.user_service.schemas.user import CreateUserResponse, \
+from services.user_service.schemas.user import CreateUserResponse, \
     CreateUserRequest, LoginRequest, LoginResponse
 
-import src.services.user_service.controllers.create_user \
+import services.user_service.controllers.create_user \
     as create_user_controller
 
 router = APIRouter(prefix="/user", tags=["user"])
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/user", tags=["user"])
 @router.post("/create", response_model=CreateUserResponse)
 async def create_user(data: CreateUserRequest):
     try:
-        userID = create_user_controller.createUser(data.email, data.password)
+        userID = create_user_controller.create_user(data.email, data.password)
         return CreateUserResponse(uuid=userID)
     except Exception as e:
         raise handle_error(e)

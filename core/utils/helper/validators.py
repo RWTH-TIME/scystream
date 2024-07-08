@@ -1,6 +1,6 @@
 import re
 
-from src.utils.config.environment import ENV
+from utils.config.environment import ENV
 
 EMAIL_RE = re.compile(r'^[\w.-]+@[\w.-]+\.[\w.-]{2,4}$')
 

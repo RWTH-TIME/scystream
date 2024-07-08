@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, LargeBinary
 
 import uuid
 
-from src.utils.database.connection import Base
+from utils.database.connection import Base
 
 
 class User(Base):

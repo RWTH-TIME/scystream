@@ -2,8 +2,8 @@ from uuid import UUID, uuid4
 import bcrypt
 from sqlalchemy.orm import Session
 
-from src.utils.database.session_injector import get_database
-from src.services.user_service.models.user import User
+from utils.database.session_injector import get_database
+from services.user_service.models.user import User
 
 
 def create_user(email: str, password: str) -> UUID:

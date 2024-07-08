@@ -22,4 +22,4 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8", case_sensitive=True)
 
 
-ENV = Settings(_env_file="src/.env", _env_file_encoding="utf-8")
+ENV = Settings(_env_file=".env", _env_file_encoding="utf-8")
