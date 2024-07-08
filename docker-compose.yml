@@ -236,7 +236,15 @@ services:
     restart: always
     ports:
       - "4000:4000"
-  
+    depends_on:
+      core-postgres:
+        condition: service_healthy
+    command: >
+      /bin/sh -c "
+      alembic upgrade head &&
+      uvicorn main:app --proxy-headers
+      "
+      
   core-postgres:
     image: postgres:13
     ports:
@@ -248,6 +256,11 @@ services:
     volumes:
       - core-postgres:/var/lib/postgresql/data
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U core -d core -q"]
+      interval: 10s
+      timeout: 2s
+      retries: 5
 
 volumes:
   postgres-airflow-volume:
