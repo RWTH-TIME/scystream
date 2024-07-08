@@ -8,7 +8,7 @@ As an example see `src/.env.example`
 You can now start the uvicorn server locally with
 
 ```sh
-uvicorn src.main:app --reload --port <port>
+uvicorn main:app --reload --port <port>
 ```
 
 ### Migrations

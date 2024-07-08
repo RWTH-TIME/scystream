@@ -5,9 +5,9 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from src.utils.database.connection import SQLALCHEMY_DATABASE_URL
-from src.utils.database.connection import Base
-from src.utils.database.import_models import import_all_models
+from utils.database.connection import SQLALCHEMY_DATABASE_URL
+from utils.database.connection import Base
+from utils.database.import_models import import_all_models
 
 
 """
@@ -15,7 +15,7 @@ Import all your model directories here.
 We need to load all models or alembic will not recognize table changes
 with target_metadata = Base.metadata
 """
-import_all_models('src.services.user_service.models')
+import_all_models('services.user_service.models')
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
