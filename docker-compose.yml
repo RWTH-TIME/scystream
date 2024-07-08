@@ -30,7 +30,6 @@ x-airflow-common:
     
 
 services:
-## airflow
   redis-airflow:
     # Redis is limited to 7.2-bookworm due to licencing change
     image: redis:7.2-bookworm
@@ -225,7 +224,7 @@ services:
       - SPARK_WORKER_CORES=1
     depends_on:
       - spark-master
-### custom
+
   frontend:
     build: frontend
     restart: always
@@ -249,7 +248,7 @@ services:
     volumes:
       - core-postgres:/var/lib/postgresql/data
     restart: always
-##
+
 volumes:
   postgres-airflow-volume:
   airflow-dags:
