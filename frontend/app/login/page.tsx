@@ -1,11 +1,11 @@
 "use client"
 
-import Button from "@/components/Button";
-import Input from "@/components/inputs/Input";
-import InputAdornment from "@/components/inputs/InputAdornment";
-import PageWithHeader from "@/components/layout/PageWithHeader";
-import Link from "next/link";
-import { useState } from "react";
+import Link from "next/link"
+import { useState } from "react"
+import Button from "@/components/Button"
+import Input from "@/components/inputs/Input"
+import InputAdornment from "@/components/inputs/InputAdornment"
+import PageWithHeader from "@/components/layout/PageWithHeader"
 
 export default function Login() {
   const [mail, setMail] = useState<string>("")
@@ -32,7 +32,7 @@ export default function Login() {
           rightAdornment={<InputAdornment type={showPass ? "visibility" : "visibilityOff"} onClick={() => setShowPass(!showPass)} />}
         />
         <Button>LogIn</Button>
-        <Link href="sign-up"><u>Dont't have an account? - Sign up here</u></Link>
+        <Link href="sign-up"><u>Don&apos;t have an account? - Sign up here</u></Link>
       </div>
     </PageWithHeader>
   )

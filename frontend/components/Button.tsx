@@ -1,7 +1,7 @@
-import { ButtonHTMLAttributes, MouseEventHandler, PropsWithChildren } from "react"
+import type { ButtonHTMLAttributes, MouseEventHandler, PropsWithChildren } from "react"
 
 type ButtonProps = PropsWithChildren<{
-  className?: string
+  className?: string,
   onClick?: MouseEventHandler<HTMLButtonElement>
 }> & Omit<ButtonHTMLAttributes<Element>, "onClick" | "className">
 
