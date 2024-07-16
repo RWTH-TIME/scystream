@@ -1,11 +1,11 @@
 "use client"
 
+import Link from "next/link"
+import { useState } from "react"
 import Button from "@/components/Button"
 import Input from "@/components/inputs/Input"
 import InputAdornment from "@/components/inputs/InputAdornment"
 import PageWithHeader from "@/components/layout/PageWithHeader"
-import Link from "next/link"
-import { useState } from "react"
 
 export default function Register() {
   // TODO: form-validation
@@ -46,5 +46,4 @@ export default function Register() {
       </div>
     </PageWithHeader>
   )
-
 }

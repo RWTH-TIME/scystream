@@ -12,7 +12,7 @@ import { VisibilityOff } from "@mui/icons-material"
 type InputAdornmentIconTypes = "email" | "password" | "visibility" | "visibilityOff"
 
 export type InputAdornmentProps = {
-  type: InputAdornmentIconTypes
+  type: InputAdornmentIconTypes,
   onClick?: () => void
 }
 

@@ -1,7 +1,8 @@
-import Image from 'next/image'
-import BreadCrumbs, { BreadCrumbsProps } from './BreadCrumbs'
+import Image from "next/image"
+import type { BreadCrumbsProps } from "./BreadCrumbs"
+import BreadCrumbs from "./BreadCrumbs"
 
-import logo from '@/public/logo.png'
+import logo from "@/public/logo.png"
 
 export type TopBarProps = Partial<BreadCrumbsProps>
 
