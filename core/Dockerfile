@@ -30,4 +30,4 @@ COPY . /app
 
 WORKDIR /app
 
-CMD ["bin/sh"]
+CMD alembic upgrade head && uvicorn main:app --proxy-headers 

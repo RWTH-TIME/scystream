@@ -239,12 +239,7 @@ services:
     depends_on:
       core-postgres:
         condition: service_healthy
-    command: >
-      /bin/sh -c "
-      alembic upgrade head &&
-      uvicorn main:app --proxy-headers
-      "
-      
+
   core-postgres:
     image: postgres:13
     ports:

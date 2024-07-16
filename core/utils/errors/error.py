@@ -1,7 +1,8 @@
 from sqlalchemy import exc
 from fastapi import HTTPException
 from psycopg2 import Error as PostgresError
-from psycopg2.errors import UniqueViolation, ForeignKeyViolation, NotNullViolation
+from psycopg2.errors import UniqueViolation, ForeignKeyViolation, \
+        NotNullViolation
 
 import logging
 """

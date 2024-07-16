@@ -41,6 +41,7 @@ jobs:
       - name: Run flake8
         uses: py-actions/flake8@v2
         with:
+          exclude: "core/alembic/versions/"
           path: "core"
 
   build:
