@@ -6,16 +6,14 @@ from sqlalchemy import pool
 from alembic import context
 
 from utils.database.connection import SQLALCHEMY_DATABASE_URL
-from utils.database.connection import Base
-from utils.database.import_models import import_all_models
 
 
 """
-Import all your model directories here.
-We need to load all models or alembic will not recognize table changes
-with target_metadata = Base.metadata
+Import all your models here.
+We need to load all models or alembic will not recognize table changes,
+don't forget to add the models Base to target_metadata
 """
-import_all_models('services.user_service.models')
+from services.user_service.models.user import User
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -37,9 +35,9 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
+# target_metadata = mymodel.metadata
 ####
-target_metadata = Base.metadata
+target_metadata = [User.metadata]
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

@@ -16,8 +16,7 @@ uvicorn main:app --reload --port <port>
 We are using [alembic](https://alembic.sqlalchemy.org/en/latest/) as our migration tool.
 
 > [!IMPORTANT]
-> When creating a new models directory, be aware to make it a package by creating an `__init__.py`
-> and don't forget to import the models in `src/alembic/env.py`
+> When creating a new models, don't forget to import them in `src/alembic/env.py` 
 
 To create a migration, run
 
