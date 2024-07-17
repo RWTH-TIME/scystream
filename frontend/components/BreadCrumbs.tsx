@@ -15,7 +15,7 @@ export default function BreadCrumbs({ breadcrumbs }: BreadCrumbsProps) {
       {
         breadcrumbs.map((crumb, index) => (
           <div key={index}>
-            <Link href={crumb.link} className="">
+            <Link href={crumb.link}>
               {crumb.text}
             </Link>
             {index !== breadcrumbs.length - 1 && <span className="px-2">/</span>}

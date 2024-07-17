@@ -32,7 +32,7 @@ export default function Login() {
           rightAdornment={<InputAdornment type={showPass ? "visibility" : "visibilityOff"} onClick={() => setShowPass(!showPass)} />}
         />
         <Button>LogIn</Button>
-        <Link href="sign-up"><u>Don&apos;t have an account? - Sign up here</u></Link>
+        <Link href="sign-up"><u>{"Don't have an account? - Sign up here"}</u></Link>
       </div>
     </PageWithHeader>
   )
