@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from "next/link"
 
 export type Crumb = {
   text: string,
@@ -11,14 +11,14 @@ export type BreadCrumbsProps = {
 
 export default function BreadCrumbs({ breadcrumbs }: BreadCrumbsProps) {
   return (
-    <div className='flex flex-row'>
+    <div className="flex flex-row">
       {
         breadcrumbs.map((crumb, index) => (
           <div key={index}>
-            <Link href={crumb.link} className=''>
+            <Link href={crumb.link}>
               {crumb.text}
             </Link>
-            {index !== breadcrumbs.length - 1 && <span className='px-2'>/</span>}
+            {index !== breadcrumbs.length - 1 && <span className="px-2">/</span>}
           </div>
         ))
       }

@@ -1,5 +1,6 @@
-import { PropsWithChildren } from "react"
-import TopBar, { TopBarProps } from "../TopBar"
+import type { PropsWithChildren } from "react"
+import type { TopBarProps } from "../TopBar"
+import TopBar from "../TopBar"
 
 type PageWithHeaderProps = Partial<TopBarProps>
 
