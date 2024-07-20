@@ -30,4 +30,4 @@ COPY . /app
 
 WORKDIR /app
 
-ENTRYPOINT ["uvicorn", "main:app", "--proxy-headers"]
+CMD alembic upgrade head && uvicorn main:app --proxy-headers 

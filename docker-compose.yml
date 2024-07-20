@@ -234,9 +234,16 @@ services:
   core:
     build: core
     restart: always
-  
+    ports:
+      - "4000:4000"
+    depends_on:
+      core-postgres:
+        condition: service_healthy
+
   core-postgres:
     image: postgres:13
+    ports:
+      - "5433:5432"
     environment:
       POSTGRES_USER: core
       POSTGRES_PASSWORD: core
@@ -244,6 +251,11 @@ services:
     volumes:
       - core-postgres:/var/lib/postgresql/data
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U core -d core -q"]
+      interval: 10s
+      timeout: 2s
+      retries: 5
 
 volumes:
   postgres-airflow-volume:

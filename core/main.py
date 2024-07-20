@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 
-app = FastAPI()
+from services.user_service.views import user as user_view
 
+app = FastAPI(title="scystream-core")
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+app.include_router(user_view.router)
