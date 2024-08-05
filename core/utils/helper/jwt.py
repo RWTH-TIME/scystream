@@ -25,7 +25,7 @@ def verify_token(token: str) -> dict:
             ENV.JWT_SECRET,
             algorithm=ENV.JWT_ALGORITHM
         )
-    if not payload:     #might be unnecessary
+    if not payload:     #can also throw: jwt.ExpiredSignatureError, might be necessary to change into try - except
         raise jwt.InvalidSignatureError
-    
+
     return payload
