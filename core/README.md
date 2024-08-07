@@ -6,6 +6,7 @@ For local development create an `.env` file inside the `/src` directory.
 As an example see `src/.env.example`
 
 Make sure you are in the ../core directory
+
 You can now start the uvicorn server locally with
 
 ```sh
