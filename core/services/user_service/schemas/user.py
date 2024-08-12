@@ -34,3 +34,12 @@ class LoginRequest(EmailValidatorMixin):
 class LoginResponse(BaseModel):
     access_token: str
     refresh_token: str
+
+
+class RefreshAccessRequest(BaseModel):
+    refresh_token: str
+
+
+class RefreshAccessResponse(BaseModel):
+    access_token: str
+    refresh_token: str
