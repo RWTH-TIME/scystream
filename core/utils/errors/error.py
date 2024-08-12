@@ -33,4 +33,4 @@ def handle_error(error: Exception) -> None:
     else:
         # TODO: Can we propagate more error details to the user
         logging.exception("Could not handle exception.")
-        raise HTTPException(505, detail="internal server error")
+        raise HTTPException(500, detail="internal server error")
