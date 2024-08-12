@@ -42,4 +42,4 @@ class RefreshAccessRequest(BaseModel):
 
 class RefreshAccessResponse(BaseModel):
     access_token: str
-    refresh_token: str    
+    refresh_token: str

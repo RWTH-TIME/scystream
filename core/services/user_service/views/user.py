@@ -2,7 +2,8 @@ from fastapi import APIRouter
 from utils.errors.error import handle_error
 
 from services.user_service.schemas.user import CreateUserResponse, \
-    CreateUserRequest, LoginRequest, LoginResponse, RefreshAccessResponse, RefreshAccessRequest
+    CreateUserRequest, LoginRequest, LoginResponse, \
+    RefreshAccessResponse, RefreshAccessRequest
 
 import services.user_service.controllers.auth_controller as auth_controller
 
@@ -32,16 +33,19 @@ async def login(data: LoginRequest):
         )
     except Exception as e:
         raise handle_error(e)
-    
-    
+
+
 @router.post("/refresh", response_model=RefreshAccessResponse)
 async def refresh_access(data: RefreshAccessRequest):
     try:
-        access_token, refresh_token = auth_controller.refresh_access_token(data.refresh_token)
+        access_token, refresh_token = \
+            auth_controller.refresh_access_token(
+                data.refresh_token
+            )
 
         return RefreshAccessResponse(
             access_token=access_token,
             refresh_token=refresh_token
         )
     except Exception as e:
-        raise handle_error(e)    
+        raise handle_error(e)

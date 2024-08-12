@@ -13,15 +13,15 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
         token = None
         if auth_header:
             token = auth_header.split(" ")[1]
-        
+
         if not token:
             raise HTTPException(
-                status_code=401, 
+                status_code=401,
                 detail="Access token is missing or invalid"
                 )
 
         payload = verify_token(token)
         request.state.user = payload  # Attach user info to the request state
-        
+
         response = await call_next(request)
         return response
