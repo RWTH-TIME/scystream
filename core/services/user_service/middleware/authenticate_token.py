@@ -17,7 +17,6 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
                 detail="Authorization header is missing"
             )
 
-        # Split the Authorization header
         parts = auth_header.split(" ")
 
         # Ensure there are exactly two parts
@@ -36,7 +35,7 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
             )
 
         payload = verify_token(token)
-        request.state.user = payload  # Attach user info to the request state
+        request.state.user = payload
 
         response = await call_next(request)
         return response
