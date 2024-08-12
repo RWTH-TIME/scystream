@@ -11,4 +11,3 @@ app = FastAPI(title="scystream-core")
 
 app.add_middleware(JWTAuthMiddleware, secret_key=ENV.JWT_SECRET)
 app.include_router(user_view.router)
-

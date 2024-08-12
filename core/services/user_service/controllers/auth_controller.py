@@ -61,8 +61,7 @@ def refresh_access_token(refresh_token: str):
     user: User = db.query(User).filter_by(email=email).first()
 
     if not user:
-        raise HTTPException(403, detail="User not found")
-        # Username enumeration possible?
+        raise HTTPException(403)
 
     # refresh tokens
     now = datetime.now(tz=timezone.utc)
