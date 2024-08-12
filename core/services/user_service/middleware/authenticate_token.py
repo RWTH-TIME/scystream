@@ -10,15 +10,30 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         auth_header = request.headers.get("Authorization")
-        token = None
-        if auth_header:
-            token = auth_header.split(" ")[1]
+
+        if not auth_header:
+            raise HTTPException(
+                status_code=401,
+                detail="Authorization header is missing"
+            )
+
+        # Split the Authorization header
+        parts = auth_header.split(" ")
+
+        # Ensure there are exactly two parts
+        if len(parts) != 2 or parts[0] != "Bearer":
+            raise HTTPException(
+                status_code=401,
+                detail="Authorization header format is invalid"
+            )
+
+        token = parts[1]
 
         if not token:
             raise HTTPException(
                 status_code=401,
                 detail="Access token is missing or invalid"
-                )
+            )
 
         payload = verify_token(token)
         request.state.user = payload  # Attach user info to the request state
