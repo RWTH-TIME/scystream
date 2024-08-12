@@ -1,7 +1,6 @@
-# middleware/authenticate_token.py
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
-from utils.helper.jwt import create_token, verify_token
+from utils.helper.jwt import verify_token
 
 
 class JWTAuthMiddleware(BaseHTTPMiddleware):
@@ -11,13 +10,15 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         auth_header = request.headers.get("Authorization")
+        token = None
         if auth_header:
             token = auth_header.split(" ")[1]
-        else:
-            token = None
-
+        
         if not token:
-            raise HTTPException(status_code=401, detail="Access token is missing or invalid")
+            raise HTTPException(
+                status_code=401, 
+                detail="Access token is missing or invalid"
+                )
 
         payload = verify_token(token)
         request.state.user = payload  # Attach user info to the request state

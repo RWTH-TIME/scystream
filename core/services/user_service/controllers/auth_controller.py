@@ -56,19 +56,20 @@ def refresh_access_token(refresh_token: str):
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     email: str = payload.get("email")
-    
+
     db: Session = next(get_database())
     user: User = db.query(User).filter_by(email=email).first()
 
     if not user:
-        raise HTTPException(404, detail="User not found")
-    
-    #refresh tokens
+        raise HTTPException(403, detail="User not found")
+        # Username enumeration possible?
+
+    # refresh tokens
     now = datetime.now(tz=timezone.utc)
     access_token = create_token({
         "email": user.email,
         "iat": now,
         "exp": now + timedelta(minutes=ENV.JWT_ACCESS_TOKEN_EXPIRE_MIN)
     })
-   
+
     return access_token, refresh_token
