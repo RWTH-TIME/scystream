@@ -2,14 +2,14 @@ from sqlalchemy import exc
 from fastapi import HTTPException
 from psycopg2 import Error as PostgresError
 from psycopg2.errors import UniqueViolation, ForeignKeyViolation, \
-        NotNullViolation
+    NotNullViolation
 
 import logging
+
 """
 The handleError function is intented to be used in our views
 Pass any Exception to the function and it will raise the.
 """
-# TODO: logging
 
 
 def handle_error(error: Exception) -> None:
@@ -32,5 +32,5 @@ def handle_error(error: Exception) -> None:
         raise error
     else:
         # TODO: Can we propagate more error details to the user
-        logging.exception("error")
-        raise HTTPException(505, detail="internal server error")
+        logging.exception("Could not handle exception.")
+        raise HTTPException(500, detail="internal server error")
