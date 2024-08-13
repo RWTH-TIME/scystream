@@ -6,11 +6,19 @@ import Button from "@/components/Button"
 import Input from "@/components/inputs/Input"
 import InputAdornment from "@/components/inputs/InputAdornment"
 import PageWithHeader from "@/components/layout/PageWithHeader"
+import { useLoginMutation } from "@/mutations/userMutation"
 
 export default function Login() {
   const [mail, setMail] = useState<string>("")
   const [password, setPassword] = useState<string>("")
   const [showPass, setShowPass] = useState<boolean>(false)
+
+  const { mutate } = useLoginMutation()
+
+  function logIn(e: React.MouseEvent<HTMLElement>) {
+    e.preventDefault()
+    mutate({ email: mail, password })
+  }
 
   return (
     <PageWithHeader breadcrumbs={[{ text: "Login", link: "/login" }]}>
@@ -30,7 +38,7 @@ export default function Login() {
           leftAdornment={<InputAdornment type="password" />}
           rightAdornment={<InputAdornment type={showPass ? "visibility" : "visibilityOff"} onClick={() => setShowPass(!showPass)} />}
         />
-        <Button>LogIn</Button>
+        <Button onClick={(e) => logIn(e)}>LogIn</Button>
         <Link href="sign-up"><u>{"Don't have an account? - Sign up here"}</u></Link>
       </div>
     </PageWithHeader>

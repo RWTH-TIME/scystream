@@ -30,6 +30,7 @@ def login(email: str, password: str) -> Tuple[str, str]:
     # create tokens
     now: datetime = datetime.now(tz=timezone.utc)
 
+    # TODO: encode uuid as well
     access_token = create_token({
         "email": user.email,
         "iat": now,

@@ -1,5 +1,5 @@
 import axios from "axios"
-import getConfig from "next/config"
+import { getConfig } from "./config"
 
 const config = getConfig()
 
@@ -10,6 +10,8 @@ const config = getConfig()
 const api = axios.create({
   baseURL: config.apiUrl,
 })
+
+api.defaults.headers.common["Content-Type"] = "application/json"
 
 export {
   api

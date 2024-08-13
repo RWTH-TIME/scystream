@@ -1,3 +1,4 @@
+import { useRouter } from "next/navigation"
 import { api } from "./axios"
 import { getConfig } from "./config"
 
@@ -5,9 +6,10 @@ import { getConfig } from "./config"
   Within this file, our request and repsponse interceptors are defined
 */
 
+const envConfig = getConfig()
+
 api.interceptors.request.use(function(config) {
   // Attach the authentication token, if existant
-  const envConfig = getConfig()
   const token = localStorage.getItem(envConfig.accessTokenKey)
 
   if (token !== null) {
@@ -26,7 +28,6 @@ api.interceptors.response.use(function(response) {
   // Status code outside range of 2xx
   if (error.response.status === 401) {
     try {
-      const envConfig = getConfig()
       const refreshToken = localStorage.getItem(envConfig.refreshTokenKey)
       const response = await api.post("user/refresh", {
         refresh_token: refreshToken
@@ -37,6 +38,14 @@ api.interceptors.response.use(function(response) {
       return response
     } catch (error) {
       console.error(`Error refreshing token: ${error}.`)
+
+      const router = useRouter()
+
+      localStorage.removeItem(envConfig.accessTokenKey)
+      localStorage.removeItem(envConfig.refreshTokenKey)
+
+      router.push("/login")
+
       return Promise.reject(error)
     }
   }
