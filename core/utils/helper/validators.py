@@ -2,7 +2,7 @@ import re
 
 from utils.config.environment import ENV
 
-EMAIL_RE = re.compile(r'^[\w.-]+@[\w.-]+\.[\w.-]{2,4}$')
+EMAIL_RE = re.compile(r"^[\w.-]+@[\w.-]+\.[\w.-]{2,4}$")
 
 
 def validate_email(mail: str) -> str:
@@ -16,13 +16,14 @@ def validate_email(mail: str) -> str:
 
 
 def validate_password(password: str) -> str:
-    if re.search('[0-9]', password) is None:
+    if re.search("[0-9]", password) is None:
         raise ValueError("password must contain a number")
-    elif re.search('[A-Z]', password) is None:
+    elif re.search("[A-Z]", password) is None:
         raise ValueError("password must contain a captial letter")
-    elif re.search('[a-z]', password) is None:
+    elif re.search("[a-z]", password) is None:
         raise ValueError("password must contain a lower letter")
     elif re.search('[!@#$%^&*(),.?":{}|<>]', password) is None:
         raise ValueError(
-            "password must contain at least one special character")
+            "password must contain at least one special character"
+        )
     return password

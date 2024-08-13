@@ -263,8 +263,9 @@ services:
       - "1080:1080"
 
   catapulte:
-    image: jdrouet/catapulte:latest-alpine
+    build: github.com/jdrouet/catapulte
     environment:
+      LOG: debug
       SMTP__HOSTNAME: smtp
       SMTP__PORT: 1025
       #SMTP__USERNAME: "set me"
