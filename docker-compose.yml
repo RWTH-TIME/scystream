@@ -237,8 +237,10 @@ services:
     ports:
       - "4000:4000"
     depends_on:
-      - catapulte
-      - core-postgres
+      catapulte:
+        condition: service_started
+      core-postgres:
+        condition: service_healthy
 
   core-postgres:
     image: postgres:13
