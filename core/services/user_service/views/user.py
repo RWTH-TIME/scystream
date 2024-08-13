@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter  # , Depends
 from utils.errors.error import handle_error
 
 from services.user_service.schemas.user import CreateUserResponse, \
@@ -10,8 +10,8 @@ import services.user_service.controllers.auth_controller as auth_controller
 import services.user_service.controllers.create_user \
     as create_user_controller
 
-from services.user_service.middleware.authenticate_token \
-    import authenticate_token
+# from services.user_service.middleware.authenticate_token \
+#    import authenticate_token
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -41,11 +41,12 @@ async def login(data: LoginRequest):
 @router.post("/refresh", response_model=RefreshAccessResponse)
 async def refresh_access(
     data: RefreshAccessRequest,
-    token_data: dict = Depends(authenticate_token)
+    # token_data: dict = Depends(authenticate_token)
 ):
     try:
         access_token, refresh_token = \
             auth_controller.refresh_access_token(
+                data.access_token,
                 data.refresh_token
             )
 

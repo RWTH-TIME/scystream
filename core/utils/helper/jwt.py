@@ -22,7 +22,7 @@ def verify_token(token: str) -> dict:
     payload = jwt.decode(
             token,
             ENV.JWT_SECRET,
-            algorithm=ENV.JWT_ALGORITHM
+            algorithms=ENV.JWT_ALGORITHM
         )
 
     if not payload:     # can also throw: jwt.ExpiredSignatureError,

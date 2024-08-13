@@ -44,24 +44,26 @@ def login(email: str, password: str) -> Tuple[str, str]:
     return access_token, refresh_token
 
 
-def refresh_access_token(refresh_token: str):
+def refresh_access_token(access_token: str, refresh_token: str):
     """
     The refresh function takes a refresh token
     and generates a new access_token.
     Returns a tuple of access_token and refresh_token
     """
-    payload = verify_token(refresh_token)
-
-    if not payload:
+    payload_refresh = verify_token(refresh_token)
+    if not payload_refresh:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
-    email: str = payload.get("email")
+    # using old access token to get user email
+    payload_access = verify_token(access_token)
+    print(payload_access)
+    email: str = payload_access.get("email")
 
     db: Session = next(get_database())
     user: User = db.query(User).filter_by(email=email).first()
-
+    print("not up to here", user)
     if not user:
-        raise HTTPException(403)
+        raise HTTPException(403)    # This is thrown! Because the refresh token does not contain the email! old access token is still accessable
 
     # refresh tokens
     now = datetime.now(tz=timezone.utc)

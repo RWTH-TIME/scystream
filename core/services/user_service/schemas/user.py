@@ -37,6 +37,7 @@ class LoginResponse(BaseModel):
 
 
 class RefreshAccessRequest(BaseModel):
+    access_token: str
     refresh_token: str
 
 
