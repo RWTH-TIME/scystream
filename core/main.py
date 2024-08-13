@@ -2,8 +2,9 @@ from services.user_service.views import user as user_view
 from utils.config.environment import ENV
 from utils.database.connection import engine
 from fastapi import FastAPI
-from services.user_service.middleware.authenticate_token \
-    import JWTAuthMiddleware
+from services.user_service.middleware.authenticate_token import (
+    JWTAuthMiddleware,
+)
 
 from sqlalchemy.exc import OperationalError
 import logging
@@ -11,7 +12,7 @@ import logging
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     level=ENV.LOG_LEVEL,
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
 app = FastAPI(title="scystream-core")
@@ -24,6 +25,7 @@ async def test_db_conn():
     except OperationalError:
         logging.error("Connection to database failed.")
         raise RuntimeError("Shutdown, database connection failed.")
+
 
 app.add_middleware(JWTAuthMiddleware, secret_key=ENV.JWT_SECRET)
 app.include_router(user_view.router)

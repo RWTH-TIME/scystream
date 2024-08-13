@@ -20,10 +20,7 @@ from services.user_service.models.user import User
 config = context.config
 
 # set sqlalchemy db url from configuration
-config.set_main_option(
-        "sqlalchemy.url",
-        SQLALCHEMY_DATABASE_URL
-)
+config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

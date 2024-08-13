@@ -237,6 +237,8 @@ services:
     ports:
       - "4000:4000"
     depends_on:
+      catapulte:
+        condition: service_started
       core-postgres:
         condition: service_healthy
 
@@ -256,6 +258,30 @@ services:
       interval: 10s
       timeout: 2s
       retries: 5
+
+  smtp:
+    image: reachfive/fake-smtp-server
+    ports:
+      - "1080:1080"
+
+  catapulte:
+    build: github.com/jdrouet/catapulte
+    environment:
+      LOG: debug
+      SMTP__HOSTNAME: smtp
+      SMTP__PORT: 1025
+      #SMTP__USERNAME: "set me"
+      #SMTP__PASSWORD: "set me"
+      #SMTP__TLS_ENABLED: true
+      #SMTP__ACCEPT_INVALID_CERT: false
+      TEMPLATE__TYPE: local
+      TEMPLATE__PATH: /template
+    volumes:
+      - "./mail-template:/template:ro"
+    depends_on:
+      - smtp
+    ports:
+      - "3010:3000"
 
 volumes:
   postgres-airflow-volume:

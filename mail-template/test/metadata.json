@@ -1,0 +1,18 @@
+{
+  "name": "test",
+  "description": "test template for this service",
+  "template": {
+    "path": "test/template.mjml"
+  },
+  "attributes": {
+    "type": "object",
+    "properties": {
+      "nbame": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "name"
+    ]
+  }
+}
