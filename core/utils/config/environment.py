@@ -4,6 +4,9 @@ from typing import List
 
 
 class Settings(BaseSettings):
+    DEVELOPMENT: bool = False
+    EXTERNAL_URL: str = "http://scystream"
+
     DATABASE_HOST: str = "core-postgres"
     DATABASE_NAME: str = "core"
     DATABASE_USER: str = "core"
