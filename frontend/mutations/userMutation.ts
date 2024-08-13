@@ -45,6 +45,7 @@ function useLoginMutation() {
       } catch (error) {
         // TODO: Handle error
         console.error("Login failed")
+        throw error
       }
     },
   })

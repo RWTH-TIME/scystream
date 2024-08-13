@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Button from "@/components/Button"
 import Input from "@/components/inputs/Input"
 import InputAdornment from "@/components/inputs/InputAdornment"
@@ -13,16 +14,23 @@ export default function Login() {
   const [password, setPassword] = useState<string>("")
   const [showPass, setShowPass] = useState<boolean>(false)
 
-  const { mutate } = useLoginMutation()
+  const { mutateAsync } = useLoginMutation()
 
-  function logIn(e: React.MouseEvent<HTMLElement>) {
+  const router = useRouter()
+
+  async function logIn(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    mutate({ email: mail, password })
+    try {
+      await mutateAsync({ email: mail, password })
+      router.push("/dashboard")
+    } catch (error) {
+      console.error("Login failed")
+    }
   }
 
   return (
     <PageWithHeader breadcrumbs={[{ text: "Login", link: "/login" }]}>
-      <div className="w-1/4 bg-slate-50 m-auto p-10 min-h-96 rounded-lg flex flex-col gap-5 drop-shadow justify-center">
+      <form onSubmit={(e) => logIn(e)} className="w-1/4 bg-slate-50 m-auto p-10 min-h-96 rounded-lg flex flex-col gap-5 drop-shadow justify-center">
         <Input
           type="text"
           value={mail}
@@ -38,9 +46,9 @@ export default function Login() {
           leftAdornment={<InputAdornment type="password" />}
           rightAdornment={<InputAdornment type={showPass ? "visibility" : "visibilityOff"} onClick={() => setShowPass(!showPass)} />}
         />
-        <Button onClick={(e) => logIn(e)}>LogIn</Button>
+        <Button>LogIn</Button>
         <Link href="sign-up"><u>{"Don't have an account? - Sign up here"}</u></Link>
-      </div>
+      </form>
     </PageWithHeader>
   )
 }
