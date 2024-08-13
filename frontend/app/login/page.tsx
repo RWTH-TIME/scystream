@@ -10,7 +10,6 @@ import PageWithHeader from "@/components/layout/PageWithHeader"
 export default function Login() {
   const [mail, setMail] = useState<string>("")
   const [password, setPassword] = useState<string>("")
-
   const [showPass, setShowPass] = useState<boolean>(false)
 
   return (
