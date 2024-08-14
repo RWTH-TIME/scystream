@@ -60,8 +60,9 @@ async def refresh_access(data: RefreshAccessRequest):
 
 @router.post("/test", response_model=RefreshAccessResponse)
 async def test_auth_endpoint(
-    data: RefreshAccessRequest, token_data: dict = Depends(authenticate_token)
+    data: RefreshAccessRequest, _: dict = Depends(authenticate_token)
 ):
     return RefreshAccessResponse(
-        access_token=data.access_token, refresh_token=data.refresh_token
+        new_access_token=data.old_access_token,
+        refresh_token=data.refresh_token,
     )
