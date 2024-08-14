@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 
 from utils.config.environment import ENV
-from utils.helper.jwt import create_token, verify_token
+from utils.helper.jwt import create_token, verify_token, decode_token
 
 from utils.database.session_injector import get_database
 from services.user_service.models.user import User
@@ -48,20 +48,20 @@ def login(email: str, password: str) -> Tuple[str, str]:
     return access_token, refresh_token
 
 
-def refresh_access_token(access_token: str, refresh_token: str):
+def refresh_access_token(old_access_token: str, refresh_token: str):
     """
     The refresh function takes a refresh token
     and generates a new access_token.
     Returns a tuple of access_token and refresh_token
     """
-    payload_refresh = verify_token(refresh_token)
-    if not payload_refresh:
+
+    if not verify_token(refresh_token):
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     # using old access token to get user email
-    payload_access = verify_token(access_token)
+    payload_old_access_token = decode_token(old_access_token)
 
-    email: str = payload_access.get("email")
+    email: str = payload_old_access_token.get("email")
 
     db: Session = next(get_database())
     user: User = db.query(User).filter_by(email=email).first()
@@ -71,7 +71,7 @@ def refresh_access_token(access_token: str, refresh_token: str):
 
     # refresh tokens
     now = datetime.now(tz=timezone.utc)
-    access_token = create_token(
+    new_access_token = create_token(
         {
             "email": user.email,
             "iat": now,
@@ -79,4 +79,4 @@ def refresh_access_token(access_token: str, refresh_token: str):
         }
     )
 
-    return access_token, refresh_token
+    return new_access_token, refresh_token

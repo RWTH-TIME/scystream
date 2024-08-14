@@ -47,14 +47,15 @@ async def login(data: LoginRequest):
 @router.post("/refresh", response_model=RefreshAccessResponse)
 async def refresh_access(data: RefreshAccessRequest):
     try:
-        access_token, refresh_token = \
+        new_access_token, refresh_token = \
             auth_controller.refresh_access_token(
-                data.access_token,
+                data.old_access_token,
                 data.refresh_token
             )
 
         return RefreshAccessResponse(
-            access_token=access_token, refresh_token=refresh_token
+            new_access_token=new_access_token,
+            refresh_token=refresh_token
         )
     except Exception as e:
         raise handle_error(e)

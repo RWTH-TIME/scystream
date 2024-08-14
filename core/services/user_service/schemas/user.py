@@ -37,10 +37,10 @@ class LoginResponse(BaseModel):
 
 
 class RefreshAccessRequest(BaseModel):
-    access_token: str
+    old_access_token: str
     refresh_token: str
 
 
 class RefreshAccessResponse(BaseModel):
-    access_token: str
+    new_access_token: str
     refresh_token: str
