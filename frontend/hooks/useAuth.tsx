@@ -7,10 +7,12 @@ import { getConfig } from "@/utils/config"
 import { useRefreshMutation } from "@/mutations/userMutation"
 
 const TokenPayloadSchema = z.object({
+  uuid: z.string().uuid(),
   email: z.string().email(),
   iat: z.number(),
   exp: z.number()
 }).transform((obj) => ({
+  uuid: obj.uuid,
   email: obj.email,
   iat: obj.iat,
   exp: obj.exp
@@ -19,6 +21,7 @@ const TokenPayloadSchema = z.object({
 type tokenSchema = z.output<typeof TokenPayloadSchema>
 
 export type User = {
+  uuid: string,
   email: string
 }
 
@@ -77,6 +80,7 @@ export default function useAuth() {
         }
 
         setUser({
+          uuid: tokenPayload.uuid,
           email: tokenPayload.email
         })
         setLoading(false)
