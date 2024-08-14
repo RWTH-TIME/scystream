@@ -2,13 +2,8 @@ from services.user_service.views import user as user_view
 from utils.config.environment import ENV
 from utils.database.connection import engine
 from fastapi import FastAPI
-from services.user_service.middleware.authenticate_token import (
-    JWTAuthMiddleware,
-)
-
 
 from fastapi.middleware.cors import CORSMiddleware
-
 
 from sqlalchemy.exc import OperationalError
 import logging
@@ -40,7 +35,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-print(origins)
 
-app.add_middleware(JWTAuthMiddleware, secret_key=ENV.JWT_SECRET)
 app.include_router(user_view.router)
