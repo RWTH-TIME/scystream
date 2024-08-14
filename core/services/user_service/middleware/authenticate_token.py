@@ -1,12 +1,10 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from utils.helper.jwt import verify_token
-from services.user_service.schemas.user import RefreshAccessRequest
 
 
-def authenticate_token(request: RefreshAccessRequest):
+def authenticate_token(request: Request):
     auth_header = request.headers.get("Authorization")
-# newly RefreshAccessRequest has access_token AND refresh_token
-# 
+
     if not auth_header:
         raise HTTPException(
             status_code=401,

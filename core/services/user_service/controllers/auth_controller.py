@@ -56,14 +56,14 @@ def refresh_access_token(access_token: str, refresh_token: str):
 
     # using old access token to get user email
     payload_access = verify_token(access_token)
-    print(payload_access)
+
     email: str = payload_access.get("email")
 
     db: Session = next(get_database())
     user: User = db.query(User).filter_by(email=email).first()
-    print("not up to here", user)
+
     if not user:
-        raise HTTPException(403)    # This is thrown! Because the refresh token does not contain the email! old access token is still accessable
+        raise HTTPException(403)
 
     # refresh tokens
     now = datetime.now(tz=timezone.utc)
