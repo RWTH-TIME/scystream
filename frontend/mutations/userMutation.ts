@@ -7,6 +7,7 @@ const config = getConfig()
 const REGISTER_ENDPOINT = "user/create"
 const LOGIN_ENDPOINT = "user/login"
 const REFRESH_ENDPOINT = "user/refresh"
+const TEST_ENDPOINT = "user/test"
 
 type UserDTO = {
   email: string,
@@ -14,6 +15,7 @@ type UserDTO = {
 }
 
 type RefreshDTO = {
+  access_token: string,
   refresh_token: string
 }
 
@@ -26,7 +28,7 @@ function useRegisterMutation() {
         return response.data
       } catch (error) {
         // TODO: Handle error
-        console.error("Registration failed")
+        console.error(`Registration failed: ${error}`)
       }
     },
   })
@@ -44,7 +46,7 @@ function useLoginMutation() {
         return response.data
       } catch (error) {
         // TODO: Handle error
-        console.error("Login failed")
+        console.error(`Login failed ${error}`)
         throw error
       }
     },
@@ -63,14 +65,29 @@ function useRefreshMutation() {
         return response.data
       } catch (error) {
         // TODO: Handle error
-        console.error("Refreshing failed")
+        console.error(`Refreshing failed: ${error}`)
       }
     },
+  })
+}
+
+function useTestMutation() {
+  return useMutation({
+    mutationFn: async function test(test: RefreshDTO) {
+      try {
+        const response = await api.post(TEST_ENDPOINT, JSON.stringify(test))
+
+        return response.data
+      } catch (error) {
+        console.log(`Test failed: ${error}`)
+      }
+    }
   })
 }
 
 export {
   useRegisterMutation,
   useLoginMutation,
-  useRefreshMutation
+  useRefreshMutation,
+  useTestMutation
 }

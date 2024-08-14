@@ -13,7 +13,7 @@ import { z } from "zod"
 
 const schema = z.object({
   NODE_ENV: z.literal("production").or(z.literal("development")).default("production"),
-  NEXT_PUBLIC_API_URL: z.string().url().default("http://core:4000/"),
+  NEXT_PUBLIC_API_URL: z.string().url().default("http://localhost:4000/"),
   NEXT_PUBLIC_ACCESS_TOKEN_KEY: z.literal("accessToken").default("accessToken"),
   NEXT_PUBLIC_REFRESH_TOKEN_KEY: z.literal("refreshToken").default("refreshToken")
 }).transform(obj => ({

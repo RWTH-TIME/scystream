@@ -72,7 +72,7 @@ export default function useAuth() {
         if (isJWTExpired(tokenPayload.exp)) {
           if (!refreshToken) throw new Error("No refresh token availible.")
 
-          const res = await mutateAsync({ refresh_token: refreshToken })
+          const res = await mutateAsync({ refresh_token: refreshToken, access_token: token })
           if (!res) throw new Error("Refreshing token failed.")
         }
 
