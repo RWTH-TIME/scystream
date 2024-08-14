@@ -35,6 +35,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-print(origins)
 
 app.include_router(user_view.router)
