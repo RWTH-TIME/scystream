@@ -15,11 +15,7 @@ def verify_token(token: str) -> bool:
     Wrapper function for jwt.decode, verifying JWT tokens with our secret and
     algorithm. Returns the payload.
     """
-    payload = jwt.decode(
-            token,
-            ENV.JWT_SECRET,
-            algorithms=ENV.JWT_ALGORITHM
-        )
+    payload = jwt.decode(token, ENV.JWT_SECRET, algorithms=ENV.JWT_ALGORITHM)
 
     if not payload:  # can also throw: jwt.ExpiredSignatureError,
         # might be neccessary to change into try - except
@@ -32,11 +28,7 @@ def decode_token(token: str) -> dict:
     Wrapper function for jwt.decode, verifying JWT tokens with our secret and
     algorithm. Returns the payload.
     """
-    payload = jwt.decode(
-            token,
-            ENV.JWT_SECRET,
-            algorithms=ENV.JWT_ALGORITHM
-        )
+    payload = jwt.decode(token, ENV.JWT_SECRET, algorithms=ENV.JWT_ALGORITHM)
 
     if not payload:  # can also throw: jwt.ExpiredSignatureError,
         # might be neccessary to change into try - except

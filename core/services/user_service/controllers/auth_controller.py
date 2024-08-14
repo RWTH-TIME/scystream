@@ -73,6 +73,7 @@ def refresh_access_token(old_access_token: str, refresh_token: str):
     now = datetime.now(tz=timezone.utc)
     new_access_token = create_token(
         {
+            "uuid": user.id,
             "email": user.email,
             "iat": now,
             "exp": now + timedelta(minutes=ENV.JWT_ACCESS_TOKEN_EXPIRE_MIN),
