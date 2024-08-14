@@ -75,7 +75,7 @@ export default function useAuth() {
         if (isJWTExpired(tokenPayload.exp)) {
           if (!refreshToken) throw new Error("No refresh token availible.")
 
-          const res = await mutateAsync({ refresh_token: refreshToken, access_token: token })
+          const res = await mutateAsync({ refresh_token: refreshToken, old_access_token: token })
           if (!res) throw new Error("Refreshing token failed.")
         }
 
@@ -84,7 +84,8 @@ export default function useAuth() {
           email: tokenPayload.email
         })
         setLoading(false)
-      } catch (_) {
+      } catch (error) {
+        console.error(error)
         setUser(undefined)
         localStorage.removeItem(config.accessTokenKey)
         localStorage.removeItem(config.refreshTokenKey)

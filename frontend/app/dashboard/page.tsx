@@ -12,7 +12,7 @@ export default function Dashboard() {
 
   async function test() {
     try {
-      await mutateAsync({ access_token: "abc", refresh_token: "acs" })
+      await mutateAsync({ old_access_token: "abc", refresh_token: "acs" })
     } catch (error) {
       console.error(`Test failed: ${error}`)
     }

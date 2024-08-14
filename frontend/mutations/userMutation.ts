@@ -15,7 +15,7 @@ type UserDTO = {
 }
 
 type RefreshDTO = {
-  access_token: string,
+  old_access_token: string,
   refresh_token: string
 }
 

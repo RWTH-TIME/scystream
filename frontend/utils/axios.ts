@@ -30,11 +30,13 @@ api.interceptors.response.use(function(response) {
   return response
 }, async function(error) {
   // Status code outside range of 2xx
-  console.log(error)
+  console.error(error)
   if (error.response.status === 401) {
     try {
+      const oldAccessToken = localStorage.getItem(config.accessTokenKey)
       const refreshToken = localStorage.getItem(config.refreshTokenKey)
       const response = await api.post("user/refresh", {
+        old_access_token: oldAccessToken,
         refresh_token: refreshToken
       })
       const { access_token: accessToken, refresh_token: newRefreshToken } = response.data
