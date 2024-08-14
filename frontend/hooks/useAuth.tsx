@@ -46,7 +46,8 @@ function isJWTExpired(exp: number): boolean {
 */
 export default function useAuth() {
   const [user, setUser] = useState<User | undefined>(undefined)
-  const { mutateAsync, data } = useRefreshMutation()
+  const [loading, setLoading] = useState<boolean>(true)
+  const { mutateAsync } = useRefreshMutation()
   const config = getConfig()
   const router = useRouter()
 
@@ -78,6 +79,7 @@ export default function useAuth() {
         setUser({
           email: tokenPayload.email
         })
+        setLoading(false)
       } catch (_) {
         setUser(undefined)
         localStorage.removeItem(config.accessTokenKey)
@@ -88,5 +90,5 @@ export default function useAuth() {
     checkToken()
   }, [config.accessTokenKey, router, mutateAsync, config.refreshTokenKey])
 
-  return { user, signOut }
+  return { user, loading, signOut }
 }

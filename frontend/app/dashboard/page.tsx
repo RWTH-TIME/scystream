@@ -5,9 +5,9 @@ import PageWithHeader from "@/components/layout/PageWithHeader"
 import useAuth from "@/hooks/useAuth"
 
 export default function Dashboard() {
-  const { signOut } = useAuth()
+  const { signOut, loading } = useAuth()
 
-  return (
+  return !loading ? (
     <PageWithHeader breadcrumbs={[{ text: "Dashboard", link: "/dashboard" }]}>
       <div>
         DASHBOARD
@@ -17,5 +17,5 @@ export default function Dashboard() {
         }}>SignOut</Button>
       </div>
     </PageWithHeader>
-  )
+  ) : (<></>)
 }
