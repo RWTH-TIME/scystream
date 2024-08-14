@@ -31,3 +31,4 @@ def authenticate_token(request: Request):
     payload = verify_token(token)
 
     return payload
+

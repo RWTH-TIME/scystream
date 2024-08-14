@@ -1,8 +1,11 @@
 from sqlalchemy import exc
 from fastapi import HTTPException
 from psycopg2 import Error as PostgresError
-from psycopg2.errors import UniqueViolation, ForeignKeyViolation, \
-    NotNullViolation
+from psycopg2.errors import (
+    UniqueViolation,
+    ForeignKeyViolation,
+    NotNullViolation,
+)
 
 import logging
 
@@ -26,7 +29,8 @@ def handle_error(error: Exception) -> None:
             raise HTTPException(422, detail=error_msg)
         else:
             raise HTTPException(
-                409, detail=f"db integrity violated: {error_msg}")
+                409, detail=f"db integrity violated: {error_msg}"
+            )
     elif isinstance(error, HTTPException):
         # HTTPExceptions are already in the right format
         raise error

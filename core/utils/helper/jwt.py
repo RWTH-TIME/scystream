@@ -7,11 +7,7 @@ def create_token(payload: dict) -> str:
     wrapper function for jwt.encode creating jwt tokens with our secret and
     algorithm
     """
-    return jwt.encode(
-        payload,
-        ENV.JWT_SECRET,
-        algorithm=ENV.JWT_ALGORITHM
-    )
+    return jwt.encode(payload, ENV.JWT_SECRET, algorithm=ENV.JWT_ALGORITHM)
 
 
 def verify_token(token: str) -> dict:
@@ -25,7 +21,7 @@ def verify_token(token: str) -> dict:
             algorithms=ENV.JWT_ALGORITHM
         )
 
-    if not payload:     # can also throw: jwt.ExpiredSignatureError,
+    if not payload:  # can also throw: jwt.ExpiredSignatureError,
         # might be neccessary to change into try - except
         raise jwt.InvalidSignatureError
 

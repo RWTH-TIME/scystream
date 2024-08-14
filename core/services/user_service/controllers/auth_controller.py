@@ -30,16 +30,20 @@ def login(email: str, password: str) -> Tuple[str, str]:
     # create tokens
     now: datetime = datetime.now(tz=timezone.utc)
 
-    access_token = create_token({
-        "email": user.email,
-        "iat": now,
-        "exp": now + timedelta(minutes=ENV.JWT_ACCESS_TOKEN_EXPIRE_MIN)
-    })
+    access_token = create_token(
+        {
+            "email": user.email,
+            "iat": now,
+            "exp": now + timedelta(minutes=ENV.JWT_ACCESS_TOKEN_EXPIRE_MIN),
+        }
+    )
 
-    refresh_token = create_token({
-        "iat": now,
-        "exp": now + timedelta(days=ENV.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
-    })
+    refresh_token = create_token(
+        {
+            "iat": now,
+            "exp": now + timedelta(days=ENV.JWT_REFRESH_TOKEN_EXPIRE_DAYS),
+        }
+    )
 
     return access_token, refresh_token
 
@@ -67,10 +71,12 @@ def refresh_access_token(access_token: str, refresh_token: str):
 
     # refresh tokens
     now = datetime.now(tz=timezone.utc)
-    access_token = create_token({
-        "email": user.email,
-        "iat": now,
-        "exp": now + timedelta(minutes=ENV.JWT_ACCESS_TOKEN_EXPIRE_MIN)
-    })
+    access_token = create_token(
+        {
+            "email": user.email,
+            "iat": now,
+            "exp": now + timedelta(minutes=ENV.JWT_ACCESS_TOKEN_EXPIRE_MIN),
+        }
+    )
 
     return access_token, refresh_token
