@@ -66,10 +66,12 @@ def refresh_access_token(refresh_token: str):
 
     # refresh tokens
     now = datetime.now(tz=timezone.utc)
-    access_token = create_token({
-        "email": user.email,
-        "iat": now,
-        "exp": now + timedelta(minutes=ENV.JWT_ACCESS_TOKEN_EXPIRE_MIN)
-    })
+    access_token = create_token(
+        {
+            "email": user.email,
+            "iat": now,
+            "exp": now + timedelta(minutes=ENV.JWT_ACCESS_TOKEN_EXPIRE_MIN),
+        }
+    )
 
     return access_token, refresh_token

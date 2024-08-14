@@ -9,7 +9,6 @@ SQLALCHEMY_DATABASE_URL = (
     f"@{ENV.DATABASE_HOST}:{ENV.DATABASE_PORT}/{ENV.DATABASE_NAME}"
 )
 
-
 # db connection
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
