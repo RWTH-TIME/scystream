@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { z } from "zod"
 import { useRouter } from "next/navigation"
 import { getConfig } from "@/utils/config"
+import { useRefreshMutation } from "@/mutations/userMutation"
 
 const TokenPayloadSchema = z.object({
   email: z.string().email(),
@@ -45,6 +46,7 @@ function isJWTExpired(exp: number): boolean {
 */
 export default function useAuth() {
   const [user, setUser] = useState<User | undefined>(undefined)
+  const { mutateAsync, data } = useRefreshMutation()
   const config = getConfig()
   const router = useRouter()
 
@@ -56,25 +58,35 @@ export default function useAuth() {
 
   useEffect(() => {
     // TODO: refreshToken
-    try {
-      const token = localStorage.getItem(config.accessTokenKey)
+    async function checkToken() {
+      try {
+        const token = localStorage.getItem(config.accessTokenKey)
+        const refreshToken = localStorage.getItem(config.refreshTokenKey)
 
-      if (!token) throw new Error("No token set.")
+        if (!token) throw new Error("No token set.")
 
-      const tokenPayload = tokenToPayload(token)
-      if (!tokenPayload) throw new Error("Payload not set.")
+        const tokenPayload = tokenToPayload(token)
+        if (!tokenPayload) throw new Error("Payload not set.")
 
-      if (isJWTExpired(tokenPayload.exp)) throw new Error("Token expired.")
+        if (isJWTExpired(tokenPayload.exp)) {
+          if (!refreshToken) throw new Error("No refresh token availible.")
 
-      setUser({
-        email: tokenPayload.email
-      })
-    } catch (_) {
-      setUser(undefined)
-      localStorage.removeItem(config.accessTokenKey)
-      router.push("/login")
+          const res = await mutateAsync({ refresh_token: refreshToken })
+          if (!res) throw new Error("Refreshing token failed.")
+        }
+
+        setUser({
+          email: tokenPayload.email
+        })
+      } catch (_) {
+        setUser(undefined)
+        localStorage.removeItem(config.accessTokenKey)
+        localStorage.removeItem(config.refreshTokenKey)
+        router.push("/login")
+      }
     }
-  }, [config.accessTokenKey, router])
+    checkToken()
+  }, [config.accessTokenKey, router, mutateAsync, config.refreshTokenKey])
 
   return { user, signOut }
 }
