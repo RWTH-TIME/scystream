@@ -10,7 +10,7 @@ def create_user(email: str, password: str) -> UUID:
     db: Session = next(get_database())
     user: User = User()
 
-    user.id = uuid4()
+    user.uuid = uuid4()
     user.email = email
 
     user.password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
@@ -19,4 +19,4 @@ def create_user(email: str, password: str) -> UUID:
     db.commit()
     db.refresh(user)
 
-    return user.id
+    return user.uuid

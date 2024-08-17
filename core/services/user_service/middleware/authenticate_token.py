@@ -1,5 +1,5 @@
 from fastapi import HTTPException, Request
-from utils.helper.jwt import verify_token
+from utils.helper.jwt import decode_token, verify_token
 
 
 def authenticate_token(request: Request):
@@ -7,8 +7,7 @@ def authenticate_token(request: Request):
 
     if not auth_header:
         raise HTTPException(
-            status_code=401,
-            detail="Authorization header is missing"
+            status_code=401, detail="Authorization header is missing"
         )
 
     parts = auth_header.split(" ")
@@ -16,18 +15,14 @@ def authenticate_token(request: Request):
     # Ensure there are exactly two parts
     if len(parts) != 2 or parts[0] != "Bearer":
         raise HTTPException(
-            status_code=401,
-            detail="Authorization header format is invalid"
+            status_code=401, detail="Authorization header format is invalid"
         )
 
     token = parts[1]
 
-    if not token:
+    if not token or not verify_token(token):
         raise HTTPException(
-            status_code=401,
-            detail="Access token is missing or invalid"
+            status_code=401, detail="Access token is missing or invalid"
         )
 
-    payload = verify_token(token)
-
-    return payload
+    return decode_token(token)

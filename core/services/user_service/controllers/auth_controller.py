@@ -2,11 +2,14 @@ import bcrypt
 
 from typing import Tuple
 from fastapi import HTTPException
-from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 
-from utils.config.environment import ENV
-from utils.helper.jwt import create_token, verify_token, decode_token
+from utils.helper.jwt import (
+    create_access_token,
+    create_refresh_token,
+    verify_token,
+    decode_token,
+)
 
 from utils.database.session_injector import get_database
 from services.user_service.models.user import User
@@ -28,19 +31,8 @@ def login(email: str, password: str) -> Tuple[str, str]:
         raise HTTPException(401, detail="wrong password")
 
     # create tokens
-    now: datetime = datetime.now(tz=timezone.utc)
-
-    # TODO: encode uuid as well
-    access_token = create_token({
-        "email": user.email,
-        "iat": now,
-        "exp": now + timedelta(minutes=ENV.JWT_ACCESS_TOKEN_EXPIRE_MIN)
-    })
-
-    refresh_token = create_token({
-        "iat": now,
-        "exp": now + timedelta(days=ENV.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
-    })
+    access_token = create_access_token(user)
+    refresh_token = create_refresh_token()
 
     return access_token, refresh_token
 
@@ -67,13 +59,6 @@ def refresh_access_token(old_access_token: str, refresh_token: str):
         raise HTTPException(403)
 
     # refresh tokens
-    now = datetime.now(tz=timezone.utc)
-    new_access_token = create_token(
-        {
-            "email": user.email,
-            "iat": now,
-            "exp": now + timedelta(minutes=ENV.JWT_ACCESS_TOKEN_EXPIRE_MIN),
-        }
-    )
+    new_access_token = create_access_token(user)
 
     return new_access_token, refresh_token
