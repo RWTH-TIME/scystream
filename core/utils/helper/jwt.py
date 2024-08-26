@@ -5,7 +5,6 @@ from services.user_service.models.user import User
 from datetime import datetime, timezone, timedelta
 
 
-
 def create_refresh_token() -> str:
     now: datetime = datetime.now(tz=timezone.utc)
 
@@ -54,7 +53,6 @@ def verify_token(token: str) -> bool:
 
     except jwt.InvalidSignatureError:
         raise HTTPException(status_code=401, detail="Invalid token signature")
-
 
     return True
 
