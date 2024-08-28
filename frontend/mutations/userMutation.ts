@@ -59,7 +59,7 @@ function useRefreshMutation() {
       try {
         const response = await api.post(REFRESH_ENDPOINT, JSON.stringify(refresh))
 
-        localStorage.setItem(config.accessTokenKey, response.data.access_token)
+        localStorage.setItem(config.accessTokenKey, response.data.new_access_token)
         localStorage.setItem(config.refreshTokenKey, response.data.refresh_token)
 
         return response.data

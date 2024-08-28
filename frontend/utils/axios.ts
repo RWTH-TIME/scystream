@@ -31,25 +31,31 @@ api.interceptors.response.use(function(response) {
 }, async function(error) {
   // Status code outside range of 2xx
   console.error(error)
+
   if (error.response.status === 401) {
     try {
       const oldAccessToken = localStorage.getItem(config.accessTokenKey)
       const refreshToken = localStorage.getItem(config.refreshTokenKey)
-      const response = await api.post("user/refresh", {
+
+      const response = await axios.post(`${config.apiUrl}user/refresh`, {
         old_access_token: oldAccessToken,
         refresh_token: refreshToken
       })
-      const { access_token: accessToken, refresh_token: newRefreshToken } = response.data
+
+      const { new_access_token: accessToken, refresh_token: newRefreshToken } = response.data
       localStorage.setItem(config.accessTokenKey, accessToken)
       localStorage.setItem(config.refreshTokenKey, newRefreshToken)
-      return response
+
+      api.defaults.headers.common.Authorization = `Bearer ${accessToken}`
+
+      return api(error.config)
     } catch (error) {
       console.error(`Error refreshing token: ${error}.`)
 
       localStorage.removeItem(config.accessTokenKey)
       localStorage.removeItem(config.refreshTokenKey)
 
-      // TODO: navigate back to the login
+      window.location.href = "/login"
 
       return Promise.reject(error)
     }
