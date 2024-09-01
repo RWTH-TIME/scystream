@@ -18,3 +18,5 @@ class User(Base):
 
     users = relationship("User", secondary="user_project",
                          back_populates="projects")
+
+    blocks = relationship("Block", back_populates="blocks")
