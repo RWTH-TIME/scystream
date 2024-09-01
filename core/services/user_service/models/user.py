@@ -1,5 +1,5 @@
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, String, LargeBinary
+from sqlalchemy import Column, String, LargeBinary, relationship
 
 import uuid
 
@@ -9,6 +9,9 @@ from utils.database.connection import Base
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, unique=True, nullable=False)
     password = Column(LargeBinary, nullable=False)
+
+    projects = relationship("Project", secondary="user_project",
+                            back_populates="projects")
