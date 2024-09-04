@@ -231,7 +231,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: "http://localhost:4000"
     ports:
-      - "8008:80"
+      - "8000:80"
   
   core:
     build: core
@@ -239,7 +239,7 @@ services:
     ports:
       - "4000:4000"
     environment:
-      EXTERNAL_URL: "http://localhost:8008"
+      EXTERNAL_URL: "http://localhost:8000"
     depends_on:
       catapulte:
         condition: service_started

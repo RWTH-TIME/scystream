@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Button from "@/components/Button"
 import Input from "@/components/inputs/Input"
 import InputAdornment from "@/components/inputs/InputAdornment"
@@ -16,16 +15,9 @@ export default function Login() {
 
   const { mutateAsync } = useLoginMutation()
 
-  const router = useRouter()
-
   async function logIn(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    try {
-      await mutateAsync({ email: mail, password })
-      router.push("/dashboard")
-    } catch (error) {
-      console.error("Login failed")
-    }
+    await mutateAsync({ email: mail, password })
   }
 
   return (
