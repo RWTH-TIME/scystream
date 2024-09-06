@@ -6,6 +6,7 @@ import Button from "@/components/Button"
 import Input from "@/components/inputs/Input"
 import InputAdornment from "@/components/inputs/InputAdornment"
 import PageWithHeader from "@/components/layout/PageWithHeader"
+import { useRegisterMutation } from "@/mutations/userMutation"
 
 export default function Register() {
   // TODO: form-validation
@@ -16,9 +17,16 @@ export default function Register() {
 
   const [showPass, setShowPass] = useState<boolean>(false)
 
+  const { mutate } = useRegisterMutation()
+
+  function signUp(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    mutate({ email: mail, password })
+  }
+
   return (
     <PageWithHeader breadcrumbs={[{ text: "Signup", link: "/sign-up" }]}>
-      <div className="w-1/4 bg-slate-50 m-auto p-10 min-h-96 rounded-lg flex flex-col gap-5 drop-shadow justify-center">
+      <form onSubmit={(e) => signUp(e)} className="w-1/4 bg-slate-50 m-auto p-10 min-h-96 rounded-lg flex flex-col gap-5 drop-shadow justify-center">
         <Input
           type="text"
           value={mail}
@@ -41,9 +49,9 @@ export default function Register() {
           onChange={setPasswordRep}
           leftAdornment={<InputAdornment type="password" />}
         />
-        <Button>Create Account</Button>
+        <Button type="submit">Create Account</Button>
         <Link href="login"><u>Already have an account? - Login here</u></Link>
-      </div>
+      </form>
     </PageWithHeader>
   )
 }

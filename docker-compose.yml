@@ -228,6 +228,8 @@ services:
   frontend:
     build: frontend
     restart: always
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:4000"
     ports:
       - "8000:80"
   
@@ -237,7 +239,7 @@ services:
     ports:
       - "4000:4000"
     environment:
-      EXTERNAL_URL: "http://localhost:4000"
+      EXTERNAL_URL: "http://localhost:8000"
     depends_on:
       catapulte:
         condition: service_started

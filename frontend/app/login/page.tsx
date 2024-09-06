@@ -6,16 +6,23 @@ import Button from "@/components/Button"
 import Input from "@/components/inputs/Input"
 import InputAdornment from "@/components/inputs/InputAdornment"
 import PageWithHeader from "@/components/layout/PageWithHeader"
+import { useLoginMutation } from "@/mutations/userMutation"
 
 export default function Login() {
   const [mail, setMail] = useState<string>("")
   const [password, setPassword] = useState<string>("")
-
   const [showPass, setShowPass] = useState<boolean>(false)
+
+  const { mutateAsync } = useLoginMutation()
+
+  async function logIn(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    await mutateAsync({ email: mail, password })
+  }
 
   return (
     <PageWithHeader breadcrumbs={[{ text: "Login", link: "/login" }]}>
-      <div className="w-1/4 bg-slate-50 m-auto p-10 min-h-96 rounded-lg flex flex-col gap-5 drop-shadow justify-center">
+      <form onSubmit={(e) => logIn(e)} className="w-1/4 bg-slate-50 m-auto p-10 min-h-96 rounded-lg flex flex-col gap-5 drop-shadow justify-center">
         <Input
           type="text"
           value={mail}
@@ -33,7 +40,7 @@ export default function Login() {
         />
         <Button>LogIn</Button>
         <Link href="sign-up"><u>{"Don't have an account? - Sign up here"}</u></Link>
-      </div>
+      </form>
     </PageWithHeader>
   )
 }
