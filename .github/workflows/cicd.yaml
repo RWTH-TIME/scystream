@@ -86,4 +86,28 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+    
+  deploy:
+    name: Deploy Docker containers
+    runs-on: self-hosted
+    needs: build
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+    steps:
+      - name: Write SSH keys
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOSTNAME }} > ~/.ssh/known_hosts
 
+      - name: Pull images
+        run: |
+          docker pull ${{ env.REGISTRY }}/rwth-time/${{ env.IMAGE_NAME }}/scystream-frontend:latest
+          docker pull ${{ env.REGISTRY }}/rwth-time/${{ env.IMAGE_NAME }}/scystream-core:latest
+      
+      - name: SSH Deploy
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@{{ secrets.SERVER_HOSTNAME }} << 'EOF'
+            docker compose down && docker compose up -d
+          EOF
