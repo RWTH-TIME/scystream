@@ -97,9 +97,8 @@ jobs:
     steps:
       - name: Write SSH keys
         run: |
-          install -m 600 -D /dev/null ~/.ssh/id_rsa
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SERVER_HOSTNAME }} > ~/.ssh/known_hosts
+          install -m 600 -D /dev/null ~/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/id_rsa
 
       - name: Pull images
         run: |
@@ -108,6 +107,6 @@ jobs:
       
       - name: SSH Deploy
         run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@{{ secrets.SERVER_HOSTNAME }} << 'EOF'
+          ssh -i ~/id_rsa -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@{{ secrets.SERVER_HOSTNAME }} << 'EOF'
             docker compose down && docker compose up -d
           EOF
