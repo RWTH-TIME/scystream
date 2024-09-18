@@ -102,8 +102,8 @@ jobs:
 
       - name: Pull images
         run: |
-          docker pull ${{ env.REGISTRY }}/rwth-time/${{ env.IMAGE_NAME }}/scystream-frontend:latest
-          docker pull ${{ env.REGISTRY }}/rwth-time/${{ env.IMAGE_NAME }}/scystream-core:latest
+          docker pull ${{ env.REGISTRY }}/rwth-time/scystream/scystream-frontend:latest
+          docker pull ${{ env.REGISTRY }}/rwth-time/scystream/scystream-core:latest
       
       - name: SSH Deploy
         run: |
