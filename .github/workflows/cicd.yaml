@@ -78,6 +78,15 @@ jobs:
           tags: |
             type=ref,event=pr
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+      
+      - name: Define build args
+        id: define_build_args
+        run: |
+          if [ "${{ matrix.context }}" == "frontend" ]; then
+            echo "BUILD_ARGS=NEXT_PUBLIC_API_URL=${{ secrets.BUILD_API_URL }}" >> $GITHUB_ENV
+          else
+            echo "" >> $GITHUB_ENV
+          fi
 
       - name: Build and push docker images
         uses: docker/build-push-action@v5
@@ -86,6 +95,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: ${{ env.BUILD_ARGS }}
+
     
   deploy:
     name: Deploy Docker containers
