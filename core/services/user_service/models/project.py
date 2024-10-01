@@ -8,7 +8,7 @@ import datetime
 from utils.database.connection import Base
 
 
-class User(Base):
+class Project(Base):
     __tablename__ = "projects"
 
     uuid = Column(UUID(as_uuid=True), primary_key=True,
