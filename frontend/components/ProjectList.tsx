@@ -1,24 +1,23 @@
+import { v4 as uuidv4 } from "uuid"
 import type { Project } from "@/utils/types"
 import { useProjectsQuery } from "@/mutations/projectMutation"
-import { useEffect } from "react"
-import { v4 as uuidv4 } from "uuid"
 
 // TODO: remove
-const dummyProjects = [
+const dummyProjects: Project[] = [
   {
     uuid: uuidv4(),
     name: "Projekt 1 - Das ist ein Name",
-    created_at: Date()
+    created_at: new Date()
   },
   {
     uuid: uuidv4(),
     name: "Was ist Scystream?",
-    created_at: Date()
+    created_at: new Date()
   },
   {
     uuid: uuidv4(),
     name: "Downloader",
-    created_at: Date()
+    created_at: new Date()
   },
 ]
 
@@ -27,12 +26,11 @@ export type ProjectListProps = {
   setSelectedProject: (value: Project | undefined) => void
 }
 
-
 export default function ProjectList({ selectedProject, setSelectedProject }: ProjectListProps) {
-  const { data: projects, isLoading, isError } = useProjectsQuery();
+  const { data: projects, isLoading, isError } = useProjectsQuery()
 
   // TODO: handle error instead of displaying dummyProjects
-  const renderedProjects = isError ? dummyProjects : projects
+  const renderedProjects: Project[] = isError ? dummyProjects : projects as Project[]
 
   // TODO: find a more generic way of handling the load state
   if (isLoading) {
@@ -42,12 +40,11 @@ export default function ProjectList({ selectedProject, setSelectedProject }: Pro
   return (
     <div className="shadow h-full">
       {
-        renderedProjects.map((project) => (
+        renderedProjects.map((project: Project) => (
           <li
             key={project.uuid}
             onClick={() => setSelectedProject(project)}
-            className={`p-4 rounded-sm flex-grow items-center justify-between relative ${
-                selectedProject?.uuid === project.uuid ? "bg-gray-200" : ""
+            className={`p-4 rounded-sm flex-grow items-center justify-between relative ${selectedProject?.uuid === project.uuid ? "bg-gray-200" : ""
               } overflow-y-auto hover:bg-gray-100`}
           >
             <div>

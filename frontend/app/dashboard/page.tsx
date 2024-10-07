@@ -6,10 +6,10 @@ import PageWithHeader from "@/components/layout/PageWithHeader"
 import ProjectList from "@/components/ProjectList"
 import useAuth from "@/hooks/useAuth"
 import { useTestMutation } from "@/mutations/userMutation"
-import { v4 as uuidv4 } from "uuid"
+import type { Project } from "@/utils/types"
 
 export default function Dashboard() {
-  const [ selectedProject, setSelectedProject ] = useState<Project | undefined>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined)
   const { signOut, loading } = useAuth()
 
   const { mutateAsync } = useTestMutation()
@@ -25,7 +25,7 @@ export default function Dashboard() {
           <ProjectList selectedProject={selectedProject} setSelectedProject={setSelectedProject} />
         </div>
         <div>
-          Selected Project: { selectedProject?.name }
+          Selected Project: {selectedProject?.name}
           <Button onClick={(e) => {
             e.preventDefault()
             signOut()

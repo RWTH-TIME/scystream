@@ -1,3 +1,3 @@
 export const QueryKeys = {
-  projects: 'projects'
+  projects: "projects"
 }
