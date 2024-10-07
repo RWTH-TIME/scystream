@@ -8,24 +8,6 @@ import useAuth from "@/hooks/useAuth"
 import { useTestMutation } from "@/mutations/userMutation"
 import { v4 as uuidv4 } from "uuid"
 
-const projects = [
-  {
-    uuid: uuidv4(),
-    name: "Projekt 1",
-    created_at: Date.now()
-  },
-  {
-    uuid: uuidv4(),
-    name: "Projekt 2",
-    created_at: Date.now()
-  },
-  {
-    uuid: uuidv4(),
-    name: "Projekt 3",
-    created_at: Date.now()
-  },
-]
-
 export default function Dashboard() {
   const [ selectedProject, setSelectedProject ] = useState<Project | undefined>(null);
   const { signOut, loading } = useAuth()

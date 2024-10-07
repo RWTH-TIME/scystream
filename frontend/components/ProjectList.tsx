@@ -31,10 +31,6 @@ export type ProjectListProps = {
 export default function ProjectList({ selectedProject, setSelectedProject }: ProjectListProps) {
   const { data: projects, isLoading, isError } = useProjectsQuery();
 
-  useEffect(() => {
-    console.log(selectedProject)
-  }, [selectedProject])
-
   // TODO: handle error instead of displaying dummyProjects
   const renderedProjects = isError ? dummyProjects : projects
 
