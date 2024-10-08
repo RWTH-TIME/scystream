@@ -1,6 +1,8 @@
 import { useMutation } from "@tanstack/react-query"
 import { api } from "@/utils/axios"
 import { getConfig } from "@/utils/config"
+import type { setAlertType } from "@/hooks/useAlert"
+import { AlertType } from "@/hooks/useAlert"
 
 const config = getConfig()
 
@@ -19,13 +21,15 @@ type RefreshDTO = {
   refresh_token: string
 }
 
-function useRegisterMutation() {
+function useRegisterMutation(setAlert: setAlertType) {
   return useMutation({
     mutationFn: async function register(user: UserDTO) {
       const response = await api.post(REGISTER_ENDPOINT, JSON.stringify(user))
       return response.data
     },
     onError: (error) => {
+      // TODO: handle error  more specifically, depending on the backend response
+      setAlert("Registration failed. Please try again later.", AlertType.ERROR)
       console.error(`Registration failed: ${error}`)
     }
   })
@@ -42,6 +46,7 @@ function useLoginMutation() {
       return response.data
     },
     onError: (error) => {
+      // TODO: handle error
       console.error(`Login failed ${error}`)
     },
     onSuccess: () => {
@@ -61,6 +66,7 @@ function useRefreshMutation() {
       return response.data
     },
     onError: (error) => {
+      // TODO: Notify user
       console.error(`Refreshing failed: ${error}`)
     }
   })

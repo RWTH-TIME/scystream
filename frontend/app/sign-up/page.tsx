@@ -7,17 +7,18 @@ import Input from "@/components/inputs/Input"
 import InputAdornment from "@/components/inputs/InputAdornment"
 import PageWithHeader from "@/components/layout/PageWithHeader"
 import { useRegisterMutation } from "@/mutations/userMutation"
+import { useAlert } from "@/hooks/useAlert"
 
 export default function Register() {
   // TODO: form-validation
-
+  const { setAlert } = useAlert()
   const [mail, setMail] = useState<string>("")
   const [password, setPassword] = useState<string>("")
   const [passwordRep, setPasswordRep] = useState<string>("")
 
   const [showPass, setShowPass] = useState<boolean>(false)
 
-  const { mutate } = useRegisterMutation()
+  const { mutate } = useRegisterMutation(setAlert)
 
   function signUp(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

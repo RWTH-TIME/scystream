@@ -1,10 +1,11 @@
+import type { Dispatch, SetStateAction } from "react"
 import LoadingAndError from "./LoadingAndError"
 import type { Project } from "@/utils/types"
 import { useProjectsQuery } from "@/mutations/projectMutation"
 
 export type ProjectListProps = {
   selectedProject: Project | undefined,
-  setSelectedProject: (value: Project | undefined) => void
+  setSelectedProject: Dispatch<SetStateAction<Project | undefined>>
 }
 
 export default function ProjectList({ selectedProject, setSelectedProject }: ProjectListProps) {
