@@ -7,15 +7,17 @@ import ProjectList from "@/components/ProjectList"
 import useAuth from "@/hooks/useAuth"
 import { useTestMutation } from "@/mutations/userMutation"
 import type { Project } from "@/utils/types"
+import { useAlert } from "@/hooks/useAlert"
 
 export default function Dashboard() {
+  const { setAlert } = useAlert()
   const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined)
   const { signOut, loading } = useAuth()
 
-  const { mutateAsync } = useTestMutation()
+  const { mutate } = useTestMutation(setAlert)
 
-  async function test() {
-    await mutateAsync({ old_access_token: "abc", refresh_token: "acs" })
+  function test() {
+    mutate({ old_access_token: "abc", refresh_token: "acs" })
   }
 
   return !loading ? (

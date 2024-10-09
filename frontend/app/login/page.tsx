@@ -17,7 +17,7 @@ export default function Login() {
 
   const { mutate } = useLoginMutation(setAlert)
 
-  async function logIn(e: React.FormEvent<HTMLFormElement>) {
+  function logIn(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     mutate({ email: mail, password })
   }

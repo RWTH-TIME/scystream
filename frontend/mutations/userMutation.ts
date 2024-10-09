@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { api } from "@/utils/axios"
 import { getConfig } from "@/utils/config"
-import type { setAlertType } from "@/hooks/useAlert"
+import { AlertType, type setAlertType } from "@/hooks/useAlert"
 import displayStandardAxiosErrors from "@/utils/errors"
 
 const config = getConfig()
@@ -71,15 +71,19 @@ function useRefreshMutation() {
   })
 }
 
-function useTestMutation() {
+function useTestMutation(setAlert: setAlertType) {
   return useMutation({
     mutationFn: async function test(test: RefreshDTO) {
       const response = await api.post(TEST_ENDPOINT, JSON.stringify(test))
 
       return response.data
     },
-    onError: (error) => {
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
       console.log(`Test failed: ${error}`)
+    },
+    onSuccess: () => {
+      setAlert("Successfully sent test request!", AlertType.SUCCESS)
     }
   })
 }
