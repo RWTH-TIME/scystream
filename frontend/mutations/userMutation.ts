@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { api } from "@/utils/axios"
 import { getConfig } from "@/utils/config"
-import { AlertType, type setAlertType } from "@/hooks/useAlert"
+import { AlertType, type SetAlertType } from "@/hooks/useAlert"
 import displayStandardAxiosErrors from "@/utils/errors"
 
 const config = getConfig()
@@ -22,7 +22,7 @@ type RefreshDTO = {
   refresh_token: string
 }
 
-function useRegisterMutation(setAlert: setAlertType) {
+function useRegisterMutation(setAlert: SetAlertType) {
   return useMutation({
     mutationFn: async function register(user: UserDTO) {
       const response = await api.post(REGISTER_ENDPOINT, JSON.stringify(user))
@@ -35,7 +35,7 @@ function useRegisterMutation(setAlert: setAlertType) {
   })
 }
 
-function useLoginMutation(setAlert: setAlertType) {
+function useLoginMutation(setAlert: SetAlertType) {
   return useMutation({
     mutationFn: async function login(user: UserDTO) {
       const response = await api.post(LOGIN_ENDPOINT, JSON.stringify(user))
@@ -71,7 +71,7 @@ function useRefreshMutation() {
   })
 }
 
-function useTestMutation(setAlert: setAlertType) {
+function useTestMutation(setAlert: SetAlertType) {
   return useMutation({
     mutationFn: async function test(test: RefreshDTO) {
       const response = await api.post(TEST_ENDPOINT, JSON.stringify(test))

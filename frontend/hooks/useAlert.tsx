@@ -12,12 +12,12 @@ export enum AlertType {
   DEFAULT = 3,
 }
 
-export type setAlertType = (text: string, type: AlertType) => void
+export type SetAlertType = (text: string, type: AlertType) => void
 
 type AlertContextValues = {
   text: string,
   type: AlertType,
-  setAlert: setAlertType
+  setAlert: SetAlertType
 }
 
 const initialState: AlertContextValues = {
@@ -36,7 +36,7 @@ export function AlertProvider({ children }: PropsWithChildren) {
   const [text, setText] = useState<string>("")
   const [type, setType] = useState<AlertType>(AlertType.DEFAULT)
 
-  const setAlert: setAlertType = (text: string, type: AlertType) => {
+  const setAlert: SetAlertType = (text: string, type: AlertType) => {
     setText(text)
     setType(type)
     setTimeout(() => {

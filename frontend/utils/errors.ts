@@ -1,10 +1,10 @@
 import type { AxiosError } from "axios"
-import { AlertType, type setAlertType } from "@/hooks/useAlert"
+import { AlertType, type SetAlertType } from "@/hooks/useAlert"
 
 /*
 * Use this function to display the default Axios Errors
 */
-export default function displayStandardAxiosErrors(error: AxiosError, setAlert: setAlertType) {
+export default function displayStandardAxiosErrors(error: AxiosError, setAlert: SetAlertType) {
   if (error.response) {
     const statusCode = error.response.status
     if (statusCode === 422) {

@@ -20,12 +20,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AlertProvider>
-          <QueryProvider>
+        <QueryProvider>
+          <AlertProvider>
             {children}
             <Alert />
-          </QueryProvider>
-        </AlertProvider>
+          </AlertProvider>
+        </QueryProvider>
       </body>
     </html>
   )

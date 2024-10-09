@@ -30,10 +30,8 @@ api.interceptors.response.use(function(response) {
   // Status code in range of 2xx
   return response
 }, async function(error) {
-  const { config } = error
-  console.log(config.url)
   // Status code outside range of 2xx
-  if (error.response.status === 401 && config.url === "user/login") {
+  if (error.response.status === 401 && error.config.url !== "user/login") {
     try {
       const oldAccessToken = localStorage.getItem(config.accessTokenKey)
       const refreshToken = localStorage.getItem(config.refreshTokenKey)
@@ -56,7 +54,7 @@ api.interceptors.response.use(function(response) {
       localStorage.removeItem(config.accessTokenKey)
       localStorage.removeItem(config.refreshTokenKey)
 
-      window.location.href = "/login"
+      // window.location.href = "/login"
 
       return Promise.reject(error)
     }
