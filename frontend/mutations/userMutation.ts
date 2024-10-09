@@ -1,6 +1,9 @@
 import { useMutation } from "@tanstack/react-query"
+import type { AxiosError } from "axios"
 import { api } from "@/utils/axios"
 import { getConfig } from "@/utils/config"
+import { AlertType, type SetAlertType } from "@/hooks/useAlert"
+import displayStandardAxiosErrors from "@/utils/errors"
 
 const config = getConfig()
 
@@ -19,19 +22,20 @@ type RefreshDTO = {
   refresh_token: string
 }
 
-function useRegisterMutation() {
+function useRegisterMutation(setAlert: SetAlertType) {
   return useMutation({
     mutationFn: async function register(user: UserDTO) {
       const response = await api.post(REGISTER_ENDPOINT, JSON.stringify(user))
       return response.data
     },
-    onError: (error) => {
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
       console.error(`Registration failed: ${error}`)
     }
   })
 }
 
-function useLoginMutation() {
+function useLoginMutation(setAlert: SetAlertType) {
   return useMutation({
     mutationFn: async function login(user: UserDTO) {
       const response = await api.post(LOGIN_ENDPOINT, JSON.stringify(user))
@@ -41,7 +45,8 @@ function useLoginMutation() {
 
       return response.data
     },
-    onError: (error) => {
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
       console.error(`Login failed ${error}`)
     },
     onSuccess: () => {
@@ -66,15 +71,19 @@ function useRefreshMutation() {
   })
 }
 
-function useTestMutation() {
+function useTestMutation(setAlert: SetAlertType) {
   return useMutation({
     mutationFn: async function test(test: RefreshDTO) {
       const response = await api.post(TEST_ENDPOINT, JSON.stringify(test))
 
       return response.data
     },
-    onError: (error) => {
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
       console.log(`Test failed: ${error}`)
+    },
+    onSuccess: () => {
+      setAlert("Successfully sent test request!", AlertType.SUCCESS)
     }
   })
 }

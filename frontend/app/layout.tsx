@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import QueryProvider from "@/hooks/useQueryClient"
+import { AlertProvider } from "@/hooks/useAlert"
+import Alert from "@/components/Alert"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -19,7 +21,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <QueryProvider>
-          {children}
+          <AlertProvider>
+            {children}
+            <Alert />
+          </AlertProvider>
         </QueryProvider>
       </body>
     </html>

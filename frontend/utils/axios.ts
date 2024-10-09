@@ -23,6 +23,7 @@ api.interceptors.request.use(function(reqconf) {
   return reqconf
 }, function(error) {
   console.error(`request error ${error}`)
+  return Promise.reject(error)
 })
 
 api.interceptors.response.use(function(response) {
@@ -30,9 +31,7 @@ api.interceptors.response.use(function(response) {
   return response
 }, async function(error) {
   // Status code outside range of 2xx
-  console.error(error)
-
-  if (error.response.status === 401) {
+  if (error.response.status === 401 && error.config.url !== "user/login") {
     try {
       const oldAccessToken = localStorage.getItem(config.accessTokenKey)
       const refreshToken = localStorage.getItem(config.refreshTokenKey)
@@ -55,7 +54,7 @@ api.interceptors.response.use(function(response) {
       localStorage.removeItem(config.accessTokenKey)
       localStorage.removeItem(config.refreshTokenKey)
 
-      window.location.href = "/login"
+      // window.location.href = "/login"
 
       return Promise.reject(error)
     }
