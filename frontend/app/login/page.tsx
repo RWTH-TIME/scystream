@@ -7,17 +7,19 @@ import Input from "@/components/inputs/Input"
 import InputAdornment from "@/components/inputs/InputAdornment"
 import PageWithHeader from "@/components/layout/PageWithHeader"
 import { useLoginMutation } from "@/mutations/userMutation"
+import { useAlert } from "@/hooks/useAlert"
 
 export default function Login() {
+  const { setAlert } = useAlert()
   const [mail, setMail] = useState<string>("")
   const [password, setPassword] = useState<string>("")
   const [showPass, setShowPass] = useState<boolean>(false)
 
-  const { mutateAsync } = useLoginMutation()
+  const { mutate } = useLoginMutation(setAlert)
 
   async function logIn(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    await mutateAsync({ email: mail, password })
+    mutate({ email: mail, password })
   }
 
   return (

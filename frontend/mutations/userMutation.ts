@@ -1,8 +1,9 @@
 import { useMutation } from "@tanstack/react-query"
+import type { AxiosError } from "axios"
 import { api } from "@/utils/axios"
 import { getConfig } from "@/utils/config"
 import type { setAlertType } from "@/hooks/useAlert"
-import { AlertType } from "@/hooks/useAlert"
+import displayStandardAxiosErrors from "@/utils/errors"
 
 const config = getConfig()
 
@@ -27,15 +28,14 @@ function useRegisterMutation(setAlert: setAlertType) {
       const response = await api.post(REGISTER_ENDPOINT, JSON.stringify(user))
       return response.data
     },
-    onError: (error) => {
-      // TODO: handle error  more specifically, depending on the backend response
-      setAlert("Registration failed. Please try again later.", AlertType.ERROR)
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
       console.error(`Registration failed: ${error}`)
     }
   })
 }
 
-function useLoginMutation() {
+function useLoginMutation(setAlert: setAlertType) {
   return useMutation({
     mutationFn: async function login(user: UserDTO) {
       const response = await api.post(LOGIN_ENDPOINT, JSON.stringify(user))
@@ -45,8 +45,8 @@ function useLoginMutation() {
 
       return response.data
     },
-    onError: (error) => {
-      // TODO: handle error
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
       console.error(`Login failed ${error}`)
     },
     onSuccess: () => {
@@ -66,7 +66,6 @@ function useRefreshMutation() {
       return response.data
     },
     onError: (error) => {
-      // TODO: Notify user
       console.error(`Refreshing failed: ${error}`)
     }
   })

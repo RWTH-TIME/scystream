@@ -23,16 +23,17 @@ api.interceptors.request.use(function(reqconf) {
   return reqconf
 }, function(error) {
   console.error(`request error ${error}`)
+  return Promise.reject(error)
 })
 
 api.interceptors.response.use(function(response) {
   // Status code in range of 2xx
   return response
 }, async function(error) {
+  const { config } = error
+  console.log(config.url)
   // Status code outside range of 2xx
-  console.error(error)
-
-  if (error.response.status === 401) {
+  if (error.response.status === 401 && config.url === "user/login") {
     try {
       const oldAccessToken = localStorage.getItem(config.accessTokenKey)
       const refreshToken = localStorage.getItem(config.refreshTokenKey)
