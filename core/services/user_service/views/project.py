@@ -65,10 +65,10 @@ async def read_all_projects():
         raise handle_error(e)
 
 
-@router.put("/update", response_model=UpdateProjectResponse)
-async def update_project(data: UpdateProjectRequest):
+@router.put("/rename", response_model=UpdateProjectResponse)
+async def rename_project(data: UpdateProjectRequest):
     try:
-        updated_project = project_controller.update_project(
+        updated_project = project_controller.rename_project(
             data.project_uuid,
             data.new_name
         )

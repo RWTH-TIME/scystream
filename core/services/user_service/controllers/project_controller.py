@@ -6,6 +6,7 @@ from typing import List
 from utils.database.session_injector import get_database
 from services.user_service.models.project import Project
 from services.user_service.models.user import User
+from services.user_service.models.block import Block
 
 
 # Create, Read, Update, Delete. ReadAll, ReadByUserUuid
@@ -43,8 +44,7 @@ def read_project(project_uuid: UUID) -> Project:
     return project
 
 
-# split into rename, add users, add blocks, delete users, delete blocks?
-def update_project(project_uuid: UUID, new_name: str) -> Project:
+def rename_project(project_uuid: UUID, new_name: str) -> Project:
     db: Session = next(get_database())
 
     project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
@@ -53,13 +53,122 @@ def update_project(project_uuid: UUID, new_name: str) -> Project:
         raise ValueError("Project not found")
 
     project.name = new_name
-    # add relation with users? adding current user to the project?
-    # add relation with blocks
 
     db.commit()
     db.refresh(project)
 
     return project
+
+
+def add_user(project_uuid: UUID, user_uuid: UUID) -> None:
+    db: Session = next(get_database())
+
+    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
+
+    if not project:
+        raise ValueError("Project not found")
+
+    user = db.query(User).filter_by(uuid=user_uuid).one_or_none()
+    if not user:
+        raise ValueError("User not found")
+
+    if user in project.users:
+        raise ValueError("User is already added to the project")
+
+    project.users.append(user)
+
+    db.commit()
+
+    return None
+
+
+def delete_user(project_uuid: UUID, user_uuid: UUID) -> None:
+    db: Session = next(get_database())
+
+    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
+
+    if not project:
+        raise ValueError("Project not found")
+
+    user = db.query(User).filter_by(uuid=user_uuid).one_or_none()
+    if not user:
+        raise ValueError("User not found")
+
+    if user not in project.users:
+        raise ValueError("User is not part of the project")
+
+    project.users.remove(user)
+
+    db.commit()
+
+    return None
+
+
+def add_block(project_uuid: UUID, block_uuid: UUID) -> None:
+    db: Session = next(get_database())
+
+    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
+
+    if not project:
+        raise ValueError("Project not found")
+
+    block = db.query(Block).filter_by(uuid=block_uuid).one_or_none()
+    if not block:
+        raise ValueError("Block not found")
+
+    if block in project.blocks:
+        raise ValueError("Block is already added to the project")
+
+    project.blocks.append(block)
+
+    db.commit()
+
+    return None
+
+
+def delete_block(project_uuid: UUID, block_uuid: UUID) -> None:
+    db: Session = next(get_database())
+
+    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
+
+    if not project:
+        raise ValueError("Project not found")
+
+    block = db.query(Block).filter_by(uuid=block_uuid).one_or_none()
+    if not block:
+        raise ValueError("Block not found")
+
+    if block not in project.blocks:
+        raise ValueError("Block is not part of the project")
+
+    project.blocks.remove(block)
+
+    db.commit()
+
+    return None
+
+
+def update_block(project_uuid: UUID, block_uuid: UUID,
+                 new_block_name: str) -> None:
+    db: Session = next(get_database())
+
+    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
+
+    if not project:
+        raise ValueError("Project not found")
+
+    block = db.query(Block).filter_by(uuid=block_uuid).one_or_none()
+    if not block:
+        raise ValueError("Block not found")
+
+    if block not in project.blocks:
+        raise ValueError("Block is not part of the project")
+
+    block.name = new_block_name
+
+    db.commit()
+
+    return None
 
 
 def delete_project(project_uuid: UUID) -> None:
