@@ -4,9 +4,9 @@ import datetime
 from typing import List
 
 from utils.database.session_injector import get_database
-from services.user_service.models.project import Project
+from core.services.workflow_service.models.project import Project
 from services.user_service.models.user import User
-from services.user_service.models.block import Block
+from core.services.workflow_service.models.block import Block
 
 
 # Create, Read, Update, Delete. ReadAll, ReadByUserUuid

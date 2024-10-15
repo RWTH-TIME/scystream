@@ -3,7 +3,7 @@ from typing import List
 from uuid import UUID
 from utils.errors.error import handle_error
 
-from services.user_service.schemas.project import (
+from core.services.workflow_service.schemas.project import (
     Project,
     CreateProjectRequest,
     CreateProjectResponse,
@@ -17,7 +17,7 @@ from services.user_service.schemas.project import (
 )
 
 
-import services.user_service.controllers.project_controller as \
+import core.services.workflow_service.controllers.project_controller as \
     project_controller
 
 
