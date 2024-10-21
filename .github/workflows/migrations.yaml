@@ -58,7 +58,7 @@ jobs:
     
     outputs:
       changed_migration_files: ${{ steps.migration-changes.outputs.all_changed_files }}
-      changed_model_file: ${{ steps.model-changes.outputs.all_changed_files }}
+      changed_model_files: ${{ steps.model-changes.outputs.all_changed_files }}
 
     
   prevent-changes:
@@ -99,8 +99,8 @@ jobs:
           MISSING_IMPORTS=()
 
           for line in $CHANGED_MODEL_FILES; do
-            model_name=$(basename "$model" .py)
-
+            model_name=$(basename "$line" .py)
+            
             # Is the model somewhere in the imports?
             if ! echo "$IMPORTS" | grep -q "$model_name"; then
               MISSING_IMPORTS+=("$model_name")
