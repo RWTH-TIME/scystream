@@ -1,0 +1,57 @@
+name: Migrations
+on:
+  pull_request:
+
+jobs:
+  detect-diffs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Changes in models directories
+        id: model-changes
+        uses: tj-actions/changed-files@v45
+        with:
+          path: "core/services"
+          files: "./*/models/**"
+
+      - name: Model changes Output
+        env:
+          CHANGED_MODEL_FILES: ${{ steps.model-changes.output.all_changed_files }}
+        run: |
+          for file in "${CHANGED_MODEL_FILES}"; do
+            echo "$file was changed"
+          done
+
+      - name: Changes in migrations
+        id: migration-changes
+        uses: tj-actions/changed-files@v45
+        with:
+          path: "core/alembic/versions"
+          files: "*.py"
+
+      - name: Migration changes Output
+        env:
+          CHANGED_MIGRATION_FILES: ${{ steps.migration-changes.output.all-changed_files }}
+        run: |
+          for file in ${CHANGED_MIGRATION_FILES}; do
+            echo "$file was changed"
+          done
+  
+      - name: Validate Changes
+        env:
+          CHANGED_MODEL_FILES: ${{ steps.model-changes.output.all_changed_files }}
+          CHANGED_MIGRATION_FILES: ${{ steps.migration-changes.output.all-changed_files }}
+        run: |
+          if [[ -n "$CHANGED_MODEL_FILES" && -z "$CHANGED_MIGRATION_FILES" ]]; then
+            echo "Model Chages detected, but no corresponding migration changes."
+            exit 1
+          fi
+
+          if [[ -n "$CHANGED_MIGRATION_FILES" && -z "$CHANGED_MODEL_FILES" ]]; then
+            echo "Migration Changes detected, but no corresponding model changes."
+            exit 1
+          fi
+          
+          echo "Changes look valid."
