@@ -81,3 +81,51 @@ jobs:
               exit 1
             fi
           done
+  
+  check-migrations:
+    runs-on: ubuntu-latest
+    needs: prevent-changes
+    services:
+      postgres:
+        image: postgres:13
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: core
+          POSTGRES_PASSWORD: core
+          POSTGRES_DB: core
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          cache: 'pip'
+
+      - name: Install requirements
+        working-directory: ./core
+        run: pip install -r requirements.txt
+      
+      - name: Create .env File
+        working-directory: ./core
+        run: |
+          echo "DATABASE_HOST=localhost" >> .env
+      
+      - name: Run Migrations
+        working-directory: ./core
+        run: alembic upgrade head
+
+      - name: Check Migrations
+        working-directory: ./core
+        run: alembic check
+
+
