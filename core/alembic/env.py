@@ -15,6 +15,7 @@ We need to load all models or alembic will not recognize table changes,
 Keep in mind to ignore the linting in this case, we do not use these models
 """
 from services.user_service.models.user import User  # noqa: F401
+from services.user_service.models.test import Test  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
