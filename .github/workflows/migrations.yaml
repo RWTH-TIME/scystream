@@ -1,0 +1,146 @@
+name: Migrations
+on:
+  pull_request:
+
+jobs:
+  detect-diffs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Changes in models directories
+        id: model-changes
+        uses: tj-actions/changed-files@v45
+        with:
+          path: "core/services"
+          files: "./*/models/**"
+
+      - name: Model changes output
+        env:
+          CHANGED_MODEL_FILES: ${{ steps.model-changes.outputs.all_changed_files }}
+        run: |
+          for file in "${CHANGED_MODEL_FILES}"; do
+            echo "$file was changed"
+          done
+
+      - name: Changes in migrations
+        id: migration-changes
+        uses: tj-actions/changed-files@v45
+        with:
+          path: "core/alembic/versions"
+          files: "*.py"
+
+      - name: Migration changes output
+        env:
+          CHANGED_MIGRATION_FILES: ${{ steps.migration-changes.outputs.all_changed_files }}
+        run: |
+          for file in ${CHANGED_MIGRATION_FILES}; do
+            echo "$file was changed"
+          done           
+    
+    outputs:
+      changed_migration_files: ${{ steps.migration-changes.outputs.all_changed_files }}
+      changed_model_files: ${{ steps.model-changes.outputs.all_changed_files }}
+
+    
+  prevent-changes:
+    runs-on: ubuntu-latest
+    needs: detect-diffs
+    steps:
+      - name: Checkout Repository 
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.base_ref }}
+      
+      - name: prevent-changes-to-existing-migrations
+        run: |
+          EXISTING_MIGRATIONS=$(git ls-tree -r HEAD --name-only | grep "core/alembic/versions/.*\.py")
+          CHANGED_MIGRATION_FILES="${{ needs.detect-diffs.outputs.changed_migration_files }}"
+          
+          for changed_migration in $CHANGED_MIGRATION_FILES; do
+            if echo $EXISTING_MIGRATIONS | grep "$changed_migration"; then
+              echo "An already existing migration should not be edited!"
+              exit 1
+            fi
+          done
+  
+  check-missing-imports:
+    runs-on: ubuntu-latest
+    needs: detect-diffs
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check for Missing imports in alembic
+        id: missing-imports
+        run: |
+          CHANGED_MODEL_FILES="${{ needs.detect-diffs.outputs.changed_model_files }}"
+
+          IMPORTS=$(grep -oP "from services\.\w+\.models\.\w+ import \w+" core/alembic/env.py)
+          MISSING_IMPORTS=()
+
+          for line in $CHANGED_MODEL_FILES; do
+            model_name=$(basename "$line" .py)
+            
+            # Is the model somewhere in the imports?
+            if ! echo "$IMPORTS" | grep -q "$model_name"; then
+              MISSING_IMPORTS+=("$model_name")
+            fi
+          done
+
+          if [ ${#MISSING_IMPORTS[@]} -ne 0 ]; then
+            echo "You probably forget to import follwoing models within the alembic/env file: ${MISSING_IMPORTS[*]}"
+            exit 1
+          fi 
+
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: core
+          POSTGRES_PASSWORD: core
+          POSTGRES_DB: core
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          cache: 'pip'
+
+      - name: Install requirements
+        working-directory: ./core
+        run: pip install -r requirements.txt
+      
+      - name: Create .env File
+        working-directory: ./core
+        run: |
+          echo "DATABASE_HOST=localhost" >> .env
+      
+      - name: Run Migrations UP
+        working-directory: ./core
+        run: alembic upgrade head
+
+      - name: Run alembic check
+        working-directory: ./core
+        run: |
+          alembic check
+       
+      - name: Run Migrations DOWN
+        working-directory: ./core
+        run: alembic downgrade base
