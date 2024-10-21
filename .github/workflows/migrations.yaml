@@ -18,7 +18,7 @@ jobs:
 
       - name: Model changes Output
         env:
-          CHANGED_MODEL_FILES: ${{ steps.model-changes.output.all_changed_files }}
+          CHANGED_MODEL_FILES: ${{ steps.model-changes.outputs.all_changed_files }}
         run: |
           for file in "${CHANGED_MODEL_FILES}"; do
             echo "$file was changed"
@@ -33,7 +33,7 @@ jobs:
 
       - name: Migration changes Output
         env:
-          CHANGED_MIGRATION_FILES: ${{ steps.migration-changes.output.all-changed_files }}
+          CHANGED_MIGRATION_FILES: ${{ steps.migration-changes.outputs.all_changed_files }}
         run: |
           for file in ${CHANGED_MIGRATION_FILES}; do
             echo "$file was changed"
@@ -41,8 +41,8 @@ jobs:
   
       - name: Validate Changes
         env:
-          CHANGED_MODEL_FILES: ${{ steps.model-changes.output.all_changed_files }}
-          CHANGED_MIGRATION_FILES: ${{ steps.migration-changes.output.all-changed_files }}
+          CHANGED_MODEL_FILES: ${{ steps.model-changes.outputs.all_changed_files }}
+          CHANGED_MIGRATION_FILES: ${{ steps.migration-changes.outputs.all_changed_files }}
         run: |
           if [[ -n "$CHANGED_MODEL_FILES" && -z "$CHANGED_MIGRATION_FILES" ]]; then
             echo "Model Chages detected, but no corresponding migration changes."
