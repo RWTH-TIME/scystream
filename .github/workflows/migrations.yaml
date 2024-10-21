@@ -45,7 +45,7 @@ jobs:
           CHANGED_MIGRATION_FILES: ${{ steps.migration-changes.outputs.all_changed_files }}
         run: |
           if [[ -n "$CHANGED_MODEL_FILES" && -z "$CHANGED_MIGRATION_FILES" ]]; then
-            echo "Model Chages detected, but no corresponding migration changes."
+            echo "Model Chages detected, but no corresponding migration changes. Create the corresponding migrations."
             exit 1
           fi
 
@@ -55,3 +55,16 @@ jobs:
           fi
           
           echo "Changes look valid."
+
+  prevent-changes:
+    run: |
+      EXISTING_MIGRATIONS=$(git ls-tree -r HEAD --name-only | grep "core/alembic/versions/.*\.py")
+
+      for migration in $EXISTING_MIGRATION; do
+        if git diff --name-only HEAD | grep "$migration"; then
+          echo "An already existing migration should not be edited!"
+          exit 1
+        fi
+      done
+
+
