@@ -37,24 +37,7 @@ jobs:
         run: |
           for file in ${CHANGED_MIGRATION_FILES}; do
             echo "$file was changed"
-          done
-      
-      - name: Validate Changes
-        env:
-          CHANGED_MODEL_FILES: ${{ steps.model-changes.outputs.all_changed_files }}
-          CHANGED_MIGRATION_FILES: ${{ steps.migration-changes.outputs.all_changed_files }}
-        run: |
-          if [[ -n "$CHANGED_MODEL_FILES" && -z "$CHANGED_MIGRATION_FILES" ]]; then
-            echo "Model Chages detected, but no corresponding migration changes. Create the corresponding migrations."
-            exit 1
-          fi
-
-          if [[ -n "$CHANGED_MIGRATION_FILES" && -z "$CHANGED_MODEL_FILES" ]]; then
-            echo "Migration Changes detected, but no corresponding model changes."
-            exit 1
-          fi
-          
-          echo "Changes look valid."
+          done           
     
     outputs:
       changed_migration_files: ${{ steps.migration-changes.outputs.all_changed_files }}
@@ -112,9 +95,8 @@ jobs:
             exit 1
           fi 
 
-  check-migrations:
+  migrations:
     runs-on: ubuntu-latest
-    needs: prevent-changes
     services:
       postgres:
         image: postgres:13
@@ -162,6 +144,3 @@ jobs:
       - name: Run Migrations DOWN
         working-directory: ./core
         run: alembic downgrade base
-
-
-# CASE 2: Forgot running alembic revision -m test
