@@ -29,7 +29,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("uuid"),
         sa.UniqueConstraint("email"),
     )
-    print("edit")
     # ### end Alembic commands ###
 
 
