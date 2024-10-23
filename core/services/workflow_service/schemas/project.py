@@ -14,7 +14,8 @@ class Project(BaseModel):
     blocks: List[UUID]
 
     class Config:
-        orm_mode = True  # ORM mode: easy conversion from SQLAlchemy objects
+        from_attributes = True
+        # helps with converting sqlalchemy models into pydantic models
 
 
 class CreateProjectRequest(BaseModel):

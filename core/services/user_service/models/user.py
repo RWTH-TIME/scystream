@@ -1,5 +1,6 @@
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, String, LargeBinary, relationship
+from sqlalchemy import Column, String, LargeBinary
+from sqlalchemy.orm import relationship
 
 import uuid
 
