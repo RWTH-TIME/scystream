@@ -1,4 +1,5 @@
 from uuid import UUID, uuid4
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 import datetime
 from typing import List
@@ -9,8 +10,6 @@ from services.user_service.models.user import User
 from core.services.workflow_service.models.block import Block
 
 
-# Create, Read, Update, Delete. ReadAll, ReadByUserUuid
-# Still missing any field validation (empty name, uuid is not UUID..)
 # Does current uuid need to be extracted from the token?
 def create_project(name: str,  current_user_uuid: UUID) -> UUID:
     db: Session = next(get_database())
@@ -23,8 +22,9 @@ def create_project(name: str,  current_user_uuid: UUID) -> UUID:
                     .one_or_none())
 
     if not current_user:
-        raise ValueError("User not found")
-    # add relation with blocks?
+        raise HTTPException(404, detail="User not found")
+
+    # TODO: add relation with blocks
 
     db.add(project)
     db.commit()
@@ -50,7 +50,7 @@ def rename_project(project_uuid: UUID, new_name: str) -> Project:
     project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
 
     if not project:
-        raise ValueError("Project not found")
+        raise HTTPException(status_code=404, detail="Project not found")
 
     project.name = new_name
 

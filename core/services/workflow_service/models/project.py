@@ -1,10 +1,10 @@
-from sqlalchemy.dialects.postgresql import UUID
+from uuid import UUID
 from sqlalchemy import Column, String, DateTime
 from sqlalchemy.orm import relationship
 
 import uuid
 
-import datetime
+from datetime import datetime
 from utils.database.connection import Base
 
 

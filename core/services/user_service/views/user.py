@@ -67,6 +67,6 @@ async def test_auth_endpoint(
     token_data: dict = Depends(authenticate_token)
 ):
     return RefreshAccessResponse(
-            access_token=data.access_token,
+            new_access_token=data.access_token,
             refresh_token=data.refresh_token
         )

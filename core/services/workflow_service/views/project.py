@@ -1,54 +1,53 @@
-from fastapi import APIRouter, HTTPException
-from typing import List
+from fastapi import APIRouter, Depends
 from uuid import UUID
 from utils.errors.error import handle_error
+
+import core.services.workflow_service.controllers.project_controller as \
+    project_controller
+
+from services.user_service.middleware.authenticate_token \
+    import authenticate_token
 
 from core.services.workflow_service.schemas.project import (
     Project,
     CreateProjectRequest,
     CreateProjectResponse,
     ReadProjectRequest,
-    ReadProjectResponse,
+    ReadByUserResponse,
     ReadAllResponse,
-    UpdateProjectRequest,
-    UpdateProjectResponse,
-    DeleteProjectRequest,
-    DeleteProjectResponse
+    RenameProjectRequest,
+    DeleteProjectRequest
 )
-
-
-import core.services.workflow_service.controllers.project_controller as \
-    project_controller
 
 
 router = APIRouter(prefix="/project", tags=["project"])
 
 
-# Create, Read, ReadByUserUuid, ReadAll, Update, Delete
 @router.post("/create", response_model=CreateProjectResponse)
-async def create_project(data: CreateProjectRequest):
+async def create_project(
+    data: CreateProjectRequest,
+    token_data: dict = Depends(authenticate_token)
+):
     try:
         project_uuid = project_controller.create_project(
             data.name,
-            data.current_user_uuid
+            token_data.get("user_uuid")
         )
         return CreateProjectResponse(project_uuid=project_uuid)
     except Exception as e:
         raise handle_error(e)
 
 
-@router.get("/read", response_model=ReadProjectResponse)
+@router.get("/read", response_model=Project)
 async def read_project(data: ReadProjectRequest):
     try:
         project = project_controller.read_project(data.project_uuid)
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
         return project
     except Exception as e:
         raise handle_error(e)
 
 
-@router.get("/read_by_user", response_model=List[Project])
+@router.get("/read_by_user", response_model=ReadByUserResponse)
 async def read_projects_by_user(user_uuid: UUID):
     try:
         return project_controller.read_projects_by_user_uuid(user_uuid)
@@ -65,22 +64,21 @@ async def read_all_projects():
         raise handle_error(e)
 
 
-@router.put("/rename", response_model=UpdateProjectResponse)
-async def rename_project(data: UpdateProjectRequest):
+@router.put("/rename", response_model=Project)
+async def rename_project(data: RenameProjectRequest):
     try:
         updated_project = project_controller.rename_project(
             data.project_uuid,
             data.new_name
         )
-        return UpdateProjectResponse(updated_project)
+        return updated_project
     except Exception as e:
         raise handle_error(e)
 
 
-@router.delete("/delete", response_model=DeleteProjectResponse)
+@router.delete("/delete", status_code=200)
 async def delete_project(data: DeleteProjectRequest):
     try:
         project_controller.delete_project(data.project_uuid)
-        return DeleteProjectResponse(detail="Project deleted successfully")
     except Exception as e:
         raise handle_error(e)

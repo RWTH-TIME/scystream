@@ -1,5 +1,5 @@
 from fastapi import HTTPException, Request
-from utils.helper.jwt import verify_token
+from utils.helper.jwt import decode_token
 
 
 def authenticate_token(request: Request):
@@ -28,6 +28,6 @@ def authenticate_token(request: Request):
             detail="Access token is missing or invalid"
         )
 
-    payload = verify_token(token)
+    payload = decode_token(token)
 
     return payload

@@ -1,12 +1,11 @@
 from uuid import UUID
 
 from pydantic import BaseModel
-from utils.helper.jwt import decode_token
-from fastapi import Depends
 from datetime import datetime
 from typing import List
 
 
+# TODO:Still missing any field validation (empty name, uuid is not UUID..)
 class Project(BaseModel):
     uuid: UUID
     name: str
@@ -20,7 +19,6 @@ class Project(BaseModel):
 
 class CreateProjectRequest(BaseModel):
     name: str
-    current_user_uuid: UUID = Depends(decode_token)
 
 
 class CreateProjectResponse(BaseModel):
@@ -29,10 +27,6 @@ class CreateProjectResponse(BaseModel):
 
 class ReadProjectRequest(BaseModel):
     project_uuid: UUID
-
-
-class ReadProjectResponse(Project):
-    pass
 
 
 class ReadByUserRequest(BaseModel):
@@ -47,18 +41,10 @@ class ReadAllResponse(BaseModel):
     projects: List[Project]
 
 
-class UpdateProjectRequest(BaseModel):
+class RenameProjectRequest(BaseModel):
     project_uuid: UUID
     new_name: str
 
 
-class UpdateProjectResponse(Project):
-    pass
-
-
-class DeleteProjectRequest():
+class DeleteProjectRequest(BaseModel):
     project_uuid: UUID
-
-
-class DeleteProjectResponse():
-    detail: str
