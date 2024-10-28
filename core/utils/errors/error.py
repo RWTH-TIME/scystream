@@ -6,7 +6,6 @@ from psycopg2.errors import (
     ForeignKeyViolation,
     NotNullViolation,
 )
-
 import logging
 
 """

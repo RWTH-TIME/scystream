@@ -78,6 +78,15 @@ jobs:
           tags: |
             type=ref,event=pr
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+      
+      - name: Define build args
+        id: define_build_args
+        run: |
+          if [ "${{ matrix.context }}" == "frontend" ]; then
+            echo "BUILD_ARGS=NEXT_PUBLIC_API_URL=${{ secrets.BUILD_API_URL }}" >> $GITHUB_ENV
+          else
+            echo "BUILD_ARGS=" >> $GITHUB_ENV
+          fi
 
       - name: Build and push docker images
         uses: docker/build-push-action@v5
@@ -86,4 +95,24 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: ${{ env.BUILD_ARGS }}
 
+    
+  deploy:
+    name: Deploy Docker containers
+    runs-on: self-hosted
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Write SSH keys
+        run: |
+          install -m 600 -D /dev/null ~/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/id_rsa
+ 
+      - name: SSH Deploy
+        run: |
+          ssh -i ~/id_rsa -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOSTNAME }} << 'EOF'
+            docker pull ${{ env.REGISTRY }}/rwth-time/scystream/scystream-frontend:latest
+            docker pull ${{ env.REGISTRY }}/rwth-time/scystream/scystream-core:latest
+            docker compose down && docker compose up -d
+          EOF
