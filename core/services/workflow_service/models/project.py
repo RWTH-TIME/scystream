@@ -19,4 +19,5 @@ class Project(Base):
     users = relationship("User", secondary="user_project",
                          back_populates="projects")
 
-    blocks = relationship("Block", back_populates="blocks")
+    blocks = relationship("Block", back_populates="project",
+                          cascade="all, delete-orphan")

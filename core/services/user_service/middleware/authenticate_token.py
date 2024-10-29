@@ -24,5 +24,5 @@ def authenticate_token(request: Request):
         raise HTTPException(
             status_code=401, detail="Access token is missing or invalid"
         )
-        
+
     return decode_token(token)

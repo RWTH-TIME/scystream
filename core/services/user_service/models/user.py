@@ -15,4 +15,4 @@ class User(Base):
     password = Column(LargeBinary, nullable=False)
 
     projects = relationship("Project", secondary="user_project",
-                            back_populates="projects")
+                            back_populates="users")
