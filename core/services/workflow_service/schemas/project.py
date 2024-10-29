@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import List
 
 
-# TODO:Still missing any field validation (empty name, uuid is not UUID..)
+# TODO:Still missing some field validation (empty name...)
 class Project(BaseModel):
     uuid: UUID
     name: str
