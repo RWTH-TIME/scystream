@@ -66,4 +66,3 @@ async def test_auth_endpoint(
         new_access_token=data.old_access_token,
         refresh_token=data.refresh_token,
     )
-
