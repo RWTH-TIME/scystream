@@ -7,13 +7,14 @@ from alembic import context
 
 from utils.database.connection import SQLALCHEMY_DATABASE_URL
 
+from utils.database.connection import Base
 
 """
 Import all your models here.
 We need to load all models or alembic will not recognize table changes,
-don't forget to add the models Base to target_metadata
+Keep in mind to ignore the linting in this case, we do not use these models
 """
-from services.user_service.models.user import User
+from services.user_service.models.user import User  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -34,7 +35,7 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.metadata
 ####
-target_metadata = [User.metadata]
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
