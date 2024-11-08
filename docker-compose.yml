@@ -32,7 +32,7 @@ x-airflow-common:
 services:
   redis-airflow:
     # Redis is limited to 7.2-bookworm due to licencing change
-    image: redis:7.2-bookworm
+    image: redis:7.4-bookworm
     expose:
       - 6379
     healthcheck:
