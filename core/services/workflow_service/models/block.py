@@ -36,6 +36,7 @@ class Block(Base):
                                                          ondelete="CASCADE"))
     # Task specific columns
     block_type = Column(Enum(OperatorType), nullable=False)
+    # This can contain a lot of optional parameters
     parameters = Column(JSON, nullable=True)
     priority_weight = Column(Integer, nullable=True)
     retries = Column(Integer, default=0)
@@ -46,8 +47,7 @@ class Block(Base):
 
     project = relationship("Project", back_populates="blocks")
 
-    # airflow allows unlimited upstream tasks, I chose two,
-    #  might need to add more later
+    # airflow allows unlimited upstream tasks
     upstream_blocks = relationship(
         "Block",
         secondary=block_dependencies,
@@ -55,4 +55,3 @@ class Block(Base):
         secondaryjoin=uuid == block_dependencies.c.parent_block_uuid,
         backref="downstream_blocks"
     )
- 

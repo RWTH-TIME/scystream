@@ -22,7 +22,7 @@ class Project(Base):
     catchup = Column(Boolean, default=False)
     concurrency = Column(Integer, nullable=True, default=1)
     default_retries = Column(Integer, default=1)
-    dag_timeout = Column(Integer, nullable=True) 
+    dag_timeout = Column(Integer, nullable=True)
 
     users = relationship("User", secondary="user_project",
                          back_populates="projects")
