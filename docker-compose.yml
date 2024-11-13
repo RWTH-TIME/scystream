@@ -44,7 +44,7 @@ services:
     restart: always
   
   postgres-airflow:
-    image: postgres:13
+    image: postgres:17
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
@@ -245,7 +245,7 @@ services:
         condition: service_healthy
 
   core-postgres:
-    image: postgres:13
+    image: postgres:17
     ports:
       - "5432:5432"
     environment:
