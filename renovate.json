@@ -40,7 +40,7 @@
             "enabled": false
         },
         {
-            "_comment": "Prevent updates for postgres-airflow (specifically postgres:14 or below)",
+            "_comment": "Prevent updates for postgres-airflow because of dependencies",
             "matchPackageNames": [
                 "postgres-airflow"
             ],
