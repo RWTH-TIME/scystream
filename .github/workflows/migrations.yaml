@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:13
+        image: postgres:17
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
