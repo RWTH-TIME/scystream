@@ -33,7 +33,7 @@
             ]
         },
         {
-            "_comment": "We dont want redis to be updated due to licencing changes",
+            "_comment": "We dont want redis to be updated due to licensing changes",
             "matchPackageNames": [
                 "redis"
             ],
