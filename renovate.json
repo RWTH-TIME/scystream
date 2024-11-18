@@ -31,6 +31,20 @@
             "matchUpdateTypes": [
                 "major"
             ]
+        },
+        {
+            "_comment": "We dont want redis to be updated due to licensing changes",
+            "matchPackageNames": [
+                "redis"
+            ],
+            "enabled": false
+        },
+        {
+            "_comment": "Prevent updates for postgres-airflow because of dependencies",
+            "matchPackageNames": [
+                "postgres-airflow"
+            ],
+            "enabled": false
         }
     ]
 }
