@@ -6,6 +6,7 @@ import uuid
 
 from datetime import datetime
 from utils.database.connection import Base
+from .block import Block
 
 
 class Project(Base):
@@ -19,5 +20,5 @@ class Project(Base):
     users = relationship("User", secondary="user_project",
                          back_populates="projects")
 
-    blocks = relationship("Block", back_populates="project",
+    blocks = relationship(Block, back_populates="project",
                           cascade="all, delete-orphan")

@@ -5,6 +5,8 @@ from sqlalchemy.orm import relationship
 import uuid
 
 from utils.database.connection import Base
+from services.workflow_service.models.user_project import UserProject
+from services.workflow_service.models.project import Project
 
 
 class User(Base):
@@ -14,5 +16,5 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     password = Column(LargeBinary, nullable=False)
 
-    projects = relationship("Project", secondary="user_project",
+    projects = relationship(Project, secondary=UserProject.__tablename__,
                             back_populates="users")
