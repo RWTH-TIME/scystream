@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends
 from uuid import UUID
 from utils.errors.error import handle_error
 
-import core.services.workflow_service.controllers.project_controller as \
+import services.workflow_service.controllers.project_controller as \
     project_controller
 
 from services.user_service.middleware.authenticate_token \
     import authenticate_token
 
-from core.services.workflow_service.schemas.project import (
+from services.workflow_service.schemas.project import (
     Project,
     CreateProjectRequest,
     CreateProjectResponse,
@@ -23,7 +23,7 @@ from core.services.workflow_service.schemas.project import (
 router = APIRouter(prefix="/project", tags=["project"])
 
 
-@router.post("/create", response_model=CreateProjectResponse)
+@router.post("/", response_model=CreateProjectResponse)
 async def create_project(
     data: CreateProjectRequest,
     token_data: dict = Depends(authenticate_token)
@@ -31,14 +31,14 @@ async def create_project(
     try:
         project_uuid = project_controller.create_project(
             data.name,
-            token_data.get("user_uuid")
+            token_data.get("uuid")
         )
         return CreateProjectResponse(project_uuid=project_uuid)
     except Exception as e:
         raise handle_error(e)
 
 
-@router.get("/read", response_model=Project)
+@router.get("/", response_model=Project)
 async def read_project(data: ReadProjectRequest):
     try:
         project = project_controller.read_project(data.project_uuid)
@@ -64,7 +64,8 @@ async def read_all_projects():
         raise handle_error(e)
 
 
-@router.put("/rename", response_model=Project)
+# TODO: Rename function aswell
+@router.put("/", response_model=Project)
 async def rename_project(data: RenameProjectRequest):
     try:
         updated_project = project_controller.rename_project(
@@ -76,7 +77,7 @@ async def rename_project(data: RenameProjectRequest):
         raise handle_error(e)
 
 
-@router.delete("/delete", status_code=200)
+@router.delete("/", status_code=200)
 async def delete_project(data: DeleteProjectRequest):
     try:
         project_controller.delete_project(data.project_uuid)

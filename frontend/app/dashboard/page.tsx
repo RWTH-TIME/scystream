@@ -10,9 +10,10 @@ import type { Project } from "@/utils/types"
 import { useAlert } from "@/hooks/useAlert"
 
 export default function Dashboard() {
-  const { setAlert } = useAlert()
-  const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined)
   const { signOut, loading } = useAuth()
+  const { setAlert } = useAlert()
+
+  const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined)
 
   const { mutate } = useTestMutation(setAlert)
 
@@ -23,7 +24,7 @@ export default function Dashboard() {
   return !loading ? (
     <PageWithHeader breadcrumbs={[{ text: "Dashboard", link: "/dashboard" }]}>
       <div className="flex">
-        <div className="w-1/6 h-screen shadow h-full">
+        <div className="w-1/6 min-h-screen max-h-fit shadow">
           <ProjectList selectedProject={selectedProject} setSelectedProject={setSelectedProject} />
         </div>
         <div>

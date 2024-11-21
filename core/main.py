@@ -1,4 +1,5 @@
 from services.user_service.views import user as user_view
+from services.workflow_service.views import project as project_view
 from utils.config.environment import ENV
 from utils.database.connection import engine
 from fastapi import FastAPI
@@ -37,3 +38,4 @@ app.add_middleware(
 
 
 app.include_router(user_view.router)
+app.include_router(project_view.router)

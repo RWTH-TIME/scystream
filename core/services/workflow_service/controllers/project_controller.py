@@ -5,21 +5,21 @@ import datetime
 from typing import List
 
 from utils.database.session_injector import get_database
-from core.services.workflow_service.models.project import Project
+from services.workflow_service.models.project import Project
 from services.user_service.models.user import User
-from core.services.workflow_service.models.block import Block
+from services.workflow_service.models.block import Block
 
 
-# Does current uuid need to be extracted from the token?
 def create_project(name: str,  current_user_uuid: UUID) -> UUID:
     db: Session = next(get_database())
     project: Project = Project()
 
     project.uuid = uuid4()
     project.name = name
-    project.created_at = datetime.utcnow()
-    current_user = (db.query(User).filter_by(uuid=current_user_uuid)
-                    .one_or_none())
+    project.created_at = datetime.datetime.utcnow()
+    current_user = (
+        db.query(User).filter_by(uuid=current_user_uuid).one_or_none()
+    )
 
     if not current_user:
         raise HTTPException(404, detail="User not found")
