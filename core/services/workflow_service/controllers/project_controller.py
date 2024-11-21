@@ -2,24 +2,25 @@ from uuid import UUID, uuid4
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 import datetime
-from typing import List
+from typing import List, Tuple
 
 from utils.database.session_injector import get_database
 from core.services.workflow_service.models.project import Project
 from services.user_service.models.user import User
-from core.services.workflow_service.models.block import Block
+from core.services.workflow_service.models.block import Block, OperatorType
 
 
 # Does current uuid need to be extracted from the token?
-def create_project(name: str,  current_user_uuid: UUID) -> UUID:
+def create_project(name: str, current_user_uuid: UUID) -> UUID:
     db: Session = next(get_database())
     project: Project = Project()
 
     project.uuid = uuid4()
     project.name = name
     project.created_at = datetime.utcnow()
-    current_user = (db.query(User).filter_by(uuid=current_user_uuid)
-                    .one_or_none())
+    current_user = (
+        db.query(User).filter_by(uuid=current_user_uuid).one_or_none()
+    )
 
     if not current_user:
         raise HTTPException(404, detail="User not found")
@@ -73,8 +74,9 @@ def add_user(project_uuid: UUID, user_uuid: UUID) -> None:
         raise HTTPException(status_code=404, detail="User not found")
 
     if user in project.users:
-        raise HTTPException(status_code=404,
-                            detail="User is already added to the project")
+        raise HTTPException(
+            status_code=404, detail="User is already added to the project"
+        )
 
     project.users.append(user)
 
@@ -96,8 +98,9 @@ def delete_user(project_uuid: UUID, user_uuid: UUID) -> None:
         raise HTTPException(status_code=404, detail="User not found")
 
     if user not in project.users:
-        raise HTTPException(status_code=404,
-                            detail="User is not part of the project")
+        raise HTTPException(
+            status_code=404, detail="User is not part of the project"
+        )
 
     project.users.remove(user)
 
@@ -106,21 +109,66 @@ def delete_user(project_uuid: UUID, user_uuid: UUID) -> None:
     return None
 
 
-def add_block(project_uuid: UUID, block_uuid: UUID) -> None:
+# Define operator types
+class OperatorType(enum.Enum):
+    POSTGRES = "PostgresOperator"
+    PYTHON = "PythonOperator"
+    MYSQL = "MySQLOperator"
+
+
+def add_new_block(
+    project_uuid: UUID,
+    name: str,
+    block_type: str,
+    parameters: str,
+    priority_weight: int,
+    retries: int,
+    retry_delay: int,
+    schedule_interval: str,
+    environment: str,
+    upstream_blocks_uuids: List[UUID],
+) -> None:
+
+    # Create bock
+    block: Block = Block()
+
+    block.name = name
+    block.uuid = uuid4()
+    block.project_uuid = project_uuid
+    block.block_type = block_type
+    block.parameters = parameters
+    block.priority_weight = priority_weight
+    block.retries = retries
+    block.retry_delay = retry_delay
+    block.schedule_interval = schedule_interval
+    block.environment = environment
+
+    for operator in OperatorType:
+        if operator.value == block_type:
+            block_type = operator
+            break 
+
     db: Session = next(get_database())
+
+    if upstream_blocks_uuids:
+        upstream_blocks = db.query(Block).filter(
+            Block.uuid.in_(upstream_blocks_uuids),
+            Block.project_uuid == project_uuid,
+        )
+
+    block.upstream_blocks = upstream_blocks
+
+    # Add block to db
 
     project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    block = db.query(Block).filter_by(uuid=block_uuid).one_or_none()
-    if not block:
-        raise HTTPException(status_code=404, detail="Block not found")
-
     if block in project.blocks:
-        raise HTTPException(status_code=404,
-                            detail="Block is already in the project")
+        raise HTTPException(
+            status_code=404, detail="Block is already in the project"
+        )
 
     project.blocks.append(block)
 
@@ -142,8 +190,9 @@ def delete_block(project_uuid: UUID, block_uuid: UUID) -> None:
         raise HTTPException(status_code=404, detail="Block not found")
 
     if block not in project.blocks:
-        raise HTTPException(status_code=404,
-                            detail="Block is not part of the project")
+        raise HTTPException(
+            status_code=404, detail="Block is not part of the project"
+        )
 
     project.blocks.remove(block)
 
@@ -152,8 +201,9 @@ def delete_block(project_uuid: UUID, block_uuid: UUID) -> None:
     return None
 
 
-def update_block(project_uuid: UUID, block_uuid: UUID,
-                 new_block_name: str) -> None:
+def update_block(
+    project_uuid: UUID, block_uuid: UUID, new_block_name: str
+) -> None:
     db: Session = next(get_database())
 
     project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
@@ -166,8 +216,9 @@ def update_block(project_uuid: UUID, block_uuid: UUID,
         raise HTTPException(status_code=404, detail="Block not found")
 
     if block not in project.blocks:
-        raise HTTPException(status_code=404,
-                            detail="Block is not part of the project")
+        raise HTTPException(
+            status_code=404, detail="Block is not part of the project"
+        )
 
     block.name = new_block_name
 
