@@ -47,11 +47,10 @@ class Block(Base):
 
     project = relationship("Project", back_populates="blocks")
 
-    # airflow allows unlimited upstream tasks
     upstream_blocks = relationship(
         "Block",
         secondary=block_dependencies,
-        primaryjoin=uuid == block_dependencies.c.child_block_uuid,
-        secondaryjoin=uuid == block_dependencies.c.parent_block_uuid,
+        primaryjoin=uuid == block_dependencies.c.downstream_block_uuid,
+        secondaryjoin=uuid == block_dependencies.c.upstream_block_uuid,
         backref="downstream_blocks"
     )

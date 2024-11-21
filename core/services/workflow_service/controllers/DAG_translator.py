@@ -1,80 +1,60 @@
-from airflow import DAG
-from airflow.operators.postgres_operator import PostgresOperator
-from airflow.operators.python_operator import PythonOperator
-from airflow.operators.mysql_operator import MySqlOperator
-from airflow.utils.dates import days_ago
-from datetime import timedelta
+from fastapi import HTTPException
+import networkx as nx
+from sqlalchemy.orm import Session
+from typing import Dict, Any
+from models.project import Project
+#from models.block import Block
 
 
-# translator from Project and Blocks to an Airflow DAG
-def create_dag_from_project(project):
-    # DAG based on project
-    dag = DAG(
-        dag_id=f"project_{project.uuid}",
-        schedule_interval=project.schedule_interval,
-        start_date=project.start_date,
-        catchup=project.catchup,
-        default_args={
-            'retries': project.default_retries,
-            'retry_delay': (
-                timedelta(seconds=project.dag_timeout)
-                if project.dag_timeout
-                else timedelta(minutes=5)
-            ),
-        },
-        concurrency=project.concurrency,
-        dagrun_timeout=(
-            timedelta(seconds=project.dag_timeout)
-            if project.dag_timeout
-            else None
-        )
-    )
+def parse_project_to_dag(project_uuid: str, db: Session) -> Dict[str, Any]:
+    """
+    Parses a project and its blocks into a DAG representation.
 
+    :param project_uuid: UUID of the project to parse.
+    :param db: SQLAlchemy database session.
+    :return: A dictionary containing DAG tasks and dependencies.
+    """
+    # Query the project
+    project = db.query(Project).filter_by(uuid=project_uuid).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Create a directed graph
+    graph = nx.DiGraph()
+
+    # Add nodes (tasks)
+    for block in project.blocks:
+        task_id = str(block.uuid)
+        graph.add_node(task_id, **{
+            "name": block.name,
+            "type": block.block_type.value,
+            "parameters": block.parameters,
+            "retries": block.retries,
+            "retry_delay": block.retry_delay,
+            "environment": block.environment,
+            "schedule_interval": block.schedule_interval,
+        })
+
+    # Add edges (dependencies)
+    for block in project.blocks:
+        for upstream in block.upstream_blocks:
+            graph.add_edge(str(upstream.uuid), str(block.uuid))
+
+    # Ensure the graph is a DAG
+    if not nx.is_directed_acyclic_graph(graph):
+        raise HTTPException(
+            status_code=400,
+            detail="The project is not acyclic."
+            )
+
+    # Convert to Airflow-compatible representation
     tasks = {}
+    dependencies = []
 
-    # tasks based on blocks
-    for block in project.blocks:
-        # Choose the right operator based on block_type
-        if block.block_type == OperatorType.POSTGRES:
-            tasks[block.uuid] = PostgresOperator(
-                task_id=f"task_{block.uuid}",
-                sql=block.parameters.get("sql"),
-                postgres_conn_id=block.environment.get("db_conn_id", "default_postgres_conn"),
-                dag=dag,
-            )
-        elif block.block_type == OperatorType.PYTHON:
-            # Define a callable for the PythonOperator
-            python_callable = load_callable(block.parameters.get("python_callable_path"))
-            tasks[block.uuid] = PythonOperator(
-                task_id=f"task_{block.uuid}",
-                python_callable=python_callable,
-                op_args=block.parameters.get("op_args", []),
-                op_kwargs=block.parameters.get("op_kwargs", {}),
-                dag=dag,
-            )
-        elif block.block_type == OperatorType.MYSQL:
-            tasks[block.uuid] = MySqlOperator(
-                task_id=f"task_{block.uuid}",
-                sql=block.parameters.get("sql"),
-                mysql_conn_id=block.environment.get("db_conn_id", "default_mysql_conn"),
-                dag=dag,
-            )
+    for node, data in graph.nodes(data=True):
+        tasks[node] = data
 
-    # Set task dependencies based on block dependencies
-    for block in project.blocks:
-        for upstream_block in block.upstream_blocks:
-            # >> is airflow-term for executing one before the other
-            tasks[upstream_block.uuid] >> tasks[block.uuid] 
+    for from_task, to_task in graph.edges:
+        dependencies.append({"from": from_task, "to": to_task})
 
-    return dag
-
-
-def load_callable(python_callable_path):
-    """
-    Utility function to import a Python callable by path.
-    Assumes format "module.submodule.function".
-    """
-    from importlib import import_module
-    module_path, func_name = python_callable_path.rsplit(".", 1)
-    module = import_module(module_path)
-    return getattr(module, func_name)
+    return {"tasks": tasks, "dependencies": dependencies}
