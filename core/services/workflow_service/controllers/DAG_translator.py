@@ -1,12 +1,12 @@
 from fastapi import HTTPException
 import networkx as nx
-from sqlalchemy.orm import Session
 from typing import Dict, Any
 from models.project import Project
-#from models.block import Block
+from project_controller import read_project
+# from models.block import Block
 
 
-def parse_project_to_dag(project_uuid: str, db: Session) -> Dict[str, Any]:
+def parse_project_to_dag(project_uuid: str) -> Dict[str, Any]:
     """
     Parses a project and its blocks into a DAG representation.
 
@@ -15,9 +15,7 @@ def parse_project_to_dag(project_uuid: str, db: Session) -> Dict[str, Any]:
     :return: A dictionary containing DAG tasks and dependencies.
     """
     # Query the project
-    project = db.query(Project).filter_by(uuid=project_uuid).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    project = read_project(project_uuid)
 
     # Create a directed graph
     graph = nx.DiGraph()

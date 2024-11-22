@@ -47,6 +47,7 @@ class Block(Base):
 
     project = relationship("Project", back_populates="blocks")
 
+    # think about logic again (differentiate btw up- and downstream)
     upstream_blocks = relationship(
         "Block",
         secondary=block_dependencies,
