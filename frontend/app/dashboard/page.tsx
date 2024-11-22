@@ -1,37 +1,30 @@
 "use client"
 
 import { useState } from "react"
-import Button from "@/components/Button"
 import PageWithHeader from "@/components/layout/PageWithHeader"
 import ProjectList from "@/components/ProjectList"
 import useAuth from "@/hooks/useAuth"
-import { useTestMutation } from "@/mutations/userMutation"
 import type { Project } from "@/utils/types"
-import { useAlert } from "@/hooks/useAlert"
 import Workbench from "@/components/Workbench"
+import LoadingAndError from "@/components/LoadingAndError"
 
 export default function Dashboard() {
-  const { signOut, loading } = useAuth()
-  const { setAlert } = useAlert()
+  const { loading } = useAuth()
 
   const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined)
 
-  const { mutate } = useTestMutation(setAlert)
-
-  function test() {
-    mutate({ old_access_token: "abc", refresh_token: "acs" })
-  }
-
-  return !loading ? (
-    <PageWithHeader breadcrumbs={[{ text: "Dashboard", link: "/dashboard" }]}>
-      <div className="flex">
-        <div className="w-1/6 min-h-screen max-h-fit shadow">
-          <ProjectList selectedProject={selectedProject} setSelectedProject={setSelectedProject} />
+  return (
+    <LoadingAndError loading={loading}>
+      <PageWithHeader breadcrumbs={[{ text: "Dashboard", link: "/dashboard" }]}>
+        <div className="flex">
+          <div className="w-1/4 min-h-screen max-h-fit shadow">
+            <ProjectList selectedProject={selectedProject} setSelectedProject={setSelectedProject} />
+          </div>
+          <div className="w-full h-full">
+            {selectedProject ? <Workbench selectedProject={selectedProject} /> : <>Select a Project...</>}
+          </div>
         </div>
-        <div className="w-full h-full">
-          <Workbench />
-        </div>
-      </div>
-    </PageWithHeader>
-  ) : (<></>)
+      </PageWithHeader>
+    </LoadingAndError>
+  )
 }

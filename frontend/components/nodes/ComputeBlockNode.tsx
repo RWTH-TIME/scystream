@@ -1,9 +1,5 @@
 import { Handle, Position } from "@xyflow/react"
 import React from "react"
-import { FileCopy, DataObjectSharp } from "@mui/icons-material"
-
-// As many handles as outputs/inputs
-// inputs Position.Left, Outputs Position.Right
 
 export enum InputTypes {
   FILE = "file",
@@ -11,7 +7,7 @@ export enum InputTypes {
 }
 
 export type Config = {
-  [key: string]: string
+  [key: string]: string | number
 }
 
 export type InputOutput = {
@@ -29,6 +25,9 @@ export type ComputeBlock = {
   outputs: InputOutput[]
 }
 
+/*
+* The Compute block node is a node for our Workbench Component.
+*/
 export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
   const getHandleStyle = (type: InputTypes) => {
     switch (type) {

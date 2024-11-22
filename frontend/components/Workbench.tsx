@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import {
   ReactFlow,
   Controls,
@@ -7,92 +7,30 @@ import {
 } from "@xyflow/react"
 import ComputeBlockNode from "./nodes/ComputeBlockNode"
 import "@xyflow/react/dist/style.css"
+import LoadingAndError from "./LoadingAndError"
+import type { Project } from "@/utils/types"
+import type { Node } from "@/mutations/projectMutation"
+import { useProjectDetailsQuery } from "@/mutations/projectMutation"
 
-const initialNodes = [
-  {
-    id: "node-1-cb-uuid",
-    position: { x: 0, y: 0 },
-    type: "computeBlock",
-    data: {
-      name: "Crawl Tagesschau",
-      selectedEntrypoint: "crawl_tagesschau",
-      author: "Jon Doe",
-      dockerImage: "ghcr.io/RWTH-TIME/crawler",
-      inputs: [
-        {
-          description: "URLs Files",
-          type: "file",
-          config: {
-            MINIO_ENDPOINT: "localhost:9000",
-            MINIO_PORT: 5432,
-          },
-        },
-      ],
-      outputs: [
-        {
-          description: "Processed Data",
-          type: "file",
-          config: {
-            MINIO_ENDPOINT: "localhost:9000",
-            MINIO_PORT: 5432,
-          },
-        },
-        {
-          description: "Processed Data",
-          type: "db_table",
-          config: {
-            MINIO_ENDPOINT: "localhost:9000",
-            MINIO_PORT: 5432,
-          },
-        },
-        {
-          description: "Processed Data",
-          type: "db_table",
-          config: {
-            MINIO_ENDPOINT: "localhost:9000",
-            MINIO_PORT: 5432,
-          },
-        },
-      ],
-    },
-  },
-  {
-    id: "node-2-cb-uuid",
-    position: { x: 100, y: 100 },
-    type: "computeBlock",
-    data: {
-      name: "Topic Modelling",
-      selectedEntrypoint: "topic_modelling",
-      author: "Markus Meilenstein",
-      dockerImage: "ghcr.io/RWTH-TIME/nlp",
-      inputs: [
-        {
-          description: "Text Files",
-          type: "db_table",
-          config: {
-            MINIO_ENDPOINT: "localhost:9000",
-            MINIO_PORT: 5432,
-          },
-        },
-      ],
-      outputs: [
-        {
-          description: "Topic Model",
-          type: "file",
-          config: {
-            MINIO_ENDPOINT: "localhost:9000",
-            MINIO_PORT: 5432,
-          },
-        },
-      ],
-    },
-  },
+export type WorkbenchProps = {
+  selectedProject: Project
+}
 
-]
-
-export default function Workbench() {
+/*
+* The Workbench Component is used to display & edit the DAGs.
+*/
+export default function Workbench({ selectedProject }: WorkbenchProps) {
   const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
-  const [nodes, setNodes] = useState(initialNodes)
+
+  const { data: projectDetails, isLoading, isError } = useProjectDetailsQuery(selectedProject.uuid)
+
+  const [nodes, setNodes] = useState<Node[]>([])
+
+  useEffect(() => {
+    if (projectDetails) {
+      setNodes(projectDetails)
+    }
+  }, [projectDetails])
 
   const onNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -100,16 +38,18 @@ export default function Workbench() {
   )
 
   return (
-    <div style={{ height: "100%" }}>
-      <ReactFlow
-        nodeTypes={nodeTypes}
-        nodes={nodes}
-        onNodesChange={onNodesChange}
-        fitView
-      >
-        <Background />
-        <Controls />
-      </ReactFlow>
-    </div>
+    <LoadingAndError loading={isLoading} error={isError}>
+      <div style={{ height: "100%" }}>
+        <ReactFlow
+          nodeTypes={nodeTypes}
+          nodes={nodes}
+          onNodesChange={onNodesChange}
+          fitView
+        >
+          <Background />
+          <Controls />
+        </ReactFlow>
+      </div>
+    </LoadingAndError>
   )
 }
