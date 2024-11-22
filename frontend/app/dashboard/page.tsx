@@ -8,6 +8,7 @@ import useAuth from "@/hooks/useAuth"
 import { useTestMutation } from "@/mutations/userMutation"
 import type { Project } from "@/utils/types"
 import { useAlert } from "@/hooks/useAlert"
+import Workbench from "@/components/Workbench"
 
 export default function Dashboard() {
   const { signOut, loading } = useAuth()
@@ -27,16 +28,8 @@ export default function Dashboard() {
         <div className="w-1/6 min-h-screen max-h-fit shadow">
           <ProjectList selectedProject={selectedProject} setSelectedProject={setSelectedProject} />
         </div>
-        <div>
-          Selected Project: {selectedProject?.name}
-          <Button onClick={(e) => {
-            e.preventDefault()
-            signOut()
-          }}>SignOut</Button>
-          <Button onClick={(e) => {
-            e.preventDefault()
-            test()
-          }}>Test</Button>
+        <div className="w-full h-full">
+          <Workbench />
         </div>
       </div>
     </PageWithHeader>
