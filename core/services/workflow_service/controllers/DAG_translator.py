@@ -61,7 +61,7 @@ def translate_project_to_dag(project_uuid: str) -> Dict[str, Any]:
             )
 
     # Initialize Jinja2 environment
-    base_dir = os.path.dirname(os.path.abspath(__file__))  
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     templates_dir = os.path.join(  # Path to the templates
         base_dir, "..", "templates"
         )
@@ -76,7 +76,6 @@ def translate_project_to_dag(project_uuid: str) -> Dict[str, Any]:
     parts = [dag_template.render(
         dag_id=f"dag_{project_uuid.replace('-', '_')}"
         )]
-    dependencies = []
 
     # Convert to Airflow-compatible representation
     for node, data in graph.nodes(data=True):
@@ -85,21 +84,20 @@ def translate_project_to_dag(project_uuid: str) -> Dict[str, Any]:
                 task_id=node,
                 image="scystreamworker",
                 name=data["name"],
-                uuid=node.split("_", 1)[1],
-                dependency="",
+                uuid=data["uuid"],  # node.split("_", 1)[1],
+                # dependency="",
                 project=str(project_uuid),
                 # pipeline=str(project.pipeline_uuid),
-                algorithm=data["type"],
+                algorithm=data["block_type"],
                 parameters=data["parameters"],
                 local_storage_path_external="/tmp/scystream-data",
                 container_name=project.container_name,
             )
         )
 
-    for from_task, to_task in graph.edges:
-        dependencies.append(dependency_template.render(
-            from_task=from_task, to_task=to_task)
-            )
+    dependencies = [dependency_template.render(
+        from_task=from_task, to_task=to_task)
+        for from_task, to_task in graph.edges]
 
     parts.extend(dependencies)
 
