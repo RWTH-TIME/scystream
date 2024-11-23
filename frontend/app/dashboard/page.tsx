@@ -18,7 +18,7 @@ export default function Dashboard() {
             <div className="w-1/4 min-h-screen max-h-fit shadow">
               <ProjectList />
             </div>
-            <div className="w-full h-full">
+            <div className="flex-grow h-full">
               <Workbench />
             </div>
           </div>

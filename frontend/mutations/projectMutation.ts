@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { QueryKeys } from "./queryKeys"
 import { api } from "@/utils/axios"
@@ -11,6 +11,7 @@ const GET_PROJECTS_ENDPOINT = "project/read_all"
 const CREATE_PROJECT_ENDPOINT = "project"
 // TODO: const GET_PROJECT_DETAILS_ENDPOINT = "project/get_dag"
 const DELETE_PROJECT_ENDPOINT = "project/"
+const UPDATE_PROJECT_ENDPOINT = "project/"
 
 export type Node = {
   id: string,
@@ -155,6 +156,11 @@ type ProjectDTO = {
   name: string
 }
 
+type UpdateProjectDTO = {
+  project_uuid: string,
+  new_name: string
+}
+
 function useProjectsQuery() {
   return useQuery({
     queryKey: [QueryKeys.projects],
@@ -179,6 +185,25 @@ function useCreateProjectMutation(setAlert: SetAlertType) {
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Creating Project failed: ${error}`)
+    }
+  })
+}
+
+function useUpdateProjectMutation(setAlert: SetAlertType) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function updateProject(project: UpdateProjectDTO) {
+      const response = await api.put(UPDATE_PROJECT_ENDPOINT, JSON.stringify(project))
+      return response.data.project_uudi
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.projects] })
+      setAlert("Successfully updated project.", AlertType.SUCCESS)
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+      console.error(`Updating Project failed: ${error}`)
     }
   })
 }
@@ -219,6 +244,7 @@ function useDeleteProjectMutation(setAlert: SetAlertType) {
 export {
   useProjectsQuery,
   useCreateProjectMutation,
+  useUpdateProjectMutation,
   useProjectDetailsQuery,
   useDeleteProjectMutation,
 }

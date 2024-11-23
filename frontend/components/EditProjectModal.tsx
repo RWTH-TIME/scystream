@@ -2,28 +2,30 @@ import { useState } from "react"
 import Input from "./inputs/Input"
 import Modal, { type ModalProps } from "./Modal"
 import LoadingAndError from "./LoadingAndError"
-import { useCreateProjectMutation } from "@/mutations/projectMutation"
+import { useUpdateProjectMutation } from "@/mutations/projectMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
+import { useSelectedProject } from "@/hooks/useSelectedProject"
 
-type CreateProjectModalProps = Omit<ModalProps, "children">;
+type EditProjectModalProps = Omit<ModalProps, "children">;
 
-export default function CreateProjectModal({
+export default function EditProjectModal({
   isOpen,
   onClose,
   className = "",
-}: CreateProjectModalProps) {
+}: EditProjectModalProps) {
   const { setAlert } = useAlert()
-  const [projectName, setProjectName] = useState<string>("")
+  const { selectedProject } = useSelectedProject()
+  const [projectName, setProjectName] = useState<string>(selectedProject?.name ?? "")
 
-  const { mutate, isPending: loading } = useCreateProjectMutation(setAlert)
+  const { mutate, isPending: loading } = useUpdateProjectMutation(setAlert)
 
-  function createProject(e: React.FormEvent<HTMLFormElement>) {
+  function updateProject(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
 
     // TODO: Currently this validation is fine, as we are only using one field.
     // However, think about a better way to validate the fields
-    if (projectName.length > 0) {
-      mutate({ name: projectName })
+    if (selectedProject && projectName && projectName.length > 0) {
+      mutate({ project_uuid: selectedProject.uuid, new_name: projectName })
       onClose()
     } else {
       setAlert("Project Name must be set.", AlertType.ERROR)
@@ -32,8 +34,8 @@ export default function CreateProjectModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className={className}>
-      <h2 className="text-xl font-bold">Project</h2>
-      <form onSubmit={(e) => createProject(e)} className="mt-4 space-y-4 text-sm">
+      <h2 className="text-xl font-bold">Update Project</h2>
+      <form onSubmit={(e) => updateProject(e)} className="mt-4 space-y-4 text-sm">
         <div>
           <Input
             type="text"
@@ -56,7 +58,7 @@ export default function CreateProjectModal({
             disabled={loading}
           >
             <LoadingAndError loading={loading} iconSize={21}>
-              Create
+              Edit
             </LoadingAndError>
           </button>
         </div>
