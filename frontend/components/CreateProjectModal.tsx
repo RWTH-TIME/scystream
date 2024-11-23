@@ -36,7 +36,7 @@ export default function CreateProjectModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className={className}>
-      <h2 className="text-xl font-bold">Create Project</h2>
+      <h2 className="text-xl font-bold">Project</h2>
       <form onSubmit={(e) => createProject(e)} className="mt-4 space-y-4 text-sm">
         <div>
           <Input

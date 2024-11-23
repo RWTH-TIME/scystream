@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { QueryKeys } from "./queryKeys"
 import { api } from "@/utils/axios"
-import type { SetAlertType } from "@/hooks/useAlert"
+import { AlertType, type SetAlertType } from "@/hooks/useAlert"
 import displayStandardAxiosErrors from "@/utils/errors"
 import { InputTypes } from "@/components/nodes/ComputeBlockNode"
 import type { ComputeBlock } from "@/components/nodes/ComputeBlockNode"
@@ -10,6 +10,7 @@ import type { ComputeBlock } from "@/components/nodes/ComputeBlockNode"
 const GET_PROJECTS_ENDPOINT = "project/read_all"
 const CREATE_PROJECT_ENDPOINT = "project"
 // TODO: const GET_PROJECT_DETAILS_ENDPOINT = "project/get_dag"
+const DELETE_PROJECT_ENDPOINT = "project/"
 
 export type Node = {
   id: string,
@@ -182,7 +183,8 @@ function useCreateProjectMutation(setAlert: SetAlertType) {
   })
 }
 
-function useProjectDetailsQuery(id: string) {
+// TODO id here right?
+function useProjectDetailsQuery(id: string | undefined) {
   return useQuery({
     queryKey: [id],
     queryFn: async function getProjects() {
@@ -191,6 +193,25 @@ function useProjectDetailsQuery(id: string) {
       return response.data
       */
       return MOCK_DAG_DATA[Math.random() < 0.5 ? 1 : 0]
+    },
+    enabled: !!id
+  })
+}
+
+function useDeleteProjectMutation(setAlert: SetAlertType) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function delProject(projectID: string) {
+      await api.delete(DELETE_PROJECT_ENDPOINT + projectID)
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+      console.log(`Deleting project failed ${error}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.projects] })
+      setAlert("Project sucessfully deleted!", AlertType.SUCCESS)
     }
   })
 }
@@ -198,5 +219,6 @@ function useProjectDetailsQuery(id: string) {
 export {
   useProjectsQuery,
   useCreateProjectMutation,
-  useProjectDetailsQuery
+  useProjectDetailsQuery,
+  useDeleteProjectMutation,
 }

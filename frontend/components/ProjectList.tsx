@@ -1,19 +1,14 @@
 import { useState } from "react"
-import type { Dispatch, SetStateAction } from "react"
 import AddIcon from "@mui/icons-material/Add"
 import LoadingAndError from "./LoadingAndError"
 import CreateProjectModal from "./CreateProjectModal"
 import type { Project } from "@/utils/types"
 import { useProjectsQuery } from "@/mutations/projectMutation"
+import { useSelectedProject } from "@/hooks/useSelectedProject"
 
-export type ProjectListProps = {
-  selectedProject: Project | undefined,
-  setSelectedProject: Dispatch<SetStateAction<Project | undefined>>
-}
-
-export default function ProjectList({ selectedProject, setSelectedProject }: ProjectListProps) {
+export default function ProjectList() {
   const [createProjectOpen, setCreateProjectOpen] = useState<boolean>(false)
-
+  const { selectedProject, setSelectedProject } = useSelectedProject()
   const { data: projects, isLoading, isError } = useProjectsQuery()
 
   return (

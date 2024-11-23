@@ -77,9 +77,11 @@ async def rename_project(data: RenameProjectRequest):
         raise handle_error(e)
 
 
-@router.delete("/", status_code=200)
-async def delete_project(data: DeleteProjectRequest):
+@router.delete("/{project_id}", status_code=200)
+async def delete_project(
+    project_id: UUID | None = None
+):
     try:
-        project_controller.delete_project(data.project_uuid)
+        project_controller.delete_project(project_id)
     except Exception as e:
         raise handle_error(e)
