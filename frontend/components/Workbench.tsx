@@ -1,62 +1,108 @@
+import type { DragEvent } from "react"
 import { useState, useCallback, useMemo, useEffect } from "react"
 import {
   ReactFlow,
   Controls,
   Background,
-  applyNodeChanges
+  applyNodeChanges,
+  type NodeChange,
+  type Node as FlowNode,
+  useReactFlow
 } from "@xyflow/react"
-import { PlayArrow, Widgets, Save, Delete, Edit } from "@mui/icons-material"
+import { PlayArrow, Widgets, Save, Delete } from "@mui/icons-material"
 import ComputeBlockNode from "./nodes/ComputeBlockNode"
 import "@xyflow/react/dist/style.css"
 import LoadingAndError from "./LoadingAndError"
 import DeleteProjectModal from "./DeleteProjectModal"
-import EditProjectModal from "./EditProjectModal"
 import EditProjectDraggable from "./EditProjectDraggable"
 import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
-import ProjectCBSettingsDraggable from "@/components/ProjectCBSettingsDraggable"
 import type { Node } from "@/mutations/projectMutation"
 import { useProjectDetailsQuery } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 
-/*
-* The Workbench Component is used to display & edit the DAGs.
-*/
+/**
+ * Workbench Component is used to display and edit Directed Acyclic Graphs (DAGs).
+ * TODO: Split this Component into multiple smaller ones
+ */
 export default function Workbench() {
   const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
   const { selectedProject } = useSelectedProject()
   const { data: projectDetails, isLoading, isError } = useProjectDetailsQuery(selectedProject?.uuid)
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
+  const { screenToFlowPosition } = useReactFlow()
 
-  const [nodes, setNodes] = useState<Node[]>([])
-  const [deleteApproveOpen, setDeleteApproveOpen] = useState<boolean>(false)
-  const [editProjectOpen, setEditProjectOpen] = useState<boolean>(false)
+  const [nodes, setNodes] = useState<FlowNode<Node>[]>([])
+  const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
+  const [type, setType] = useState<string | null>(null)
 
   useEffect(() => {
     if (projectDetails) {
-      setNodes(projectDetails)
+      setNodes(projectDetails as FlowNode<Node>[]) // Ensure projectDetails matches the Node type
     }
   }, [projectDetails])
 
-  // TODO:
   const onNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
     []
   )
 
+  const onDragStart = (event: DragEvent<HTMLButtonElement>, nodeType: string) => {
+    setType(nodeType)
+    event.dataTransfer.effectAllowed = "move"
+  }
+
+  const onDragOver = useCallback((event: DragEvent) => {
+    console.log(event)
+    event.preventDefault()
+    event.dataTransfer.dropEffect = "move"
+  }, [])
+
+  const onDrop = useCallback(
+    (event: DragEvent) => {
+      event.preventDefault()
+
+      if (!type) return
+
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      })
+
+      // TODO: We need some kind of unique identifier in the data before creating in the backend
+      // Think about a way
+      const newNode: FlowNode<Node> = {
+        id: `${type}_${nodes.length + 1}`,
+        type: "computeBlock",
+        position,
+        data: { label: `${type} Node` },
+      }
+
+      // TODO: Startup the CreateComputeBlock configuration
+
+      setNodes((nds) => [...nds, newNode])
+    },
+    [type, nodes, screenToFlowPosition]
+  )
+
   if (!selectedProject) {
-    return (<div>Select a Project</div>)
+    return <div>Select a Project</div>
   }
 
   return (
     <LoadingAndError loading={isLoading} error={isError}>
-      <DeleteProjectModal isOpen={deleteApproveOpen} onClose={() => setDeleteApproveOpen(false)} />
-      {selectedComputeBlock !== undefined ? <EditComputeBlockDraggable /> : <EditProjectDraggable />}
-      <div className="flex absolute justify-between justify-between flex-row p-5 gap-3 right-0 bg-inherit z-30">
+      <DeleteProjectModal
+        isOpen={deleteApproveOpen}
+        onClose={() => setDeleteApproveOpen(false)}
+      />
+      {selectedComputeBlock ? <EditComputeBlockDraggable /> : <EditProjectDraggable />}
+      <div className="flex absolute justify-between flex-row p-5 gap-3 right-0 bg-inherit z-30">
         <div className="justify-self-start h-12 flex flex-col items-start p-1 bg-white rounded-lg shadow-lg space-y-3">
           <button
             onClick={() => console.log("Add Component clicked")}
             className="p-2 bg-gray-100 rounded-md text-gray-800 hover:bg-gray-200 transition-all duration-200"
+            onDragStart={(event) => onDragStart(event, "computeBlock")}
+            draggable
           >
             <Widgets fontSize="small" />
           </button>
@@ -74,7 +120,6 @@ export default function Workbench() {
           >
             <Save />
           </button>
-
           <button
             onClick={() => setDeleteApproveOpen(true)}
             className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200"
@@ -90,12 +135,14 @@ export default function Workbench() {
           onNodesChange={onNodesChange}
           fitView
           onNodeClick={(_, node) => setSelectedComputeBlock(node.data)}
-          onPaneClick={(_) => setSelectedComputeBlock(undefined)}
+          onPaneClick={() => setSelectedComputeBlock(undefined)}
+          onDragOver={onDragOver}
+          onDrop={onDrop}
         >
           <Background />
           <Controls position="top-left" />
         </ReactFlow>
       </div>
-    </LoadingAndError >
+    </LoadingAndError>
   )
 }

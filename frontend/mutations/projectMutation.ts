@@ -25,7 +25,7 @@ const MOCK_DAG_DATA: Node[][] = [
   [
     {
       id: "node-1-cb-uuid",
-      position: { x: 0, y: 0 },
+      position: { x: 250, y: 5 },
       type: "computeBlock",
       data: {
         uuid: uuidv4(),
@@ -73,7 +73,7 @@ const MOCK_DAG_DATA: Node[][] = [
     },
     {
       id: "node-2-cb-uuid",
-      position: { x: 100, y: 100 },
+      position: { x: 300, y: 150 },
       type: "computeBlock",
       data: {
         uuid: uuidv4(),

@@ -1,5 +1,6 @@
 "use client"
 
+import { ReactFlowProvider } from "@xyflow/react"
 import PageWithHeader from "@/components/layout/PageWithHeader"
 import ProjectList from "@/components/ProjectList"
 import useAuth from "@/hooks/useAuth"
@@ -23,7 +24,9 @@ export default function Dashboard() {
               </div>
               {/* Workbench takes the rest of the space */}
               <div className="flex-grow h-full">
-                <Workbench />
+                <ReactFlowProvider>
+                  <Workbench />
+                </ReactFlowProvider>
               </div>
             </div>
           </PageWithHeader>
