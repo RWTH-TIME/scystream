@@ -11,9 +11,13 @@ import "@xyflow/react/dist/style.css"
 import LoadingAndError from "./LoadingAndError"
 import DeleteProjectModal from "./DeleteProjectModal"
 import EditProjectModal from "./EditProjectModal"
+import EditProjectDraggable from "./EditProjectDraggable"
+import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
+import ProjectCBSettingsDraggable from "@/components/ProjectCBSettingsDraggable"
 import type { Node } from "@/mutations/projectMutation"
 import { useProjectDetailsQuery } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
+import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 
 /*
 * The Workbench Component is used to display & edit the DAGs.
@@ -22,6 +26,7 @@ export default function Workbench() {
   const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
   const { selectedProject } = useSelectedProject()
   const { data: projectDetails, isLoading, isError } = useProjectDetailsQuery(selectedProject?.uuid)
+  const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
 
   const [nodes, setNodes] = useState<Node[]>([])
   const [deleteApproveOpen, setDeleteApproveOpen] = useState<boolean>(false)
@@ -46,7 +51,7 @@ export default function Workbench() {
   return (
     <LoadingAndError loading={isLoading} error={isError}>
       <DeleteProjectModal isOpen={deleteApproveOpen} onClose={() => setDeleteApproveOpen(false)} />
-      <EditProjectModal isOpen={editProjectOpen} onClose={() => setEditProjectOpen(false)} />
+      {selectedComputeBlock !== undefined ? <EditComputeBlockDraggable /> : <EditProjectDraggable />}
       <div className="flex absolute justify-between justify-between flex-row p-5 gap-3 right-0 bg-inherit z-30">
         <div className="justify-self-start h-12 flex flex-col items-start p-1 bg-white rounded-lg shadow-lg space-y-3">
           <button
@@ -76,25 +81,21 @@ export default function Workbench() {
           >
             <Delete />
           </button>
-          <button
-            onClick={() => setEditProjectOpen(true)}
-            className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200"
-          >
-            <Edit />
-          </button>
         </div>
       </div>
-      <div style={{ height: "100%" }}>
+      <div className="h-full">
         <ReactFlow
           nodeTypes={nodeTypes}
           nodes={nodes}
           onNodesChange={onNodesChange}
           fitView
+          onNodeClick={(_, node) => setSelectedComputeBlock(node.data)}
+          onPaneClick={(_) => setSelectedComputeBlock(undefined)}
         >
           <Background />
-          <Controls />
+          <Controls position="top-left" />
         </ReactFlow>
       </div>
-    </LoadingAndError>
+    </LoadingAndError >
   )
 }

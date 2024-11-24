@@ -1,5 +1,6 @@
 import { Handle, Position } from "@xyflow/react"
 import React from "react"
+import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 
 export enum InputTypes {
   FILE = "file",
@@ -17,6 +18,7 @@ export type InputOutput = {
 }
 
 export type ComputeBlock = {
+  uuid: string,
   name: string,
   selectedEntrypoint: string,
   author: string,
@@ -29,6 +31,10 @@ export type ComputeBlock = {
 * The Compute block node is a node for our Workbench Component.
 */
 export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
+  const { selectedComputeBlock } = useSelectedComputeBlock()
+
+  console.log(selectedComputeBlock)
+
   const getHandleStyle = (type: InputTypes) => {
     switch (type) {
       case InputTypes.FILE:
@@ -50,56 +56,60 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
   }
 
   return (
-    <div className="flex flex-col bg-gray-50 border border-gray-300 rounded shadow-md p-3 space-y-4 text-sm w-64">
-      <div className="text-lg font-bold text-gray-800">{data.name}</div>
-      {/* Block Details */}
-      <div className="flex flex-col space-y-2">
-        <div>
-          <span className="font-medium text-gray-600">Entrypoint</span><br />
-          {data.selectedEntrypoint}
+    <div>
+      <div className={`flex flex-col bg-gray-50 border ${selectedComputeBlock?.uuid === data.uuid ? "border-blue-400" : "border-gray-300"} rounded shadow-md p-3 space-y-4 text-sm w-64`}>
+        <div className="flex place-content-between items-center">
+          <div className="text-lg font-bold text-gray-800">{data.name}</div>
         </div>
-        <div>
-          <span className="font-medium text-gray-600">Author</span><br />
-          {data.author}
+        <span className="w-full h-[1px] bg-black"></span>
+        <div className="flex flex-col space-y-2">
+          <div>
+            <span className="font-medium text-gray-600">Entrypoint</span><br />
+            {data.selectedEntrypoint}
+          </div>
+          <div>
+            <span className="font-medium text-gray-600">Author</span><br />
+            {data.author}
+          </div>
+          <div>
+            <span className="font-medium text-gray-600">Image:</span><br />
+            {data.dockerImage}
+          </div>
         </div>
-        <div>
-          <span className="font-medium text-gray-600">Image:</span><br />
-          {data.dockerImage}
-        </div>
+
+        {data.inputs?.map((i, index) => (
+          <Handle
+            key={index}
+            type="target"
+            position={Position.Left}
+            id={`input-${index}`}
+            style={{
+              ...getHandleStyle(i.type),
+              width: "15px",
+              height: "15px",
+              borderRadius: "50%",
+              top: `${(index + 1) * 20}%`,
+            }}
+          />
+
+        ))}
+
+        {data.outputs?.map((o, index) => (
+          <Handle
+            key={index}
+            type="source"
+            position={Position.Right}
+            id={`output-${index}`}
+            style={{
+              ...getHandleStyle(o.type),
+              width: "15px",
+              height: "15px",
+              borderRadius: "50%",
+              top: `${(index + 1) * 20}%`,
+            }}
+          />
+        ))}
       </div>
-
-      {data.inputs?.map((i, index) => (
-        <Handle
-          key={index}
-          type="target"
-          position={Position.Left}
-          id={`input-${index}`}
-          style={{
-            ...getHandleStyle(i.type),
-            width: "15px",
-            height: "15px",
-            borderRadius: "50%",
-            top: `${(index + 1) * 20}%`,
-          }}
-        />
-
-      ))}
-
-      {data.outputs?.map((o, index) => (
-        <Handle
-          key={index}
-          type="source"
-          position={Position.Right}
-          id={`output-${index}`}
-          style={{
-            ...getHandleStyle(o.type),
-            width: "15px",
-            height: "15px",
-            borderRadius: "50%",
-            top: `${(index + 1) * 20}%`,
-          }}
-        />
-      ))}
     </div>
   )
 }

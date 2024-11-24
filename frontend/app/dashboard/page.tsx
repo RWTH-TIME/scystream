@@ -6,23 +6,28 @@ import useAuth from "@/hooks/useAuth"
 import Workbench from "@/components/Workbench"
 import LoadingAndError from "@/components/LoadingAndError"
 import { SelectedProjectProvider } from "@/hooks/useSelectedProject"
+import { SelectedComputeBlockProvider } from "@/hooks/useSelectedComputeBlock"
 
 export default function Dashboard() {
   const { loading } = useAuth()
 
   return (
     <LoadingAndError loading={loading}>
-      <SelectedProjectProvider >
-        <PageWithHeader breadcrumbs={[{ text: "Dashboard", link: "/dashboard" }]}>
-          <div className="flex">
-            <div className="w-1/4 min-h-screen max-h-fit shadow">
-              <ProjectList />
+      <SelectedProjectProvider>
+        <SelectedComputeBlockProvider>
+          <PageWithHeader breadcrumbs={[{ text: "Dashboard", link: "/dashboard" }]}>
+            <div className="flex h-full">
+              {/* ProjectList is scrollable and takes 1/4 width */}
+              <div className="w-1/4 h-full overflow-y-auto shadow">
+                <ProjectList />
+              </div>
+              {/* Workbench takes the rest of the space */}
+              <div className="flex-grow h-full">
+                <Workbench />
+              </div>
             </div>
-            <div className="flex-grow h-full">
-              <Workbench />
-            </div>
-          </div>
-        </PageWithHeader>
+          </PageWithHeader>
+        </SelectedComputeBlockProvider>
       </SelectedProjectProvider>
     </LoadingAndError>
   )

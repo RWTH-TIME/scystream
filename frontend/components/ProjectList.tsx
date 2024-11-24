@@ -5,10 +5,12 @@ import CreateProjectModal from "./CreateProjectModal"
 import type { Project } from "@/utils/types"
 import { useProjectsQuery } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
+import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 
 export default function ProjectList() {
   const [createProjectOpen, setCreateProjectOpen] = useState<boolean>(false)
   const { selectedProject, setSelectedProject } = useSelectedProject()
+  const { setSelectedComputeBlock } = useSelectedComputeBlock()
   const { data: projects, isLoading, isError } = useProjectsQuery()
 
   return (
@@ -24,7 +26,10 @@ export default function ProjectList() {
           projects?.map((project: Project) => (
             <li
               key={project.uuid}
-              onClick={() => setSelectedProject(project)}
+              onClick={() => {
+                setSelectedProject(project)
+                setSelectedComputeBlock(undefined)
+              }}
               className={`p-4 rounded-sm flex-grow items-center justify-between relative ${selectedProject?.uuid === project.uuid ? "bg-gray-200" : ""
                 } overflow-y-auto hover:bg-gray-100 hover:cursor-pointer`}
             >

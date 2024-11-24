@@ -1,5 +1,6 @@
-import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
+import { v4 as uuidv4 } from "uuid"
 import { QueryKeys } from "./queryKeys"
 import { api } from "@/utils/axios"
 import { AlertType, type SetAlertType } from "@/hooks/useAlert"
@@ -27,6 +28,7 @@ const MOCK_DAG_DATA: Node[][] = [
       position: { x: 0, y: 0 },
       type: "computeBlock",
       data: {
+        uuid: uuidv4(),
         name: "Crawl Tagesschau",
         selectedEntrypoint: "crawl_tagesschau",
         author: "Jon Doe",
@@ -74,6 +76,7 @@ const MOCK_DAG_DATA: Node[][] = [
       position: { x: 100, y: 100 },
       type: "computeBlock",
       data: {
+        uuid: uuidv4(),
         name: "Topic Modelling",
         selectedEntrypoint: "topic_modelling",
         author: "Markus Meilenstein",
@@ -107,6 +110,7 @@ const MOCK_DAG_DATA: Node[][] = [
       position: { x: 0, y: 0 },
       type: "computeBlock",
       data: {
+        uuid: uuidv4(),
         name: "Crawl Tagesschau",
         selectedEntrypoint: "crawl_tagesschau",
         author: "Jon Doe",
