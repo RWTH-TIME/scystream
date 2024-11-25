@@ -7,7 +7,7 @@ import displayStandardAxiosErrors from "@/utils/errors"
 
 const config = getConfig()
 
-const REGISTER_ENDPOINT = "user/create"
+const REGISTER_ENDPOINT = "user"
 const LOGIN_ENDPOINT = "user/login"
 const REFRESH_ENDPOINT = "user/refresh"
 const TEST_ENDPOINT = "user/test"
