@@ -16,6 +16,7 @@ import LoadingAndError from "./LoadingAndError"
 import DeleteProjectModal from "./DeleteProjectModal"
 import EditProjectDraggable from "./EditProjectDraggable"
 import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
+import CreateComputeBlockModal from "./CreateComputeBlockModal"
 import type { Node } from "@/mutations/projectMutation"
 import { useProjectDetailsQuery } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
@@ -34,6 +35,7 @@ export default function Workbench() {
 
   const [nodes, setNodes] = useState<FlowNode<Node>[]>([])
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
+  const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false)
   const [type, setType] = useState<string | null>(null)
 
   useEffect(() => {
@@ -61,6 +63,8 @@ export default function Workbench() {
   const onDrop = useCallback(
     (event: DragEvent) => {
       event.preventDefault()
+
+      setCreateComputeBlockOpen(true)
 
       if (!type) return
 
@@ -94,6 +98,10 @@ export default function Workbench() {
       <DeleteProjectModal
         isOpen={deleteApproveOpen}
         onClose={() => setDeleteApproveOpen(false)}
+      />
+      <CreateComputeBlockModal
+        isOpen={createComputeBlockOpen}
+        onClose={() => setCreateComputeBlockOpen(false)}
       />
       {selectedComputeBlock ? <EditComputeBlockDraggable /> : <EditProjectDraggable />}
       <div className="flex absolute justify-between flex-row p-5 gap-3 right-0 bg-inherit z-30">
