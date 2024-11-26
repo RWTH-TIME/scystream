@@ -2,7 +2,7 @@ import os
 from jinja2 import Environment, FileSystemLoader
 from fastapi import HTTPException
 import networkx as nx
-from typing import Dict, Any
+# from typing import Dict, Any
 
 from project_controller import read_project
 # from models.block import Block
@@ -20,7 +20,7 @@ from project_controller import read_project
 # from airflow_client.client.model.dag_state import DagState
 
 
-def translate_project_to_dag(project_uuid: str) -> Dict[str, Any]:
+def translate_project_to_dag(project_uuid: str):
     """
     Parses a project and its blocks into a DAG and validates it.
 

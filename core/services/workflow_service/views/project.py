@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends
 from uuid import UUID
 from utils.errors.error import handle_error
 
-import core.services.workflow_service.controllers.project_controller as project_controller
+import core.services.workflow_service.controllers.project_controller \
+    as project_controller
 
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
