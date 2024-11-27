@@ -15,6 +15,11 @@ class InputOutputType(enum.Enum):
     OUTPUT = "Output"
 
 
+class DataType(enum.Enum):
+    DBINPUT = "db_input"
+    FILE = "file"
+
+
 class InputOutput(Base):
     __tablename__ = "inputoutputs"
 
@@ -22,12 +27,11 @@ class InputOutput(Base):
                   default=uuid.uuid4)
     type = Column(Enum(InputOutputType), nullable=False)
     name = Column(String(100), nullable=True)
-    data_type = Column(String)  # ask Paul again if this should be enum?
+    data_type = Column(Enum(DataType), nullable=False)
     description = Column(String(500), nullable=True)
     config = Column(JSON, nullable=False)
 
-    entrypoint_uuid = Column(UUID(as_uuid=True),
-                             ForeignKey('blocks.uuid', ondelete="CASCADE"))
+    entrypoint_uuid = Column(
+        UUID(as_uuid=True), ForeignKey('entrypoints.uuid', ondelete="CASCADE"))
 
-    entrypoints = relationship(Entrypoint, back_populates="entrypoints",
-                               cascade="all, delete-orphan")
+    entrypoints = relationship(Entrypoint, back_populates="input_outputs")

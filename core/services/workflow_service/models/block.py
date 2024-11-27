@@ -38,19 +38,28 @@ class Block(Base):
     author = Column(String(100), nullable=True)
     docker_image = Column(String(150), nullable=False)
     repo_url = Column(String(100), nullable=False)
-    selected_entrypoint = Column(String(100), nullable=False)
+    selected_entrypoint = Column(
+        UUID(as_uuid=True), ForeignKey('entrypoints.uuid', ondelete="CASCADE"))
 
     # position
     x_pos = Column(Float, nullable=True)
     y_pos = Column(Float, nullable=True)
 
     project = relationship("Project", back_populates="blocks")
+    entrypoints = relationship("Entrypoint", back_populates="blocks")
 
-    # think about logic again (differentiate btw up- and downstream?)
+    # think about logic again
     upstream_blocks = relationship(
         "Block",
         secondary=block_dependencies,
         primaryjoin=uuid == block_dependencies.c.downstream_block_uuid,
         secondaryjoin=uuid == block_dependencies.c.upstream_block_uuid,
-        backref="downstream_blocks"
+        back_populates="downstream_blocks"
+    )
+    downstream_blocks = relationship(
+        "Block",
+        secondary=block_dependencies,
+        primaryjoin=uuid == block_dependencies.c.upstream_block_uuid,
+        secondaryjoin=uuid == block_dependencies.c.downstream_block_uuid,
+        back_populates="upstream_blocks"
     )

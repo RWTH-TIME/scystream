@@ -12,13 +12,6 @@
                     type="bind",
                 ),
             ],
-            environment={
-                "NAME": "{{name}}",
-                "UUID": "{{uuid}}",
-                "PROJECT_UUID": "{{project}}",
-                "ALGORITHM": "{{algorithm}}",
-                "PARAMETERS": """{{parameters}}""",
-                "LOCAL_STORAGE_PATH": "/data",
-            },
+            environment="{{env}}",
         )
 
