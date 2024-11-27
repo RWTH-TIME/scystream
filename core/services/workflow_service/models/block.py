@@ -1,19 +1,10 @@
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, String,  ForeignKey, Table, Enum, Integer
+from sqlalchemy import Column, String,  ForeignKey, Table, Integer, Float
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import JSON
 
 import uuid
 
 from utils.database.connection import Base
-import enum
-
-
-# Define operator types
-class OperatorType(enum.Enum):
-    POSTGRES = "PostgresOperator"
-    PYTHON = "PythonOperator"
-    MYSQL = "MySQLOperator"
 
 
 # Association table for block dependencies
@@ -34,20 +25,28 @@ class Block(Base):
     name = Column(String(100), nullable=False)
     project_uuid = Column(UUID(as_uuid=True), ForeignKey('projects.uuid',
                                                          ondelete="CASCADE"))
-    # Task specific columns
-    block_type = Column(Enum(OperatorType), nullable=False)
-    # This can contain a lot of optional parameters
-    parameters = Column(JSON, nullable=True)
+
+    # airflow-Task specific columns
     priority_weight = Column(Integer, nullable=True)
     retries = Column(Integer, default=0)
     retry_delay = Column(Integer, default=300)  # Delay in seconds
-    schedule_interval = Column(String, nullable=True)
-    # in case some enviroment setup is needed (API key, database connection)
-    environment = Column(JSON, nullable=True)
+    # schedule_interval = Column(String, nullable=True)
+
+    # sdk specific columns, set by user
+    custom_name = Column(String(100), nullable=False)
+    description = Column(String(100), nullable=True)  # nullable false instead?
+    author = Column(String(100), nullable=True)
+    docker_image = Column(String(150), nullable=False)
+    repo_url = Column(String(100), nullable=False)
+    selected_entrypoint = Column(String(100), nullable=False)
+
+    # position
+    x_pos = Column(Float, nullable=True)
+    y_pos = Column(Float, nullable=True)
 
     project = relationship("Project", back_populates="blocks")
 
-    # think about logic again (differentiate btw up- and downstream)
+    # think about logic again (differentiate btw up- and downstream?)
     upstream_blocks = relationship(
         "Block",
         secondary=block_dependencies,

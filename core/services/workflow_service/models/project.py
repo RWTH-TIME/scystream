@@ -1,5 +1,5 @@
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, String, DateTime, Integer, Boolean
+from sqlalchemy import Column, String, DateTime, Integer
 from sqlalchemy.orm import relationship
 
 import uuid
@@ -17,12 +17,12 @@ class Project(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # DAG-specific columns
-    schedule_interval = Column(String, nullable=True)
-    start_date = Column(DateTime, nullable=False, default=datetime.utcnow)
-    catchup = Column(Boolean, default=False)
-    concurrency = Column(Integer, nullable=True, default=1)
+    # schedule_interval = Column(String, nullable=True)
+    # start_date = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # catchup = Column(Boolean, default=False)
+    # concurrency = Column(Integer, nullable=True, default=1)
     default_retries = Column(Integer, default=1)
-    dag_timeout = Column(Integer, nullable=True)
+    # dag_timeout = Column(Integer, nullable=True)
 
     users = relationship("User", secondary="user_project",
                          back_populates="projects")
