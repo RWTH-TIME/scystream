@@ -23,9 +23,6 @@ from project_controller import read_project
 def translate_project_to_dag(project_uuid: str):
     """
     Parses a project and its blocks into a DAG and validates it.
-
-    :param project_uuid: UUID of the project to parse.
-    :param db: SQLAlchemy database session.
     """
     # Query the project
     project = read_project(project_uuid)
@@ -35,15 +32,24 @@ def translate_project_to_dag(project_uuid: str):
 
     # Add nodes (tasks)
     for block in project.blocks:
+
+        # SQLalchemy magic gives back an object of entrytype
+        entrypoint = block.selected_entrypoint
+
+        if not block.selected_entrypoint:
+            raise HTTPException(404, detail="No entrypoint has been selected.")
+
+        envs = entrypoint.envs
+        configs = [io.config for io in entrypoint.inputoutputs]
+
         graph.add_node(block.uuid, **{
+            "uuid": block.uuid,
             "name": block.name,
-            "type": block.block_type.value,
-            "parameters": block.parameters,
+            "block_type": block.block_type.value,
             "priority": block.priority_weight,
             "retries": block.retries,
             "retry_delay": block.retry_delay,
-            "environment": block.environment,
-            "schedule_interval": block.schedule_interval,
+            "environment": {**envs, **configs},  # correct concatenation?
         })
 
     # Add edges (dependencies)
@@ -84,14 +90,14 @@ def translate_project_to_dag(project_uuid: str):
                 task_id=node,
                 image="scystreamworker",
                 name=data["name"],
-                uuid=data["uuid"],  # node.split("_", 1)[1],
-                # dependency="",
+                uuid=data["uuid"],
+                command="python3 v-m import scheduler.execute_function(Entrypoint)"
                 project=str(project_uuid),
-                # pipeline=str(project.pipeline_uuid),
                 algorithm=data["block_type"],
-                parameters=data["parameters"],
+                enviroment=data["enviroment"],
                 local_storage_path_external="/tmp/scystream-data",
-                container_name=project.container_name,
+                # container_name=project.container_name,
+                # pipeline=str(project.pipeline_uuid),
             )
         )
 

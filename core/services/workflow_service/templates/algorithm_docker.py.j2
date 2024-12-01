@@ -3,7 +3,7 @@
             image='{{image}}',
             api_version='auto',
             auto_remove=True,
-            command="python worker.py",
+            command="python3 v-m import scheduler.execute_function(Entrypoint)",
             docker_url="unix://var/run/docker.sock",
             mounts=[
                 Mount(
@@ -12,6 +12,6 @@
                     type="bind",
                 ),
             ],
-            environment="{{env}}",
+            environment={{ environment }},
         )
 

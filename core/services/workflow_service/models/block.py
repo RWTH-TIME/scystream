@@ -46,6 +46,8 @@ class Block(Base):
     y_pos = Column(Float, nullable=True)
 
     project = relationship("Project", back_populates="blocks")
+    # there could be problems between this relationship and the selected 
+    # entrypoint relationship
     entrypoints = relationship("Entrypoint", back_populates="blocks")
 
     # think about logic again
