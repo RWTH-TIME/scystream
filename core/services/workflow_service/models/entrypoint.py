@@ -20,6 +20,6 @@ class Entrypoint(Base):
     block_uuid = Column(UUID(as_uuid=True),
                         ForeignKey('blocks.uuid', ondelete="CASCADE"))
 
-    blocks = relationship(Block, back_populates="entrypoints")
+    block = relationship(Block, back_populates="entrypoints")
     input_outputs = relationship("InputOutput", back_populates="entrypoints",
                                  cascade="all, delete-orphan")

@@ -91,7 +91,12 @@ def translate_project_to_dag(project_uuid: str):
                 image="scystreamworker",
                 name=data["name"],
                 uuid=data["uuid"],
-                command="python3 v-m import scheduler.execute_function(Entrypoint)"
+                command=(
+                    "sh -c 'python bv-c \"from scystream.sdk.scheduler import "
+                    "Scheduler;"
+                    "Scheduler.execute_function(\\\"function_name\\\")"
+                    "\"'"
+                ),
                 project=str(project_uuid),
                 algorithm=data["block_type"],
                 enviroment=data["enviroment"],

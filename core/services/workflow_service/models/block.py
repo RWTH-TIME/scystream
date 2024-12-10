@@ -38,17 +38,23 @@ class Block(Base):
     author = Column(String(100), nullable=True)
     docker_image = Column(String(150), nullable=False)
     repo_url = Column(String(100), nullable=False)
-    selected_entrypoint = Column(
-        UUID(as_uuid=True), ForeignKey('entrypoints.uuid', ondelete="CASCADE"))
-
+    selected_entrypoint_uuid = Column(UUID(as_uuid=True),
+                                      ForeignKey(
+                                        'entrypoints.uuid',
+                                        ondelete="SET NULL"))
     # position
     x_pos = Column(Float, nullable=True)
     y_pos = Column(Float, nullable=True)
 
     project = relationship("Project", back_populates="blocks")
-    # there could be problems between this relationship and the selected 
-    # entrypoint relationship
-    entrypoints = relationship("Entrypoint", back_populates="blocks")
+
+    entrypoints = relationship(
+        "Entrypoint", back_populates="block", cascade="all, delete-orphan"
+    )
+
+    # selected_entrypoint = relationship(
+    #     "Entrypoint", foreign_keys=[selected_entrypoint_uuid]
+    # )
 
     # think about logic again
     upstream_blocks = relationship(
