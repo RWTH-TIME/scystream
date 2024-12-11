@@ -2,8 +2,8 @@
 
 Make sure that the core-postgres container is running.
 
-For local development create an `.env` file inside the `/src` directory.
-As an example see `src/.env.example`
+For local development create an `.env` file inside the `/core` directory.
+As an example see `core/.env.example`
 
 Make sure you are in the `../core` directory
 
