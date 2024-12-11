@@ -7,8 +7,6 @@ import uuid
 from utils.database.connection import Base
 import enum
 
-from .entrypoint import Entrypoint
-
 
 class InputOutputType(enum.Enum):
     INPUT = "Input"
@@ -34,4 +32,4 @@ class InputOutput(Base):
     entrypoint_uuid = Column(
         UUID(as_uuid=True), ForeignKey('entrypoints.uuid', ondelete="CASCADE"))
 
-    entrypoints = relationship(Entrypoint, back_populates="input_outputs")
+    entrypoints = relationship("Entrypoint", back_populates="input_outputs")

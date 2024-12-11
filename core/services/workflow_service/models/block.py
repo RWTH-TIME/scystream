@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 import uuid
 
 from utils.database.connection import Base
+from services.workflow_service.models.entrypoint import Entrypoint  # noqa: F401, E501
 
 
 # Association table for block dependencies
@@ -49,12 +50,17 @@ class Block(Base):
     project = relationship("Project", back_populates="blocks")
 
     entrypoints = relationship(
-        "Entrypoint", back_populates="block", cascade="all, delete-orphan"
+        "Entrypoint",
+        back_populates="block",
+        cascade="all, delete-orphan",
+        foreign_keys="Entrypoint.block_uuid"
     )
 
-    # selected_entrypoint = relationship(
-    #     "Entrypoint", foreign_keys=[selected_entrypoint_uuid]
-    # )
+    selected_entrypoint = relationship(
+        "Entrypoint",
+        foreign_keys=[selected_entrypoint_uuid],
+        uselist=False
+    )
 
     # think about logic again
     upstream_blocks = relationship(

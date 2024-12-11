@@ -6,7 +6,8 @@ import uuid
 
 from utils.database.connection import Base
 
-from .block import Block
+from .inputoutput import InputOutput  # noqa: F401, E501
+# from .block import Block
 
 
 class Entrypoint(Base):
@@ -20,6 +21,10 @@ class Entrypoint(Base):
     block_uuid = Column(UUID(as_uuid=True),
                         ForeignKey('blocks.uuid', ondelete="CASCADE"))
 
-    block = relationship(Block, back_populates="entrypoints")
+    block = relationship(
+        "Block",
+        back_populates="entrypoints",
+        foreign_keys=[block_uuid]
+    )
     input_outputs = relationship("InputOutput", back_populates="entrypoints",
                                  cascade="all, delete-orphan")
