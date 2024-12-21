@@ -18,6 +18,8 @@ from services.user_service.models.user import User  # noqa: F401
 from services.workflow_service.models.project import Project  # noqa: F401
 from services.workflow_service.models.user_project import UserProject  # noqa: F401, E501
 from services.workflow_service.models.block import Block  # noqa: F401
+from services.workflow_service.models.entrypoint import Entrypoint  # noqa: F401, E501
+from services.workflow_service.models.inputoutput import InputOutput  # noqa: F401, E501
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
