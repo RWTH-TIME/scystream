@@ -4,7 +4,9 @@ from fastapi import HTTPException
 import networkx as nx
 # from typing import Dict, Any
 
-from project_controller import read_project
+from core.services.workflow_service.controllers.project_controller \
+    import read_project
+
 # from models.block import Block
 
 # from enum import Enum

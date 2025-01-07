@@ -52,13 +52,22 @@ class DeleteProjectRequest(BaseModel):
 
 
 class AddNewBlockRequest(BaseModel):
-    project_uuid: UUID
     name: str
-    block_type: str
-    parameters: str
+    project_uuid: UUID
+
     priority_weight: int
     retries: int
     retry_delay: int
+
+    custom_name: str
+    description: str
+    author: str
+    docker_image: str
+    repo_url: str
+    selected_entrypoint_uuid: UUID
+    x_pos: float
+    y_pos: float
+
     schedule_interval: str
     environment: str
     upstream_blocks_uuids: List[UUID]
