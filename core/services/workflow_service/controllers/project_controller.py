@@ -1,29 +1,29 @@
 from uuid import UUID, uuid4
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-import datetime
+from datetime import datetime, timezone
 from typing import List  # , Tuple
 
 from utils.database.session_injector import get_database
-from core.services.workflow_service.models.project import Project
+from services.workflow_service.models.project import Project
 from services.user_service.models.user import User
-from core.services.workflow_service.models.block import Block, OperatorType
+from services.workflow_service.models.block import Block
 
 
-# Does current uuid need to be extracted from the token?
 def create_project(name: str, current_user_uuid: UUID) -> UUID:
     db: Session = next(get_database())
     project: Project = Project()
 
     project.uuid = uuid4()
     project.name = name
-    project.created_at = datetime.utcnow()
+    project.created_at = datetime.now(timezone.utc)
+
     current_user = (
         db.query(User).filter_by(uuid=current_user_uuid).one_or_none()
     )
 
     if not current_user:
-        raise HTTPException(404, detail="User not found")
+        raise HTTPException(404, "User not found")
 
     # TODO: add relation with blocks
 
@@ -112,47 +112,56 @@ def delete_user(project_uuid: UUID, user_uuid: UUID) -> None:
 def add_new_block(
     project_uuid: UUID,
     name: str,
-    block_type: str,
-    parameters: str,
+    custom_name: str,
+    description: str,
+    author: str,
+    docker_image: str,
+    repo_url: str,
+    selected_entrypoint_uuid: UUID,
     priority_weight: int,
     retries: int,
     retry_delay: int,
-    schedule_interval: str,
-    environment: str,
+    x_pos: float,
+    y_pos: float,
     upstream_blocks_uuids: List[UUID],
 ) -> None:
 
-    # Create bock
-    block: Block = Block()
+    # Create block
 
-    block.name = name
-    block.uuid = uuid4()
-    block.project_uuid = project_uuid
-    block.block_type = block_type
-    block.parameters = parameters
-    block.priority_weight = priority_weight
-    block.retries = retries
-    block.retry_delay = retry_delay
-    block.schedule_interval = schedule_interval
-    block.environment = environment
+    block = Block(
+        uuid=uuid4(),
+        name=name,
+        project_uuid=project_uuid,
+        priority_weight=priority_weight,
+        retries=retries,
+        retry_delay=retry_delay,
+        custom_name=custom_name,
+        description=description,
+        author=author,
+        docker_image=docker_image,
+        repo_url=repo_url,
+        selected_entrypoint_uuid=selected_entrypoint_uuid,
+        x_pos=x_pos,
+        y_pos=y_pos,
 
-    for operator in OperatorType:
-        if operator.value == block_type:
-            block_type = operator
-            break
+    )
 
     db: Session = next(get_database())
 
+    # Verify the project exists
+    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Resolve upstream blocks if provided
     if upstream_blocks_uuids:
         upstream_blocks = db.query(Block).filter(
             Block.uuid.in_(upstream_blocks_uuids),
             Block.project_uuid == project_uuid,
-        )
-
-    block.upstream_blocks = upstream_blocks
+        ).all()
+        block.upstream_blocks = upstream_blocks
 
     # Add block to db
-
     project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
 
     if not project:
@@ -238,6 +247,9 @@ def read_all_projects() -> List[Project]:
 
     projects = db.query(Project).all()
 
+    if not projects:
+        raise HTTPException(status_code=404, detail="No projects found")
+    
     return projects
 
 

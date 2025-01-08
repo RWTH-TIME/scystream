@@ -2,9 +2,9 @@ from fastapi import APIRouter
 from uuid import UUID
 from utils.errors.error import handle_error
 
-import core.services.workflow_service.controllers.DAG_translator \
+import services.workflow_service.controllers.DAG_translator \
     as DAG_translator
-import core.services.workflow_service.controllers.project_controller \
+import services.workflow_service.controllers.project_controller \
     as project_controller
 from pydantic import BaseModel
 from datetime import datetime
