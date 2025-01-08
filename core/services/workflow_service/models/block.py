@@ -52,8 +52,8 @@ class Block(Base):
     repo_url = Column(String(100), nullable=False)
     selected_entrypoint_uuid = Column(UUID(as_uuid=True),
                                       ForeignKey(
-                                        "entrypoints.uuid",
-                                        ondelete="SET NULL"))
+        "entrypoints.uuid",
+        ondelete="SET NULL"), nullable=True)
     # position
     x_pos = Column(Float, nullable=True)
     y_pos = Column(Float, nullable=True)

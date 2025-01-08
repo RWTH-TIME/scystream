@@ -23,7 +23,7 @@ We are using [alembic](https://alembic.sqlalchemy.org/en/latest/) as our migrati
 To create a migration, run
 
 ```sh
-alembic revision --autogenerate -m {accurate description of what happens}
+alembic revision --autogenerate -m "accurate description of what happens"
 ```
 
 After creating the revision, please check `src/alembic/versions/{accurate-description}.py`

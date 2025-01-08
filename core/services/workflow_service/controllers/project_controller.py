@@ -112,18 +112,19 @@ def delete_user(project_uuid: UUID, user_uuid: UUID) -> None:
 def add_new_block(
     project_uuid: UUID,
     name: str,
+    priority_weight: int,
+    retries: int,
+    retry_delay: int,
     custom_name: str,
     description: str,
     author: str,
     docker_image: str,
     repo_url: str,
-    selected_entrypoint_uuid: UUID,
-    priority_weight: int,
-    retries: int,
-    retry_delay: int,
+    # selected_entrypoint_uuid: UUID,
     x_pos: float,
     y_pos: float,
-    upstream_blocks_uuids: List[UUID],
+    upstream_blocks: List[UUID],
+    downstream_blocks: List[UUID]
 ) -> None:
 
     # Create block
@@ -140,26 +141,42 @@ def add_new_block(
         author=author,
         docker_image=docker_image,
         repo_url=repo_url,
-        selected_entrypoint_uuid=selected_entrypoint_uuid,
+        # selected_entrypoint_uuid=selected_entrypoint_uuid,
         x_pos=x_pos,
         y_pos=y_pos,
 
     )
 
     db: Session = next(get_database())
-
+    print(project_uuid)
     # Verify the project exists
-    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
+    project = db.query(Project).filter(
+        Project.uuid == project_uuid).one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     # Resolve upstream blocks if provided
-    if upstream_blocks_uuids:
-        upstream_blocks = db.query(Block).filter(
-            Block.uuid.in_(upstream_blocks_uuids),
-            Block.project_uuid == project_uuid,
-        ).all()
-        block.upstream_blocks = upstream_blocks
+    try:
+        if upstream_blocks:
+            upstream_blocks = db.query(Block).filter(
+                Block.uuid.in_(upstream_blocks),
+                Block.project_uuid == project_uuid,
+            ).all()
+            block.upstream_blocks = upstream_blocks
+    except Exception:
+        raise HTTPException(status_code=400,
+                            detail="Upstream blocks are invalid")
+
+    try:
+        if downstream_blocks:
+            downstream_blocks = db.query(Block).filter(
+                Block.uuid.in_(downstream_blocks),
+                Block.project_uuid == project_uuid,
+            ).all()
+            block.downstream_blocks = downstream_blocks
+    except Exception:
+        raise HTTPException(status_code=400,
+                            detail="Downstream blocks are invalid")
 
     # Add block to db
     project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
@@ -249,7 +266,7 @@ def read_all_projects() -> List[Project]:
 
     if not projects:
         raise HTTPException(status_code=404, detail="No projects found")
-    
+
     return projects
 
 

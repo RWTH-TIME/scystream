@@ -68,7 +68,7 @@ async def create_test_dag(
 
 @router.get("/translate", response_model=str)
 async def translate_project_to_dag(
-    data: UUID,
+    data.project_uuid: UUID,
 ):
     try:
         DAG_translator.translate_project_to_dag(data)

@@ -84,8 +84,8 @@ async def delete_project(data: DeleteProjectRequest):
 async def add_new_block(data: AddNewBlockRequest):
     try:
         project_controller.add_new_block(
-            data.name,
             data.project_uuid,
+            data.name,
             data.priority_weight,
             data.retries,
             data.retry_delay,
@@ -94,10 +94,11 @@ async def add_new_block(data: AddNewBlockRequest):
             data.author,
             data.docker_image,
             data.repo_url,
-            data.selected_entrypoint_uuid,
+            # data.selected_entrypoint_uuid,
             data.x_pos,
             data.y_pos,
-            data.upstream_blocks_uuids
+            data.upstream_blocks,
+            data.downstream_blocks
         )
     except Exception as e:
         raise handle_error(e)
