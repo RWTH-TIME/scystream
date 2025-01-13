@@ -2,6 +2,7 @@ import os
 from jinja2 import Environment, FileSystemLoader
 from fastapi import HTTPException
 import networkx as nx
+from uuid import UUID
 # from typing import Dict, Any
 
 from services.workflow_service.controllers.project_controller \
@@ -22,12 +23,15 @@ from services.workflow_service.controllers.project_controller \
 # from airflow_client.client.model.dag_state import DagState
 
 
-def translate_project_to_dag(project_uuid: str):
+def translate_project_to_dag(project_uuid: UUID):
     """
     Parses a project and its blocks into a DAG and validates it.
     """
     # Query the project
     project = read_project(project_uuid)
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project is not known")
 
     # Create a directed graph
     graph = nx.DiGraph()
@@ -35,7 +39,6 @@ def translate_project_to_dag(project_uuid: str):
     # Add nodes (tasks)
     for block in project.blocks:
 
-        # SQLalchemy magic gives back an object of entrytype
         entrypoint = block.selected_entrypoint
 
         if not block.selected_entrypoint:
@@ -66,13 +69,13 @@ def translate_project_to_dag(project_uuid: str):
         raise HTTPException(
             status_code=400,
             detail="The project is not acyclic."
-            )
+        )
 
     # Initialize Jinja2 environment
     base_dir = os.path.dirname(os.path.abspath(__file__))
     templates_dir = os.path.join(  # Path to the templates
         base_dir, "..", "templates"
-        )
+    )
 
     env = Environment(loader=FileSystemLoader(templates_dir))
     dag_template = env.get_template("dag_base.py.j2")
@@ -83,7 +86,7 @@ def translate_project_to_dag(project_uuid: str):
     parts = []
     parts = [dag_template.render(
         dag_id=f"dag_{project_uuid.replace('-', '_')}"
-        )]
+    )]
 
     # Convert to Airflow-compatible representation
     for node, data in graph.nodes(data=True):
@@ -117,7 +120,7 @@ def translate_project_to_dag(project_uuid: str):
     # Write the generated DAG to a Python file
     filename = os.path.join(
         "~/airflow/dags/", f"dag_{project_uuid.replace('-', '_')}.py"
-        )
+    )
 
     with open(filename, "w") as f:
         f.write("\n".join(parts))
