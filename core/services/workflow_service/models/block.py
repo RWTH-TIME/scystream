@@ -13,20 +13,14 @@ from services.workflow_service.models.entrypoint import Entrypoint  # noqa: F401
 block_dependencies = Table(
     "block_dependencies", Base.metadata,
     Column("upstream_block_uuid", UUID(as_uuid=True),
-           ForeignKey("blocks.uuid", ondelete="CASCADE"), primary_key=True),
+           ForeignKey(
+               "blocks.uuid", ondelete="CASCADE", name="fk_upstream_block"),
+           primary_key=True),
     Column("downstream_block_uuid", UUID(as_uuid=True),
-           ForeignKey("blocks.uuid", ondelete="CASCADE"), primary_key=True)
+           ForeignKey(
+               "blocks.uuid", ondelete="CASCADE", name="fk_downstream_block"),
+           primary_key=True)
 )
-# block_dependencies = Table(
-#     "block_dependencies", Base.metadata,
-#     Column("upstream_block_uuid", UUID(as_uuid=True),
-#            ForeignKey("blocks.uuid", ondelete="CASCADE")),
-#     Column("downstream_block_uuid", UUID(as_uuid=True),
-#            ForeignKey("blocks.uuid", ondelete="CASCADE")),
-#     UniqueConstraint("upstream_block_uuid", "downstream_block_uuid",
-#                      name="uix_block_dependency"),
-#     keep_existing=True
-# )
 
 
 class Block(Base):
@@ -73,22 +67,6 @@ class Block(Base):
         uselist=False
     )
 
-    # upstream_blocks = relationship(
-    #     "Block",
-    #     secondary="block_dependencies",
-    #     # foreign_keys=[block_dependencies.c.upstream_block_uuid],
-    #     primaryjoin=uuid == block_dependencies.c.downstream_block_uuid,
-    #     secondaryjoin=uuid == block_dependencies.c.upstream_block_uuid,
-    #     back_populates="downstream_blocks"
-    # )
-    # downstream_blocks = relationship(
-    #     "Block",
-    #     secondary="block_dependencies",
-    #     # foreign_keys=[block_dependencies.c.downstream_block_uuid],
-    #     primaryjoin=uuid == block_dependencies.c.upstream_block_uuid,
-    #     secondaryjoin=uuid == block_dependencies.c.downstream_block_uuid,
-    #     back_populates="upstream_blocks"
-    # )
     upstream_blocks = relationship(
         "Block",
         secondary="block_dependencies",
