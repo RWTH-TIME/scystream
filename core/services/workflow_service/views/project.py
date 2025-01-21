@@ -16,7 +16,6 @@ from services.workflow_service.schemas.project import (
     ReadByUserResponse,
     ReadAllResponse,
     RenameProjectRequest,
-    DeleteProjectRequest
 )
 
 

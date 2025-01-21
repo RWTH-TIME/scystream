@@ -1,9 +1,7 @@
 import type { PropsWithChildren } from "react"
 import { useState } from "react"
 
-type ProjectCBSettingsDraggableProps = PropsWithChildren<{}>
-
-export default function ProjectCBSettingsDraggable({ children }: ProjectCBSettingsDraggableProps) {
+export default function ProjectCBSettingsDraggable({ children }: PropsWithChildren) {
   const [height, setHeight] = useState(300) // Initial height in pixels
 
   const handleResize = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {

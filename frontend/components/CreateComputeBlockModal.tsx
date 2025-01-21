@@ -30,7 +30,7 @@ export default function CreateComputeBlockModal({
             type="text"
             value={repoURL}
             label="Repository URL"
-            onChange={setCBName}
+            onChange={setRepoURL}
           />
         </div>
         <div className="flex justify-end">
