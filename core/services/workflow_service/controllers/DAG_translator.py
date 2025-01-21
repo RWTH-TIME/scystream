@@ -8,19 +8,6 @@ from uuid import UUID
 from services.workflow_service.controllers.project_controller \
     import read_project
 
-# from models.block import Block
-
-# from enum import Enum
-# from json import loads
-# from typing import NoReturn, List, Optional
-
-# from airflow_client.client import ApiClient, Configuration
-# from airflow_client.client.api.dag_api import DAGApi
-# from airflow_client.client.api.dag_run_api import DAGRunApi
-# from airflow_client.client.exceptions import NotFoundException
-# from airflow_client.client.model.dag import DAG
-# from airflow_client.client.model.dag_run import DAGRun
-# from airflow_client.client.model.dag_state import DagState
 
 
 def translate_project_to_dag(project_uuid: UUID):
