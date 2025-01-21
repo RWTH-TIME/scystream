@@ -120,7 +120,7 @@ def add_new_block(
     author: str,
     docker_image: str,
     repo_url: str,
-    # selected_entrypoint_uuid: UUID,
+    selected_entrypoint_uuid: UUID,
     x_pos: float,
     y_pos: float,
     upstream_blocks: List[UUID],
@@ -141,7 +141,7 @@ def add_new_block(
         author=author,
         docker_image=docker_image,
         repo_url=repo_url,
-        # selected_entrypoint_uuid=selected_entrypoint_uuid,
+        selected_entrypoint_uuid=selected_entrypoint_uuid,
         x_pos=x_pos,
         y_pos=y_pos,
 
