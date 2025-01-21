@@ -10,6 +10,7 @@ import {
   useReactFlow
 } from "@xyflow/react"
 import { PlayArrow, Widgets, Save, Delete } from "@mui/icons-material"
+import type { ComputeBlock } from "./nodes/ComputeBlockNode"
 import ComputeBlockNode from "./nodes/ComputeBlockNode"
 import "@xyflow/react/dist/style.css"
 import LoadingAndError from "./LoadingAndError"
@@ -40,12 +41,13 @@ export default function Workbench() {
 
   useEffect(() => {
     if (projectDetails) {
-      setNodes(projectDetails as FlowNode<Node>[]) // Ensure projectDetails matches the Node type
+      // TODO: Fix this type workaround below (mega ugly)
+      setNodes(projectDetails as unknown as FlowNode<Node>[])
     }
   }, [projectDetails])
 
   const onNodesChange = useCallback(
-    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds) as FlowNode<Node>[]),
     []
   )
 
@@ -79,6 +81,7 @@ export default function Workbench() {
         id: `${type}_${nodes.length + 1}`,
         type: "computeBlock",
         position,
+        // @ts-expect-error label is somehow not recognized here from the type: maybe fix: FlowNode<Node<ComputeBlock>>
         data: { label: `${type} Node` },
       }
 
@@ -142,7 +145,8 @@ export default function Workbench() {
           nodes={nodes}
           onNodesChange={onNodesChange}
           fitView
-          onNodeClick={(_, node) => setSelectedComputeBlock(node.data)}
+          // TODO: fix the ugly type workaround
+          onNodeClick={(_, node) => setSelectedComputeBlock(node.data as unknown as ComputeBlock)}
           onPaneClick={() => setSelectedComputeBlock(undefined)}
           onDragOver={onDragOver}
           onDrop={onDrop}
