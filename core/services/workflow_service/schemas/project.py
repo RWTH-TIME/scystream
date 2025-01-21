@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from datetime import datetime
-from typing import List  # , Optional
+from typing import List
 
 
 # TODO:Still missing some field validation (empty name...)
@@ -65,7 +65,7 @@ class AddNewBlockRequest(BaseModel):
     author: str
     docker_image: str
     repo_url: str
-    # selected_entrypoint_uuid: Optional[UUID] = None
+    selected_entrypoint_uuid: UUID
     x_pos: float
     y_pos: float
 

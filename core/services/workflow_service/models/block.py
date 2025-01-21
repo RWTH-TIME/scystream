@@ -6,7 +6,6 @@ import uuid
 
 from utils.database.connection import Base
 from services.workflow_service.models.entrypoint import Entrypoint  # noqa: F401, E501
-# from sqlalchemy.schema import UniqueConstraint
 
 
 # Association table for block dependencies
@@ -35,12 +34,13 @@ class Block(Base):
     # airflow-Task specific columns
     priority_weight = Column(Integer, nullable=True)
     retries = Column(Integer, default=0)
-    retry_delay = Column(Integer, default=300)  # Delay in seconds
+    # delay in seconds before rerun of pipeline after fail
+    retry_delay = Column(Integer, default=300)
     # schedule_interval = Column(String, nullable=True)
 
     # sdk specific columns, set by user
     custom_name = Column(String(100), nullable=False)
-    description = Column(String(100), nullable=True)  # nullable false instead?
+    description = Column(String(100), nullable=True)
     author = Column(String(100), nullable=True)
     docker_image = Column(String(150), nullable=False)
     repo_url = Column(String(100), nullable=False)

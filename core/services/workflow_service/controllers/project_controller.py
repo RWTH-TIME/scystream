@@ -1,8 +1,9 @@
 from uuid import UUID, uuid4
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timezone
-from typing import List  # , Tuple
+from typing import List
 
 from utils.database.session_injector import get_database
 from services.workflow_service.models.project import Project
@@ -120,16 +121,18 @@ def add_new_block(
     author: str,
     docker_image: str,
     repo_url: str,
-    # selected_entrypoint_uuid: UUID,
+    selected_entrypoint_uuid: UUID,
     x_pos: float,
     y_pos: float,
     upstream_blocks: List[UUID],
     downstream_blocks: List[UUID]
 ) -> None:
+    """
+    This function contains the logic of creating a block.
+    It validates if passed upstream blocks and downstream blocks exist.
+    """
 
-    # Create block
-
-    block = Block(
+    new_block = Block(
         uuid=uuid4(),
         name=name,
         project_uuid=project_uuid,
@@ -141,31 +144,34 @@ def add_new_block(
         author=author,
         docker_image=docker_image,
         repo_url=repo_url,
-        # selected_entrypoint_uuid=selected_entrypoint_uuid,
+        selected_entrypoint_uuid=selected_entrypoint_uuid,
         x_pos=x_pos,
         y_pos=y_pos,
 
     )
 
     db: Session = next(get_database())
-    print(project_uuid)
+
     # Verify the project exists
     project = db.query(Project).filter(
         Project.uuid == project_uuid).one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Resolve upstream blocks if provided
+    # Resolve upstream / downstream blocks if provided
     try:
         if upstream_blocks:
             upstream_blocks = db.query(Block).filter(
                 Block.uuid.in_(upstream_blocks),
                 Block.project_uuid == project_uuid,
             ).all()
-            block.upstream_blocks = upstream_blocks
+            new_block.upstream_blocks = upstream_blocks
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=400, detail="Upstream blocks are invalid")
     except Exception:
         raise HTTPException(status_code=400,
-                            detail="Upstream blocks are invalid")
+                            detail="Error with upstream blocks")
 
     try:
         if downstream_blocks:
@@ -173,10 +179,13 @@ def add_new_block(
                 Block.uuid.in_(downstream_blocks),
                 Block.project_uuid == project_uuid,
             ).all()
-            block.downstream_blocks = downstream_blocks
+            new_block.downstream_blocks = downstream_blocks
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=400, detail="Downstream blocks are invalid")
     except Exception:
         raise HTTPException(status_code=400,
-                            detail="Downstream blocks are invalid")
+                            detail="Error with downstream blocks")
 
     # Add block to db
     project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
@@ -184,12 +193,18 @@ def add_new_block(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if block in project.blocks:
+    if new_block in project.blocks:
         raise HTTPException(
-            status_code=404, detail="Block is already in the project"
+            status_code=409, detail="Block is already in the project"
         )
 
-    project.blocks.append(block)
+    existing_block = db.query(Block).filter_by(
+        uuid=new_block.uuid).one_or_none()
+    if not existing_block:
+        db.add(new_block)
+        db.commit()
+
+    project.blocks.append(new_block)
 
     db.commit()
 

@@ -5,7 +5,7 @@ from datetime import datetime
 
 default_args = {
     'owner': 'airflow',
-    'start_date': datetime(2022, 1, 1),
+    'start_date': datetime(2025, 1, 1),
 }
 
 with DAG('{{dag_id}}', default_args=default_args, schedule_interval="@once", is_paused_upon_creation=False) as dag:

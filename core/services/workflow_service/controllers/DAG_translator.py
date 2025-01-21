@@ -8,7 +8,6 @@ from services.workflow_service.controllers.project_controller \
     import read_project
 
 
-
 def translate_project_to_dag(project_uuid: UUID):
     """
     Parses a project and its blocks into a DAG and validates it.
@@ -92,8 +91,6 @@ def translate_project_to_dag(project_uuid: UUID):
                 algorithm=data["block_type"],
                 enviroment=data["enviroment"],
                 local_storage_path_external="/tmp/scystream-data",
-                # container_name=project.container_name,
-                # pipeline=str(project.pipeline_uuid),
             )
         )
 

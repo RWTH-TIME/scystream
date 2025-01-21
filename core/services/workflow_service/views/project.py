@@ -1,4 +1,4 @@
-from fastapi import APIRouter  # , Depends
+from fastapi import APIRouter
 from uuid import UUID
 from utils.errors.error import handle_error
 
@@ -25,7 +25,6 @@ router = APIRouter(prefix="/project", tags=["project"])
 async def create_project(
     data: CreateProjectRequest
 ):
-    print(data.name)
     try:
         project_uuid = project_controller.create_project(
             data.name, data.user_uuid
@@ -94,7 +93,7 @@ async def add_new_block(data: AddNewBlockRequest):
             data.author,
             data.docker_image,
             data.repo_url,
-            # data.selected_entrypoint_uuid,
+            data.selected_entrypoint_uuid,
             data.x_pos,
             data.y_pos,
             data.upstream_blocks,
