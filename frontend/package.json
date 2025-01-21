@@ -20,18 +20,18 @@
         "react": "18.3.1",
         "react-dom": "18.3.1",
         "uuid": "10.0.0",
-        "zod": "3.23.8"
+        "zod": "3.24.1"
     },
     "devDependencies": {
-        "@helpwave/eslint-config": "1.16.0",
-        "@types/node": "20.17.6",
-        "@types/react": "18.3.12",
-        "@types/react-dom": "18.3.1",
+        "@helpwave/eslint-config": "1.21.0",
+        "@types/node": "20.17.12",
+        "@types/react": "18.3.18",
+        "@types/react-dom": "18.3.5",
         "@types/uuid": "10.0.0",
         "eslint": "8.57.1",
-        "eslint-config-next": "14.2.18",
+        "eslint-config-next": "14.2.22",
         "postcss": "8.4.49",
-        "tailwindcss": "3.4.15",
-        "typescript": "5.6.3"
+        "tailwindcss": "3.4.17",
+        "typescript": "5.7.2"
     }
 }

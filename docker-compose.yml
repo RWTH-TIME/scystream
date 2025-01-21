@@ -4,19 +4,23 @@ x-airflow-common:
   # build: .
   environment:
     &airflow-common-env
+    AIRFLOW_UID: 0
+    AIRFLOW_GID: 0
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres-airflow/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis-airflow:6379/0
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 5
+    AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: 0
     # AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
-    - airflow-dags:/opt/airflow/dags
+    - ./core/airflow-dags:/opt/airflow/dags
     - airflow-logs:/opt/airflow/logs
     - airflow-config:/opt/airflow/config
     - airflow-plugins:/opt/airflow/plugins
@@ -30,6 +34,7 @@ x-airflow-common:
     
 
 services:
+  ### airflow:
   redis-airflow:
     # Redis is limited to 7.2-bookworm due to licencing change
     image: redis:7.2-bookworm
@@ -57,7 +62,7 @@ services:
       retries: 5
       start_period: 5s
     restart: always
-  
+
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
@@ -72,7 +77,11 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-  
+    # TODO: Check if only the airflow scheduler needs to be in data-processing network
+    # Info: The Airflow-Scheduler needs to schedule the dockerContainers in the data-processing network
+    networks:
+      - data-processing
+
   airflow-worker:
     <<: *airflow-common
     command: celery worker
@@ -203,28 +212,66 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-### spark
+  
+  ### spark:
   spark-master:
-    image: bitnami/spark:latest
+    image: bitnami/spark:3.5.4
     environment:
       - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
       - SPARK_RPC_ENCRYPTION_ENABLED=no
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
     ports:
       - "8080:8080" # web ui
-
+      - "7077:7077" # master port
+    networks:
+      - data-processing
+  
+  # In production, there should be more workers
   spark-worker:
-    image: bitnami/spark:latest
+    image: bitnami/spark:3.5.4
     environment:
       - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_MASTER=spark://spark-master:7077
       - SPARK_WORKER_MEMORY=1G
       - SPARK_WORKER_CORES=1
     depends_on:
       - spark-master
+    networks:
+      - data-processing
+  
+  # The postgres we offer the compute blocks to save data at
+  data-postgres:
+    image: postgres:17
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5433:5432"
+    networks:
+      - data-processing
 
+  # The minio we offer the comput block to save files at
+  data-minio:
+    image: quay.io/minio/minio
+    restart: always
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - data-processing
+    command: server /data --console-address ":9001"
+
+  ### application:
   frontend:
     build: frontend
     restart: always
@@ -285,11 +332,15 @@ services:
     ports:
       - "3010:3000"
 
+networks:
+  data-processing:
+    driver: bridge
+
 volumes:
   postgres-airflow-volume:
-  airflow-dags:
   airflow-plugins:
   airflow-logs:
   airflow-config:
   airflow-sources:
   core-postgres:
+  minio_data:
