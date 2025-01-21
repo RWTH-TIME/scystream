@@ -45,7 +45,3 @@ class ReadAllResponse(BaseModel):
 class RenameProjectRequest(BaseModel):
     project_uuid: UUID
     new_name: str
-
-
-class DeleteProjectRequest(BaseModel):
-    project_uuid: UUID
