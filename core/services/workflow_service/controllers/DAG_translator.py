@@ -3,7 +3,6 @@ from jinja2 import Environment, FileSystemLoader
 from fastapi import HTTPException
 import networkx as nx
 from uuid import UUID
-# from typing import Dict, Any
 
 from services.workflow_service.controllers.project_controller \
     import read_project
