@@ -23,7 +23,7 @@ def create_project(name: str, current_user_uuid: UUID) -> UUID:
     )
 
     if not current_user:
-        raise HTTPException(404, "User not found")
+        raise HTTPException(404, detail="User not found")
 
     # TODO: add relation with blocks
 
