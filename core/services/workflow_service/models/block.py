@@ -28,8 +28,10 @@ class Block(Base):
     uuid = Column(UUID(as_uuid=True), primary_key=True,
                   default=uuid.uuid4)
     name = Column(String(100), nullable=False)
-    project_uuid = Column(UUID(as_uuid=True), ForeignKey("projects.uuid",
-                                                         ondelete="CASCADE"))
+    project_uuid = Column(UUID(as_uuid=True),
+                          ForeignKey("projects.uuid",
+                                     ondelete="CASCADE",
+                                     name="fk_project_uuid"))
 
     # airflow-Task specific columns
     priority_weight = Column(Integer, nullable=True)
@@ -44,28 +46,30 @@ class Block(Base):
     author = Column(String(100), nullable=True)
     docker_image = Column(String(150), nullable=False)
     repo_url = Column(String(100), nullable=False)
-    selected_entrypoint_uuid = Column(UUID(as_uuid=True),
-                                      ForeignKey(
-        "entrypoints.uuid",
-        ondelete="SET NULL"), nullable=True)
+    # \\TODO: fix relationship btw entrypoint and block
+    # selected_entrypoint_uuid = Column(UUID(as_uuid=True),
+    #                                   ForeignKey(
+    #     "entrypoints.uuid",
+    #     ondelete="SET NULL"), nullable=True,
+    #     name="fk_selected_entrypoint_uuid")
     # position
     x_pos = Column(Float, nullable=True)
     y_pos = Column(Float, nullable=True)
 
     project = relationship("Project", back_populates="blocks")
 
-    entrypoints = relationship(
-        "Entrypoint",
-        back_populates="block",
-        cascade="all, delete-orphan",
-        foreign_keys="Entrypoint.block_uuid"
-    )
+    # entrypoints = relationship(
+    #     Entrypoint,
+    #     back_populates="block",
+    #     cascade="all, delete-orphan",
+    #     foreign_keys=[Entrypoint.block_uuid]
+    # )
 
-    selected_entrypoint = relationship(
-        "Entrypoint",
-        foreign_keys=[selected_entrypoint_uuid],
-        uselist=False
-    )
+    # selected_entrypoint = relationship(
+    #     "Entrypoint",
+    #     foreign_keys="fk_selected_entrypoint_uuid",
+    #     uselist=False
+    # )   # alembic error?
 
     upstream_blocks = relationship(
         "Block",
