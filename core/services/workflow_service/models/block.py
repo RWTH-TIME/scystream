@@ -28,10 +28,10 @@ class Block(Base):
     uuid = Column(UUID(as_uuid=True), primary_key=True,
                   default=uuid.uuid4)
     name = Column(String(100), nullable=False)
-    # project_uuid = Column(UUID(as_uuid=True),
-    #                       ForeignKey("projects.uuid",
-    #                                  ondelete="CASCADE",
-    #                                  name="fk_project_uuid"))
+    project_uuid = Column(UUID(as_uuid=True),
+                          ForeignKey("projects.uuid",
+                                     ondelete="CASCADE",
+                                     name="fk_project_uuid"))
 
     # airflow-Task specific columns
     priority_weight = Column(Integer, nullable=True)
