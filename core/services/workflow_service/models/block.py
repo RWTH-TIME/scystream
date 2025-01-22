@@ -48,15 +48,15 @@ class Block(Base):
     repo_url = Column(String(100), nullable=False)
 
     # \\TODO: fix relationship btw entrypoint and block
-    # selected_entrypoint_uuid = Column(
-    #     UUID(as_uuid=True),
-    #     ForeignKey(
-    #         "entrypoints.uuid",
-    #         ondelete="SET NULL",
-    #         name="fk_selected_entrypoint_uuid"
-    #     ),
-    #     nullable=True
-    # )
+    selected_entrypoint_uuid = Column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "entrypoints.uuid",
+            ondelete="SET NULL",
+            name="fk_selected_entrypoint_uuid"
+        ),
+        nullable=True
+    )
 
     # position
     x_pos = Column(Float, nullable=True)
@@ -64,20 +64,20 @@ class Block(Base):
 
     project = relationship("Project", back_populates="blocks")
 
-    # entrypoints = relationship(
-    #     Entrypoint,
-    #     back_populates="block",
-    #     cascade="all, delete-orphan",
-    #     foreign_keys=[Entrypoint.block_uuid]
-    # )
+    entrypoints = relationship(
+        Entrypoint,
+        back_populates="block",
+        cascade="all, delete-orphan",
+        foreign_keys=[Entrypoint.block_uuid]
+    )
     # \\TODO: use join here like for upstream blocks?
     # or use only definition in entrypoint (back_populates?)
 
-    # selected_entrypoint = relationship(
-    #     "Entrypoint",
-    #     foreign_keys=[selected_entrypoint_uuid],
-    #     uselist=False
-    # )  # alembic error?
+    selected_entrypoint = relationship(
+        "Entrypoint",
+        foreign_keys=[selected_entrypoint_uuid],
+        uselist=False
+    )  # alembic error?
 
     upstream_blocks = relationship(
         "Block",
