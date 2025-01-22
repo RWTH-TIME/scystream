@@ -28,10 +28,10 @@ class Block(Base):
     uuid = Column(UUID(as_uuid=True), primary_key=True,
                   default=uuid.uuid4)
     name = Column(String(100), nullable=False)
-    project_uuid = Column(UUID(as_uuid=True),
-                          ForeignKey("projects.uuid",
-                                     ondelete="CASCADE",
-                                     name="fk_project_uuid"))
+    # project_uuid = Column(UUID(as_uuid=True),
+    #                       ForeignKey("projects.uuid",
+    #                                  ondelete="CASCADE",
+    #                                  name="fk_project_uuid"))
 
     # airflow-Task specific columns
     priority_weight = Column(Integer, nullable=True)
@@ -46,12 +46,18 @@ class Block(Base):
     author = Column(String(100), nullable=True)
     docker_image = Column(String(150), nullable=False)
     repo_url = Column(String(100), nullable=False)
+
     # \\TODO: fix relationship btw entrypoint and block
-    # selected_entrypoint_uuid = Column(UUID(as_uuid=True),
-    #                                   ForeignKey(
-    #     "entrypoints.uuid",
-    #     ondelete="SET NULL"), nullable=True,
-    #     name="fk_selected_entrypoint_uuid")
+    # selected_entrypoint_uuid = Column(
+    #     UUID(as_uuid=True),
+    #     ForeignKey(
+    #         "entrypoints.uuid",
+    #         ondelete="SET NULL",
+    #         name="fk_selected_entrypoint_uuid"
+    #     ),
+    #     nullable=True
+    # )
+
     # position
     x_pos = Column(Float, nullable=True)
     y_pos = Column(Float, nullable=True)
@@ -64,12 +70,14 @@ class Block(Base):
     #     cascade="all, delete-orphan",
     #     foreign_keys=[Entrypoint.block_uuid]
     # )
+    # \\TODO: use join here like for upstream blocks?
+    # or use only definition in entrypoint (back_populates?)
 
     # selected_entrypoint = relationship(
     #     "Entrypoint",
-    #     foreign_keys="fk_selected_entrypoint_uuid",
+    #     foreign_keys=[selected_entrypoint_uuid],
     #     uselist=False
-    # )   # alembic error?
+    # )  # alembic error?
 
     upstream_blocks = relationship(
         "Block",

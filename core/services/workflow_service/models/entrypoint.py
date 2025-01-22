@@ -18,10 +18,12 @@ class Entrypoint(Base):
     name = Column(String(100), nullable=False)
     description = Column(String(500), nullable=True)
     envs = Column(JSON, nullable=False)
-    block_uuid = Column(UUID(as_uuid=True),
-                        ForeignKey('blocks.uuid',
-                                   ondelete="CASCADE",
-                                   name="fk_block_uuid"))
+
+    block_uuid = Column(
+        UUID(as_uuid=True),
+        ForeignKey("blocks.uuid", ondelete="CASCADE"),
+        nullable=False
+    )
 
     block = relationship(
         "Block",
