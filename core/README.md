@@ -2,8 +2,8 @@
 
 Make sure that the core-postgres container is running.
 
-For local development create an `.env` file inside the `/src` directory.
-As an example see `src/.env.example`
+For local development create an `.env` file inside the `/core` directory.
+As an example see `core/.env.example`
 
 Make sure you are in the `../core` directory
 
@@ -23,7 +23,7 @@ We are using [alembic](https://alembic.sqlalchemy.org/en/latest/) as our migrati
 To create a migration, run
 
 ```sh
-alembic revision --autogenerate -m {accurate description of what happens}
+alembic revision --autogenerate -m "accurate description of what happens"
 ```
 
 After creating the revision, please check `src/alembic/versions/{accurate-description}.py`
