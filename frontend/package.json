@@ -11,26 +11,26 @@
     "dependencies": {
         "@emotion/react": "11.14.0",
         "@emotion/styled": "11.14.0",
-        "@mui/icons-material": "5.16.13",
-        "@mui/material": "5.16.13",
-        "@tanstack/react-query": "5.62.16",
+        "@mui/icons-material": "5.16.14",
+        "@mui/material": "5.16.14",
+        "@tanstack/react-query": "5.66.0",
         "axios": "1.7.9",
-        "next": "14.2.22",
+        "next": "14.2.23",
         "react": "18.3.1",
         "react-dom": "18.3.1",
         "uuid": "10.0.0",
         "zod": "3.24.1"
     },
     "devDependencies": {
-        "@helpwave/eslint-config": "1.21.0",
-        "@types/node": "20.17.12",
+        "@helpwave/eslint-config": "1.23.0",
+        "@types/node": "20.17.17",
         "@types/react": "18.3.18",
         "@types/react-dom": "18.3.5",
         "@types/uuid": "10.0.0",
         "eslint": "8.57.1",
-        "eslint-config-next": "14.2.22",
-        "postcss": "8.4.49",
+        "eslint-config-next": "14.2.23",
+        "postcss": "8.5.2",
         "tailwindcss": "3.4.17",
-        "typescript": "5.7.2"
+        "typescript": "5.7.3"
     }
 }
