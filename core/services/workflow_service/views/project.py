@@ -4,7 +4,6 @@ from utils.errors.error import handle_error
 
 import services.workflow_service.controllers.project_controller as \
     project_controller
-
 from services.workflow_service.schemas.project import (
     Project,
     CreateProjectRequest,

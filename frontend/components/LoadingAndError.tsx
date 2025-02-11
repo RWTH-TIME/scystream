@@ -4,7 +4,7 @@ import { CircularProgress } from "@mui/material"
 export type LoadingAndErrorProps = PropsWithChildren<{
   loading?: boolean,
   error?: boolean,
-  iconSize?: number
+  iconSize?: number,
 }>
 
 export default function LoadingAndError({ loading = false, error = false, iconSize = undefined, children }: LoadingAndErrorProps) {
