@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . && tsc --noEmit --project tsconfig.json"
+    "lint": "eslint . && tsc --noEmit"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
