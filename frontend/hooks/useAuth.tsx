@@ -22,7 +22,7 @@ type tokenSchema = z.output<typeof TokenPayloadSchema>
 
 export type User = {
   uuid: string,
-  email: string
+  email: string,
 }
 
 function parseJWTPayload(token: string): JSON {

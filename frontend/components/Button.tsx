@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, MouseEventHandler, PropsWithChildren } from 
 
 type ButtonProps = PropsWithChildren<{
   className?: string,
-  onClick?: MouseEventHandler<HTMLButtonElement>
+  onClick?: MouseEventHandler<HTMLButtonElement>,
 }> & Omit<ButtonHTMLAttributes<Element>, "onClick" | "className">
 
 export default function Button({

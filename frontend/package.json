@@ -1,36 +1,40 @@
 {
-    "name": "frontend",
-    "version": "0.1.0",
-    "private": true,
-    "scripts": {
-        "dev": "next dev",
-        "build": "next build",
-        "start": "next start",
-        "lint": "next lint"
-    },
-    "dependencies": {
-        "@emotion/react": "11.14.0",
-        "@emotion/styled": "11.14.0",
-        "@mui/icons-material": "5.16.14",
-        "@mui/material": "5.16.14",
-        "@tanstack/react-query": "5.66.0",
-        "axios": "1.7.9",
-        "next": "14.2.23",
-        "react": "18.3.1",
-        "react-dom": "18.3.1",
-        "uuid": "10.0.0",
-        "zod": "3.24.1"
-    },
-    "devDependencies": {
-        "@helpwave/eslint-config": "1.23.0",
-        "@types/node": "20.17.17",
-        "@types/react": "18.3.18",
-        "@types/react-dom": "18.3.5",
-        "@types/uuid": "10.0.0",
-        "eslint": "8.57.1",
-        "eslint-config-next": "14.2.23",
-        "postcss": "8.5.2",
-        "tailwindcss": "3.4.17",
-        "typescript": "5.7.3"
-    }
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . && tsc --noEmit"
+  },
+  "dependencies": {
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.0",
+    "@mui/icons-material": "6.4.3",
+    "@mui/material": "6.4.3",
+    "@tailwindcss/postcss": "^4.0.6",
+    "@tanstack/react-query": "5.66.0",
+    "axios": "1.7.9",
+    "next": "15.1.6",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "uuid": "11.0.5",
+    "zod": "3.24.1"
+  },
+  "devDependencies": {
+    "@helpwave/eslint-config": "1.23.0",
+    "@stylistic/eslint-plugin": "^3.1.0",
+    "@types/node": "22.13.1",
+    "@types/react": "19.0.8",
+    "@types/react-dom": "19.0.3",
+    "@types/uuid": "10.0.0",
+    "eslint": "9.20.0",
+    "eslint-config-next": "15.1.6",
+    "postcss": "8.5.2",
+    "tailwindcss": "4.0.6",
+    "typescript": "5.7.3",
+    "typescript-eslint": "^8.24.0"
+  }
 }

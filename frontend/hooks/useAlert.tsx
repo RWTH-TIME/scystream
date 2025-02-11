@@ -9,7 +9,7 @@ const ALERT_TIME = 5000
 export enum AlertType {
   SUCCESS = 1,
   ERROR = 2,
-  DEFAULT = 3,
+  DEFAULT = 3
 }
 
 export type SetAlertType = (text: string, type: AlertType) => void
@@ -17,7 +17,7 @@ export type SetAlertType = (text: string, type: AlertType) => void
 type AlertContextValues = {
   text: string,
   type: AlertType,
-  setAlert: SetAlertType
+  setAlert: SetAlertType,
 }
 
 const initialState: AlertContextValues = {

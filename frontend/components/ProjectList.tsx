@@ -5,7 +5,7 @@ import { useProjectsQuery } from "@/mutations/projectMutation"
 
 export type ProjectListProps = {
   selectedProject: Project | undefined,
-  setSelectedProject: Dispatch<SetStateAction<Project | undefined>>
+  setSelectedProject: Dispatch<SetStateAction<Project | undefined>>,
 }
 
 export default function ProjectList({ selectedProject, setSelectedProject }: ProjectListProps) {

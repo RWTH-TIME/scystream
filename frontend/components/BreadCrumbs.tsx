@@ -2,11 +2,11 @@ import Link from "next/link"
 
 export type Crumb = {
   text: string,
-  link: string
+  link: string,
 }
 
 export type BreadCrumbsProps = {
-  breadcrumbs: Crumb[]
+  breadcrumbs: Crumb[],
 }
 
 export default function BreadCrumbs({ breadcrumbs }: BreadCrumbsProps) {

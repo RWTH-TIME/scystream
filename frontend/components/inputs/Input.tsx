@@ -9,7 +9,7 @@ type InputProps = {
   leftAdornment?: React.ReactElement<InputAdornmentProps>,
   rightAdornment?: React.ReactElement<InputAdornmentProps>,
   onChange?: (text: string) => void,
-  onChangeEvent?: (event: ChangeEvent<HTMLInputElement>) => void
+  onChangeEvent?: (event: ChangeEvent<HTMLInputElement>) => void,
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "id" | "value" | "label" | "onChange">
 
 /**

@@ -2,7 +2,7 @@ import type { PropsWithChildren } from "react"
 
 export type LoadingAndErrorProps = PropsWithChildren<{
   loading?: boolean,
-  error?: boolean
+  error?: boolean,
 }>
 
 export default function LoadingAndError({ loading = false, error = false, children }: LoadingAndErrorProps) {

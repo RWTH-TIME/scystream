@@ -14,12 +14,12 @@ const TEST_ENDPOINT = "user/test"
 
 type UserDTO = {
   email: string,
-  password: string
+  password: string,
 }
 
 type RefreshDTO = {
   old_access_token: string,
-  refresh_token: string
+  refresh_token: string,
 }
 
 function useRegisterMutation(setAlert: SetAlertType) {
