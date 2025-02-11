@@ -25,6 +25,7 @@ router = APIRouter(prefix="/project", tags=["project"])
 async def create_project(
     data: CreateProjectRequest
 ):
+    # TODO: Get the User_UUID from the token
     try:
         project_uuid = project_controller.create_project(
             data.name, data.user_uuid

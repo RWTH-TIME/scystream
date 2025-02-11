@@ -5,13 +5,6 @@
             auto_remove=True,
             command="python3 v-m import scheduler.execute_function(Entrypoint)",
             docker_url="unix://var/run/docker.sock",
-            mounts=[
-                Mount(
-                    source="{{local_storage_path_external}}",
-                    target="/data",
-                    type="bind",
-                ),
-            ],
             environment={{ environment }},
         )
 

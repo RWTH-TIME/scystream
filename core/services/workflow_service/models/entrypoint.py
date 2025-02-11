@@ -6,9 +6,6 @@ import uuid
 
 from utils.database.connection import Base
 
-from .inputoutput import InputOutput  # noqa: F401, E501
-# from .block import Block
-
 
 class Entrypoint(Base):
     __tablename__ = "entrypoints"
