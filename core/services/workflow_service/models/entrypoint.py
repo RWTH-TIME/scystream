@@ -1,10 +1,11 @@
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import Column, String, JSON, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 import uuid
 
 from utils.database.connection import Base
+from services.workflow_service.models.inputoutput import InputOutput
 
 
 class Entrypoint(Base):
@@ -25,7 +26,10 @@ class Entrypoint(Base):
     block = relationship(
         "Block",
         back_populates="entrypoints",
-        foreign_keys="Block.block_uuid"
+        foreign_keys=[block_uuid]
     )
-    input_outputs = relationship("InputOutput", back_populates="entrypoints",
-                                 cascade="all, delete-orphan")
+    input_outputs = relationship(
+        InputOutput,
+        back_populates="entrypoints",
+        cascade="all, delete-orphan"
+    )

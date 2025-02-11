@@ -18,7 +18,7 @@ export type Node = {
   id: string,
   position: { x: number, y: number },
   type: string,
-  data: ComputeBlock
+  data: ComputeBlock,
 }
 
 const MOCK_DAG_DATA: Node[][] = [
@@ -157,12 +157,12 @@ const MOCK_DAG_DATA: Node[][] = [
 ]
 
 type ProjectDTO = {
-  name: string
+  name: string,
 }
 
 type UpdateProjectDTO = {
   project_uuid: string,
-  new_name: string
+  new_name: string,
 }
 
 function useProjectsQuery() {
