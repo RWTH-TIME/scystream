@@ -1,25 +1,36 @@
-import type { Dispatch, SetStateAction } from "react"
+import { useState } from "react"
+import AddIcon from "@mui/icons-material/Add"
 import LoadingAndError from "./LoadingAndError"
+import CreateProjectModal from "./CreateProjectModal"
 import type { Project } from "@/utils/types"
 import { useProjectsQuery } from "@/mutations/projectMutation"
+import { useSelectedProject } from "@/hooks/useSelectedProject"
+import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 
-export type ProjectListProps = {
-  selectedProject: Project | undefined,
-  setSelectedProject: Dispatch<SetStateAction<Project | undefined>>,
-}
-
-export default function ProjectList({ selectedProject, setSelectedProject }: ProjectListProps) {
+export default function ProjectList() {
+  const [createProjectOpen, setCreateProjectOpen] = useState<boolean>(false)
+  const { selectedProject, setSelectedProject } = useSelectedProject()
+  const { setSelectedComputeBlock } = useSelectedComputeBlock()
   const { data: projects, isLoading, isError } = useProjectsQuery()
 
   return (
     <LoadingAndError loading={isLoading} error={isError}>
       <div>
+        <div
+          className="p-4 rounded-sm flex-grow items-center justify-between relative overflow-y-auto bg-gray-100 hover:bg-gray-200 hover:cursor-pointer"
+          onClick={() => setCreateProjectOpen(true)}
+        >
+          <AddIcon /> Add Project
+        </div>
         {
           projects?.map((project: Project) => (
             <li
               key={project.uuid}
-              onClick={() => setSelectedProject(project)}
-              className={`p-4 rounded-xs grow items-center justify-between relative ${selectedProject?.uuid === project.uuid ? "bg-gray-200" : ""
+              onClick={() => {
+                setSelectedProject(project)
+                setSelectedComputeBlock(undefined)
+              }}
+              className={`p-4 rounded-sm flex-grow items-center justify-between relative ${selectedProject?.uuid === project.uuid ? "bg-gray-200" : ""
                 } overflow-y-auto hover:bg-gray-100 hover:cursor-pointer`}
             >
               <div>
@@ -32,6 +43,11 @@ export default function ProjectList({ selectedProject, setSelectedProject }: Pro
           ))
         }
       </div>
-    </LoadingAndError>
+      <CreateProjectModal
+        isOpen={createProjectOpen}
+        onClose={() => setCreateProjectOpen(false)}
+      >
+      </CreateProjectModal>
+    </LoadingAndError >
   )
 }

@@ -8,7 +8,7 @@ export type TopBarProps = Partial<BreadCrumbsProps>
 
 export default function TopBar({ breadcrumbs }: TopBarProps) {
   return (
-    <div className="bg-black items-center text-white w-screen py-5 px-10 flex flex-row text-lg">
+    <div className="bg-black items-center text-white w-screen py-5 px-10 flex flex-row text-lg h-[80px]">
       <div className="">
         <BreadCrumbs breadcrumbs={breadcrumbs ? breadcrumbs : []} />
       </div>
