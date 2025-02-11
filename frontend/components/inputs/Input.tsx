@@ -9,7 +9,7 @@ type InputProps = {
   leftAdornment?: React.ReactElement<InputAdornmentProps>,
   rightAdornment?: React.ReactElement<InputAdornmentProps>,
   onChange?: (text: string) => void,
-  onChangeEvent?: (event: ChangeEvent<HTMLInputElement>) => void
+  onChangeEvent?: (event: ChangeEvent<HTMLInputElement>) => void,
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "id" | "value" | "label" | "onChange">
 
 /**
@@ -29,7 +29,7 @@ export default function Input({
   return (
     <div>
       {label ?? <label htmlFor={id} className="mb-4 text-sm text-gray-900 font-medium">{label}</label>}
-      <div className="relative mt-2 rounded-md shadow-sm">
+      <div className="relative mt-2 rounded-md shadow-xs">
         {leftAdornment !== undefined ? (<span className="absolute inset-y-0 left-0 flex items-center pl-3">{leftAdornment}</span>) : null}
         <input
           type={type}

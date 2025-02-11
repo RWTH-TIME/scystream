@@ -1,5 +1,5 @@
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, String, DateTime, Integer
 from sqlalchemy.orm import relationship
 
 import uuid
@@ -16,6 +16,9 @@ class Project(Base):
                   default=uuid.uuid4)
     name = Column(String(100), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # DAG-specific columns
+    default_retries = Column(Integer, default=1)
 
     users = relationship("User", secondary="user_project",
                          back_populates="projects")

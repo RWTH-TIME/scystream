@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, MouseEventHandler, PropsWithChildren } from 
 
 type ButtonProps = PropsWithChildren<{
   className?: string,
-  onClick?: MouseEventHandler<HTMLButtonElement>
+  onClick?: MouseEventHandler<HTMLButtonElement>,
 }> & Omit<ButtonHTMLAttributes<Element>, "onClick" | "className">
 
 export default function Button({
@@ -17,7 +17,7 @@ export default function Button({
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       {...rest}
-      className={className + " border p-1 rounded-md shadow-sm bg-white"}
+      className={className + " border p-1 rounded-md shadow-xs bg-white"}
     >
       {children}
     </button>
