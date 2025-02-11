@@ -17,7 +17,7 @@ export default function Button({
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       {...rest}
-      className={className + " border p-1 rounded-md shadow-sm bg-white"}
+      className={className + " border p-1 rounded-md shadow-xs bg-white"}
     >
       {children}
     </button>

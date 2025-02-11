@@ -23,7 +23,7 @@ export default function Dashboard() {
   return !loading ? (
     <PageWithHeader breadcrumbs={[{ text: "Dashboard", link: "/dashboard" }]}>
       <div className="flex">
-        <div className="w-1/6 h-screen shadow h-full">
+        <div className="w-1/6 h-screen shadow-sm h-full">
           <ProjectList selectedProject={selectedProject} setSelectedProject={setSelectedProject} />
         </div>
         <div>
