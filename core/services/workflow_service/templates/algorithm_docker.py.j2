@@ -1,0 +1,10 @@
+{{task_id}} = DockerOperator(
+            task_id='{{task_id}}',
+            image='{{image}}',
+            api_version='auto',
+            auto_remove=True,
+            command="python3 v-m import scheduler.execute_function(Entrypoint)",
+            docker_url="unix://var/run/docker.sock",
+            environment={{ environment }},
+        )
+

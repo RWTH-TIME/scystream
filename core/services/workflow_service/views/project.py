@@ -1,14 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from uuid import UUID
 from utils.errors.error import handle_error
 
-import core.services.workflow_service.controllers.project_controller as \
-    project_controller
+import services.workflow_service.controllers.project_controller \
+    as project_controller
 
-from services.user_service.middleware.authenticate_token \
-    import authenticate_token
-
-from core.services.workflow_service.schemas.project import (
+from services.workflow_service.schemas.project import (
     Project,
     CreateProjectRequest,
     CreateProjectResponse,
@@ -16,7 +13,8 @@ from core.services.workflow_service.schemas.project import (
     ReadByUserResponse,
     ReadAllResponse,
     RenameProjectRequest,
-    DeleteProjectRequest
+    DeleteProjectRequest,
+    AddNewBlockRequest
 )
 
 
@@ -25,13 +23,12 @@ router = APIRouter(prefix="/project", tags=["project"])
 
 @router.post("/create", response_model=CreateProjectResponse)
 async def create_project(
-    data: CreateProjectRequest,
-    token_data: dict = Depends(authenticate_token)
+    data: CreateProjectRequest
 ):
+    # TODO: Get the User_UUID from the token
     try:
         project_uuid = project_controller.create_project(
-            data.name,
-            token_data.get("user_uuid")
+            data.name, data.user_uuid
         )
         return CreateProjectResponse(project_uuid=project_uuid)
     except Exception as e:
@@ -68,8 +65,7 @@ async def read_all_projects():
 async def rename_project(data: RenameProjectRequest):
     try:
         updated_project = project_controller.rename_project(
-            data.project_uuid,
-            data.new_name
+            data.project_uuid, data.new_name
         )
         return updated_project
     except Exception as e:
@@ -80,5 +76,29 @@ async def rename_project(data: RenameProjectRequest):
 async def delete_project(data: DeleteProjectRequest):
     try:
         project_controller.delete_project(data.project_uuid)
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.put("/add_new_block", status_code=200)
+async def add_new_block(data: AddNewBlockRequest):
+    try:
+        project_controller.add_new_block(
+            data.project_uuid,
+            data.name,
+            data.priority_weight,
+            data.retries,
+            data.retry_delay,
+            data.custom_name,
+            data.description,
+            data.author,
+            data.docker_image,
+            data.repo_url,
+            data.selected_entrypoint_uuid,
+            data.x_pos,
+            data.y_pos,
+            data.upstream_blocks,
+            data.downstream_blocks
+        )
     except Exception as e:
         raise handle_error(e)
