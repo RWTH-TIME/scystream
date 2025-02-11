@@ -13,7 +13,7 @@ type InputAdornmentIconTypes = "email" | "password" | "visibility" | "visibility
 
 export type InputAdornmentProps = {
   type: InputAdornmentIconTypes,
-  onClick?: () => void
+  onClick?: () => void,
 }
 
 function renderIcon(iconType: InputAdornmentIconTypes) {

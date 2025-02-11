@@ -5,7 +5,7 @@ import { useProjectsQuery } from "@/mutations/projectMutation"
 
 export type ProjectListProps = {
   selectedProject: Project | undefined,
-  setSelectedProject: Dispatch<SetStateAction<Project | undefined>>
+  setSelectedProject: Dispatch<SetStateAction<Project | undefined>>,
 }
 
 export default function ProjectList({ selectedProject, setSelectedProject }: ProjectListProps) {
@@ -19,7 +19,7 @@ export default function ProjectList({ selectedProject, setSelectedProject }: Pro
             <li
               key={project.uuid}
               onClick={() => setSelectedProject(project)}
-              className={`p-4 rounded-sm flex-grow items-center justify-between relative ${selectedProject?.uuid === project.uuid ? "bg-gray-200" : ""
+              className={`p-4 rounded-xs grow items-center justify-between relative ${selectedProject?.uuid === project.uuid ? "bg-gray-200" : ""
                 } overflow-y-auto hover:bg-gray-100 hover:cursor-pointer`}
             >
               <div>
