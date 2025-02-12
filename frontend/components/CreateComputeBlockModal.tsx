@@ -2,6 +2,8 @@ import { useState } from "react"
 import LoadingAndError from "./LoadingAndError"
 import Modal, { type ModalProps } from "./Modal"
 import Input from "./inputs/Input"
+import { useCreateComputeBlockMutation } from "@/mutations/computeBlockMutation";
+import { AlertType, useAlert } from "@/hooks/useAlert";
 
 type CreateComputeBlockModalProps = Omit<ModalProps, "children">;
 
@@ -10,15 +12,28 @@ export default function CreateComputeBlockModal({
   onClose,
   className = "",
 }: CreateComputeBlockModalProps) {
+  const { setAlert } = useAlert()
   const [cbName, setCBName] = useState<string>("")
   const [repoURL, setRepoURL] = useState<string>("")
 
-  // TODO: Api Call
+  const { mutate, isPending: loading } = useCreateComputeBlockMutation(setAlert)
+
+  function createComputeBlock(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+
+    // TODO: Validation
+    if (cbName.length > 0 && repoURL.length > 0) {
+      mutate({ compute_block_title: cbName, cbc_url: repoURL })
+      onClose()
+    } else {
+      setAlert("Compute Block Name and Repo URL must be set.", AlertType.ERROR)
+    }
+  }
 
   return (
     <Modal className={className} isOpen={isOpen} onClose={onClose}>
       <h2 className="text-xl font-bold">Create Compute Block:</h2>
-      <form onSubmit={() => { }} className="mt-4 space-y-4 text-sm">
+      <form onSubmit={(e) => { createComputeBlock(e) }} className="mt-4 space-y-4 text-sm">
         <div>
           <Input
             type="text"
@@ -29,7 +44,7 @@ export default function CreateComputeBlockModal({
           <Input
             type="text"
             value={repoURL}
-            label="Repository URL"
+            label="Compute Block Config URL"
             onChange={setRepoURL}
           />
         </div>
@@ -46,7 +61,7 @@ export default function CreateComputeBlockModal({
             className="flex flex-col w-[78px] h-[36px] px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
             disabled={false}
           >
-            <LoadingAndError loading={false} iconSize={21}>
+            <LoadingAndError loading={loading} iconSize={21}>
               Create
             </LoadingAndError>
           </button>

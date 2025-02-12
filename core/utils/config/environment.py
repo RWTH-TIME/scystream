@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     CATAPULTE_SENDER: str = "mailing@scystream"
     CATAPULTE_SSL_ENABLED: bool = False
 
+    TRUSTED_CBC_DOMAINS: List[str] = ["github.com"]
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8", case_sensitive=True
     )

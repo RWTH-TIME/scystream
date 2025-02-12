@@ -1,6 +1,6 @@
 from services.user_service.views import user as user_view
 from services.workflow_service.views import dag as dag_view, \
-    project as project_view
+    project as project_view, compute_block as compute_block_view
 from utils.config.environment import ENV
 from utils.database.connection import engine
 from fastapi import FastAPI
@@ -41,3 +41,4 @@ app.add_middleware(
 app.include_router(user_view.router)
 app.include_router(dag_view.router)
 app.include_router(project_view.router)
+app.include_router(compute_block_view.router)
