@@ -20,7 +20,6 @@ class Project(BaseModel):
 
 class CreateProjectRequest(BaseModel):
     name: str
-    user_uuid: UUID
 
 
 class CreateProjectResponse(BaseModel):

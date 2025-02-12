@@ -65,19 +65,17 @@ class Block(Base):
     project = relationship("Project", back_populates="blocks")
 
     entrypoints = relationship(
-        Entrypoint,
+        "Entrypoint",
         back_populates="block",
         cascade="all, delete-orphan",
         foreign_keys=[Entrypoint.block_uuid]
     )
-    # \\TODO: use join here like for upstream blocks?
-    # or use only definition in entrypoint (back_populates?)
 
     selected_entrypoint = relationship(
         "Entrypoint",
         foreign_keys=[selected_entrypoint_uuid],
         uselist=False
-    )  # alembic error?
+    )
 
     upstream_blocks = relationship(
         "Block",
