@@ -14,7 +14,7 @@ export default function Alert() {
 
   if (text) {
     return (
-      <div className={`${alertColor} text-white p-4 rounded-md fixed bottom-5 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex justify-between items-center`}>
+      <div className={`${alertColor} z-50 text-white p-4 rounded-md fixed bottom-5 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex justify-between items-center`}>
         {text}
       </div>
     )

@@ -6,9 +6,11 @@ type PageWithHeaderProps = Partial<TopBarProps>
 
 export default function PageWithHeader({ children, breadcrumbs }: PropsWithChildren<PageWithHeaderProps>) {
   return (
-    <div className="w-screen h-screen flex flex-col">
+    <div className="flex flex-col h-screen w-screen">
       <TopBar breadcrumbs={breadcrumbs} />
-      {children}
+      <div className="flex-1 overflow-y-auto">
+        {children}
+      </div>
     </div>
   )
 }
