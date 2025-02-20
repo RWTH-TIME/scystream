@@ -47,7 +47,6 @@ class Block(Base):
     docker_image = Column(String(150), nullable=False)
     repo_url = Column(String(100), nullable=False)
 
-    # \\TODO: fix relationship btw entrypoint and block
     selected_entrypoint_uuid = Column(
         UUID(as_uuid=True),
         ForeignKey(

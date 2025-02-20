@@ -4,19 +4,18 @@ import { useMutation } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { api } from "@/utils/axios";
 
-const CREATE_COMPUTE_BLOCK_ENDPOINT = "compute_block/"
+const GET_COMPUTE_BLOCK_INFO = "compute_block/information"
 
 type ComputeBlockDTO = {
-  compute_block_title: string,
   cbc_url: string,
 }
 
-export function useCreateComputeBlockMutation(setAlert: SetAlertType) {
+export function useGetComputeBlockInfoMutation(setAlert: SetAlertType) {
   // const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async function createComputeBlock(compute_block: ComputeBlockDTO) {
-      const response = await api.post(CREATE_COMPUTE_BLOCK_ENDPOINT, JSON.stringify(compute_block))
+    mutationFn: async function getComputeBlockFromURL(compute_block: ComputeBlockDTO) {
+      const response = await api.post(GET_COMPUTE_BLOCK_INFO, JSON.stringify(compute_block))
       return response.data
     },
     onSuccess: () => {
@@ -28,3 +27,5 @@ export function useCreateComputeBlockMutation(setAlert: SetAlertType) {
     }
   })
 }
+
+// TODO: export function getComputeBlockQuery()

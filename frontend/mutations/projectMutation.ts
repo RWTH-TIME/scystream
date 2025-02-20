@@ -21,6 +21,10 @@ export type Node = {
   data: ComputeBlock,
 }
 
+
+// TODO: How do we handle updates of the compute blocks?
+// selectedEntrypoint can be undefined theoretically (for new blocks only)
+// Inputs Outputs can be undefeined (for new block only)
 const MOCK_DAG_DATA: Node[][] = [
   [
     {

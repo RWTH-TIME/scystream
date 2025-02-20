@@ -30,8 +30,11 @@ class InputOutput(Base):
     config = Column(JSON, nullable=False)
 
     entrypoint_uuid = Column(
-        UUID(as_uuid=True), ForeignKey('entrypoints.uuid',
-                                       ondelete="CASCADE",
-                                       name="fk_entrypoint_uuid"))
+        UUID(as_uuid=True),
+        ForeignKey('entrypoints.uuid',
+                   ondelete="CASCADE",
+                   name="fk_entrypoint_uuid"),
+        nullable=False
+    )
 
     entrypoints = relationship("Entrypoint", back_populates="input_outputs")

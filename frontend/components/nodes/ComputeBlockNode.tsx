@@ -8,13 +8,13 @@ export enum InputTypes {
 }
 
 export type Config = {
-  [key: string]: string | number
+  [key: string]: string | number,
 }
 
 export type InputOutput = {
   description: string,
   type: InputTypes,
-  config: Config
+  config: Config,
 }
 
 export type ComputeBlock = {
@@ -24,7 +24,7 @@ export type ComputeBlock = {
   author: string,
   dockerImage: string,
   inputs: InputOutput[],
-  outputs: InputOutput[]
+  outputs: InputOutput[],
 }
 
 /*
@@ -32,8 +32,6 @@ export type ComputeBlock = {
 */
 export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
   const { selectedComputeBlock } = useSelectedComputeBlock()
-
-  console.log(selectedComputeBlock)
 
   const getHandleStyle = (type: InputTypes) => {
     switch (type) {

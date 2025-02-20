@@ -10,8 +10,8 @@ class Project(BaseModel):
     uuid: UUID
     name: str
     created_at: datetime
-    users: List[UUID]
-    blocks: List[UUID]
+    # users: List[UUID]
+    # blocks: List[UUID]
 
     class Config:
         from_attributes = True
