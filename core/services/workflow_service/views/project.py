@@ -2,9 +2,8 @@ from fastapi import APIRouter
 from uuid import UUID
 from utils.errors.error import handle_error
 
-import services.workflow_service.controllers.project_controller \
-    as project_controller
-
+import services.workflow_service.controllers.project_controller as \
+    project_controller
 from services.workflow_service.schemas.project import (
     Project,
     CreateProjectRequest,
@@ -13,7 +12,6 @@ from services.workflow_service.schemas.project import (
     ReadByUserResponse,
     ReadAllResponse,
     RenameProjectRequest,
-    DeleteProjectRequest,
     AddNewBlockRequest
 )
 
@@ -21,7 +19,7 @@ from services.workflow_service.schemas.project import (
 router = APIRouter(prefix="/project", tags=["project"])
 
 
-@router.post("/create", response_model=CreateProjectResponse)
+@router.post("/", response_model=CreateProjectResponse)
 async def create_project(
     data: CreateProjectRequest
 ):
@@ -35,7 +33,7 @@ async def create_project(
         raise handle_error(e)
 
 
-@router.get("/read", response_model=Project)
+@router.get("/", response_model=Project)
 async def read_project(data: ReadProjectRequest):
     try:
         project = project_controller.read_project(data.project_uuid)
@@ -61,7 +59,8 @@ async def read_all_projects():
         raise handle_error(e)
 
 
-@router.put("/rename", response_model=Project)
+# TODO: Rename function aswell
+@router.put("/", response_model=Project)
 async def rename_project(data: RenameProjectRequest):
     try:
         updated_project = project_controller.rename_project(
@@ -72,10 +71,12 @@ async def rename_project(data: RenameProjectRequest):
         raise handle_error(e)
 
 
-@router.delete("/delete", status_code=200)
-async def delete_project(data: DeleteProjectRequest):
+@router.delete("/{project_id}", status_code=200)
+async def delete_project(
+    project_id: UUID | None = None
+):
     try:
-        project_controller.delete_project(data.project_uuid)
+        project_controller.delete_project(project_id)
     except Exception as e:
         raise handle_error(e)
 

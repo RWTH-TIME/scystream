@@ -22,7 +22,7 @@ from services.user_service.middleware.authenticate_token import (
 router = APIRouter(prefix="/user", tags=["user"])
 
 
-@router.post("/create", response_model=CreateUserResponse)
+@router.post("/", response_model=CreateUserResponse)
 async def create_user(data: CreateUserRequest):
     try:
         userID = create_user_controller.create_user(data.email, data.password)
