@@ -8,20 +8,20 @@ export default function CreateComputeBlockEntrypointStep({
   selectedEntrypoint,
   computeBlock
 }: PageProps) {
-  const handleSelect = (entrypoint: Entrypoint) => {
+  function handleSelect(entrypoint: Entrypoint) {
     if (setSelectedEntrypoint) {
       setSelectedEntrypoint(entrypoint)
     }
   };
 
-  const renderOption = (entrypoint: Entrypoint) => (
-    <div className="flex flex-col">
-      <span>{entrypoint.name}</span>
-      <span className="text-gray-500 text-sm">{entrypoint.description}</span>
-    </div>
-  );
-
-  const getValue = (entrypoint: Entrypoint) => entrypoint.name
+  function renderOption(entrypoint: Entrypoint) {
+    return (
+      <div className="flex flex-col">
+        <span>{entrypoint.name}</span>
+        <span className="text-gray-500 text-sm">{entrypoint.description}</span>
+      </div>
+    )
+  };
 
   return (
     <div className="mt-5">
@@ -37,10 +37,10 @@ export default function CreateComputeBlockEntrypointStep({
       <h3 className="text-lg font-semibold mt-5">Select Entrypoint:</h3>
       <Dropdown
         options={computeBlock?.entrypoints || []}
-        selectedValue={selectedEntrypoint?.name}
+        selectedValue={selectedEntrypoint}
         onSelect={handleSelect}
         renderOption={renderOption}
-        getValue={getValue}
+        renderSelected={renderOption}
         placeholder="Select an entrypoint"
       />
 

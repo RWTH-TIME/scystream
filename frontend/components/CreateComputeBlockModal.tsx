@@ -5,7 +5,6 @@ import CreateComputeBlockInformationStep from "./steps/CreateComputeBlockInforma
 import CreateComputeBlockEntrypointStep from "./steps/CreateComputeBlockEntrypointStep";
 import CreateComputeBlockConfigurationStep from "./steps/CreateComputeBlockConfigurationStep";
 
-// TODO: Split this component into multiple files?
 
 type CreateComputeBlockModalProps = Omit<ModalProps, "children">;
 
@@ -68,13 +67,13 @@ export default function CreateComputeBlockModal({
     { label: "Configuration" },
   ];
 
-  const handleNext = () => {
+  function handleNext() {
     if (activeStep < stepsInformation.length - 1) {
       setActiveStep((prevStep) => prevStep + 1);
     }
   };
 
-  const handleBack = () => {
+  function handleBack() {
     if (activeStep > 0) {
       setActiveStep((prevStep) => prevStep - 1);
     }
