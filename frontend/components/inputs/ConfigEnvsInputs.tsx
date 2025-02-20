@@ -12,7 +12,7 @@ export default function ConfigEnvsInputs({
     <div>
       {
         Object.entries(pairs).map(([key, value]) => (
-          <div key={key} className="mt-2">
+          <div key={key}>
             <label className="block text-sm font-medium">{key}</label>
             <Input value={value} />
           </div>

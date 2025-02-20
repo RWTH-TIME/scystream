@@ -19,7 +19,7 @@ export default function ConfigBox({
       {
         Array.isArray(config) ? (
           config.map((o: InputOutput) => (
-            <div className="p-4 border rounded" key={o.name}>
+            <div className="p-4 border rounded mt-5" key={o.name}>
               <h3 className="text-md font-semibold" key={o.name}>{o.name}</h3>
               <p className="text-gray-700 mb-4" key={o.description}>{o.description}</p>
               <ConfigEnvsInputs pairs={o.config} />
