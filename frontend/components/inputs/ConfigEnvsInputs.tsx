@@ -1,20 +1,16 @@
-import { useState } from "react";
 import type { RecordValueType } from "../CreateComputeBlockModal";
 import Input from "./Input";
 import Dropdown from "./Dropdown";
-import MultiSelectInput from "./MultiSelectInput"; // Import the new component
+import MultiSelectInput from "./MultiSelectInput";
 
 type ConfigEnvsInputsProps = {
   pairs: Record<string, RecordValueType>,
+  onUpdate: (key: string, value: RecordValueType) => void,
 };
 
-export default function ConfigEnvsInputs({ pairs }: ConfigEnvsInputsProps) {
-  const [values, setValues] = useState<Record<string, RecordValueType>>(
-    Object.fromEntries(Object.entries(pairs).map(([key, value]) => [key, value ?? ""]))
-  );
-
+export default function ConfigEnvsInputs({ pairs, onUpdate }: ConfigEnvsInputsProps) {
   function handleChange(key: string, newValue: RecordValueType) {
-    setValues((prev) => ({ ...prev, [key]: newValue }));
+    onUpdate(key, newValue)
   }
 
   function renderOption(val: boolean) {
@@ -36,7 +32,7 @@ export default function ConfigEnvsInputs({ pairs }: ConfigEnvsInputsProps) {
 
   return (
     <div>
-      {Object.entries(values).map(([key, value]) => (
+      {Object.entries(pairs).map(([key, value]) => (
         <div key={key} className="mb-4">
           <label className="block text-sm font-medium mb-1 text-gray-600">
             {key}
@@ -58,6 +54,13 @@ export default function ConfigEnvsInputs({ pairs }: ConfigEnvsInputsProps) {
               selectedValues={value}
               getValue={(value) => value.toString()}
               onChange={(updatedList) => handleChange(key, updatedList as RecordValueType)}
+            />
+          ) : typeof value === "number" ? (
+            <Input
+              value={value}
+              onChange={(text) => handleChange(key, parseFloat(text))}
+              type="number"
+              min="0"
             />
           ) : (
             <Input

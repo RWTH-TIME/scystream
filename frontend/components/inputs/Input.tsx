@@ -3,7 +3,7 @@ import type { ChangeEvent, HTMLInputTypeAttribute, InputHTMLAttributes } from "r
 
 type InputProps = {
   type: HTMLInputTypeAttribute,
-  value: string,
+  value: string | number,
   id?: string,
   label?: string,
   leftAdornment?: React.ReactElement<InputAdornmentProps>,

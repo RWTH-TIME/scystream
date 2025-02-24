@@ -86,7 +86,7 @@ export default function CreateComputeBlockModal({
       case 1:
         return <CreateComputeBlockEntrypointStep onNext={handleNext} onPrev={handleBack} computeBlock={computeBlockDraft} setSelectedEntrypoint={setSelectedEntrypoint} selectedEntrypoint={selectedEntrypoint} />;
       case 2:
-        return <CreateComputeBlockConfigurationStep onNext={handleNext} onPrev={handleBack} computeBlock={computeBlockDraft} selectedEntrypoint={selectedEntrypoint} />;
+        return <CreateComputeBlockConfigurationStep onNext={handleNext} onPrev={handleBack} computeBlock={computeBlockDraft} selectedEntrypoint={selectedEntrypoint} setSelectedEntrypoint={setSelectedEntrypoint} />;
     }
   };
 
