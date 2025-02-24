@@ -4,7 +4,7 @@ import { Close } from "@mui/icons-material"
 export type ModalProps = PropsWithChildren<{
   className?: string,
   onClose: () => void,
-  isOpen: boolean
+  isOpen: boolean,
 }>;
 
 export default function Modal({
@@ -25,7 +25,7 @@ export default function Modal({
       />
 
       <div
-        className={`relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6 transition-transform transform ${isOpen ? "scale-100" : "scale-95"
+        className={`relative bg-white max-h-[90vh] overflow-y-auto rounded-lg shadow-xl max-w-3/4 w-full p-6 transition-transform transform ${isOpen ? "scale-100" : "scale-95"
           } ${className}`}
       >
         <button
@@ -39,3 +39,4 @@ export default function Modal({
     </div>
   )
 }
+

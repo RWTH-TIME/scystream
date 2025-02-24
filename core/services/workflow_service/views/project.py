@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from uuid import UUID
 from utils.errors.error import handle_error
 
@@ -14,6 +14,9 @@ from services.workflow_service.schemas.project import (
     RenameProjectRequest,
     AddNewBlockRequest
 )
+from services.user_service.middleware.authenticate_token import (
+    authenticate_token,
+)
 
 
 router = APIRouter(prefix="/project", tags=["project"])
@@ -21,12 +24,12 @@ router = APIRouter(prefix="/project", tags=["project"])
 
 @router.post("/", response_model=CreateProjectResponse)
 async def create_project(
-    data: CreateProjectRequest
+    data: CreateProjectRequest,
+    token_data: dict = Depends(authenticate_token)
 ):
-    # TODO: Get the User_UUID from the token
     try:
         project_uuid = project_controller.create_project(
-            data.name, data.user_uuid
+            data.name, token_data["uuid"]
         )
         return CreateProjectResponse(project_uuid=project_uuid)
     except Exception as e:
@@ -34,7 +37,9 @@ async def create_project(
 
 
 @router.get("/", response_model=Project)
-async def read_project(data: ReadProjectRequest):
+async def read_project(
+        data: ReadProjectRequest,
+):
     try:
         project = project_controller.read_project(data.project_uuid)
         return project

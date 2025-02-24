@@ -1,58 +1,106 @@
-import { useState } from "react"
-import LoadingAndError from "./LoadingAndError"
-import Modal, { type ModalProps } from "./Modal"
-import Input from "./inputs/Input"
+import { useState } from "react";
+import Modal, { type ModalProps } from "./Modal";
+import { Step, StepLabel, Stepper } from "@mui/material";
+import CreateComputeBlockInformationStep from "./steps/CreateComputeBlockInformationStep";
+import CreateComputeBlockEntrypointStep from "./steps/CreateComputeBlockEntrypointStep";
+import CreateComputeBlockConfigurationStep from "./steps/CreateComputeBlockConfigurationStep";
+
 
 type CreateComputeBlockModalProps = Omit<ModalProps, "children">;
+
+type InputOutputType = "file" | "db_table";
+export type RecordValueType = string | number | boolean | string[] | number[] | boolean[] | null
+
+export type InputOutput = {
+  type: InputOutputType,
+  name: string,
+  data_type: string,
+  description: string,
+  config: Record<string, RecordValueType>,
+}
+
+
+export type Entrypoint = {
+  name: string,
+  description: string,
+  inputs: InputOutput[],
+  outputs: InputOutput[],
+  envs: Record<string, RecordValueType>,
+}
+
+export type ComputeBlock = {
+  name: string,
+  description: string,
+  custom_name: string,
+  author: string,
+  image: string,
+  entrypoints: Entrypoint[],
+}
+
+export type PageProps = {
+  onNext: () => void,
+  onPrev?: () => void,
+  computeBlock?: ComputeBlock,
+  setComputeBlock?: React.Dispatch<React.SetStateAction<ComputeBlock>>,
+  setSelectedEntrypoint?: React.Dispatch<React.SetStateAction<Entrypoint | undefined>>,
+  selectedEntrypoint?: Entrypoint,
+}
 
 export default function CreateComputeBlockModal({
   isOpen,
   onClose,
-  className = "",
 }: CreateComputeBlockModalProps) {
-  const [cbName, setCBName] = useState<string>("")
-  const [repoURL, setRepoURL] = useState<string>("")
+  const [computeBlockDraft, setComputeBlockDraft] = useState<ComputeBlock>({
+    name: "",
+    description: "",
+    custom_name: "",
+    author: "",
+    image: "",
+    entrypoints: [],
+  });
+  const [selectedEntrypoint, setSelectedEntrypoint] = useState<Entrypoint | undefined>(undefined)
+  const [activeStep, setActiveStep] = useState<number>(0);
 
-  // TODO: Api Call
+  const stepsInformation = [
+    { label: "CBC" },
+    { label: "Entrypoint" },
+    { label: "Configuration" },
+  ];
+
+  function handleNext() {
+    if (activeStep < stepsInformation.length - 1) {
+      setActiveStep((prevStep) => prevStep + 1);
+    }
+  };
+
+  function handleBack() {
+    if (activeStep > 0) {
+      setActiveStep((prevStep) => prevStep - 1);
+    }
+  };
+
+  const getStepContent = () => {
+    switch (activeStep) {
+      case 0:
+        return <CreateComputeBlockInformationStep onNext={handleNext} setComputeBlock={setComputeBlockDraft} />;
+      case 1:
+        return <CreateComputeBlockEntrypointStep onNext={handleNext} onPrev={handleBack} computeBlock={computeBlockDraft} setSelectedEntrypoint={setSelectedEntrypoint} selectedEntrypoint={selectedEntrypoint} />;
+      case 2:
+        return <CreateComputeBlockConfigurationStep onNext={handleNext} onPrev={handleBack} computeBlock={computeBlockDraft} selectedEntrypoint={selectedEntrypoint} setSelectedEntrypoint={setSelectedEntrypoint} />;
+    }
+  };
 
   return (
-    <Modal className={className} isOpen={isOpen} onClose={onClose}>
-      <h2 className="text-xl font-bold">Create Compute Block:</h2>
-      <form onSubmit={() => { }} className="mt-4 space-y-4 text-sm">
-        <div>
-          <Input
-            type="text"
-            value={cbName}
-            label="Compute Block Title"
-            onChange={setCBName}
-          />
-          <Input
-            type="text"
-            value={repoURL}
-            label="Repository URL"
-            onChange={setRepoURL}
-          />
-        </div>
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-[78px] h-[36px] px-4 py-2 mr-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex flex-col w-[78px] h-[36px] px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
-            disabled={false}
-          >
-            <LoadingAndError loading={false} iconSize={21}>
-              Create
-            </LoadingAndError>
-          </button>
-        </div>
-      </form>
-    </Modal >
-
-  )
+    <Modal onClose={onClose} isOpen={isOpen}>
+      <Stepper activeStep={activeStep} >
+        {stepsInformation.map((step, index) => (
+          <Step key={index}>
+            <StepLabel>{step.label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+      {getStepContent()}
+    </Modal>
+  );
 }
+

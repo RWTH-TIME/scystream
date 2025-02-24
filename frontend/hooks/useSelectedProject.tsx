@@ -3,7 +3,7 @@ import type { Project } from "@/utils/types"
 
 type SelectedProjectContextType = {
   selectedProject: Project | undefined,
-  setSelectedProject: (project: Project | undefined) => void
+  setSelectedProject: (project: Project | undefined) => void,
 }
 
 const initialState: SelectedProjectContextType = {

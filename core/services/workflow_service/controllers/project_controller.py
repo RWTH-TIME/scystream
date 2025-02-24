@@ -279,9 +279,6 @@ def read_all_projects() -> List[Project]:
 
     projects = db.query(Project).all()
 
-    if not projects:
-        raise HTTPException(status_code=404, detail="No projects found")
-
     return projects
 
 

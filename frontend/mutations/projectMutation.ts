@@ -18,9 +18,13 @@ export type Node = {
   id: string,
   position: { x: number, y: number },
   type: string,
-  data: ComputeBlock
+  data: ComputeBlock,
 }
 
+
+// TODO: How do we handle updates of the compute blocks?
+// selectedEntrypoint can be undefined theoretically (for new blocks only)
+// Inputs Outputs can be undefeined (for new block only)
 const MOCK_DAG_DATA: Node[][] = [
   [
     {
@@ -157,12 +161,12 @@ const MOCK_DAG_DATA: Node[][] = [
 ]
 
 type ProjectDTO = {
-  name: string
+  name: string,
 }
 
 type UpdateProjectDTO = {
   project_uuid: string,
-  new_name: string
+  new_name: string,
 }
 
 function useProjectsQuery() {
