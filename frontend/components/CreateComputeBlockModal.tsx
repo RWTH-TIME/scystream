@@ -8,13 +8,13 @@ import CreateComputeBlockConfigurationStep from "./steps/CreateComputeBlockConfi
 
 type CreateComputeBlockModalProps = Omit<ModalProps, "children">;
 
-type InputOutputType = "file" | "db_table";
+export type InputOutputType = "file" | "db_table";
 export type RecordValueType = string | number | boolean | string[] | number[] | boolean[] | null
 
 export type InputOutput = {
-  type: InputOutputType,
+  type: string,
   name: string,
-  data_type: string,
+  data_type: InputOutputType,
   description: string,
   config: Record<string, RecordValueType>,
 }
@@ -35,6 +35,7 @@ export type ComputeBlock = {
   author: string,
   image: string,
   entrypoints: Entrypoint[],
+  cbc_url: string,
 }
 
 export type PageProps = {
@@ -57,6 +58,7 @@ export default function CreateComputeBlockModal({
     author: "",
     image: "",
     entrypoints: [],
+    cbc_url: "",
   });
   const [selectedEntrypoint, setSelectedEntrypoint] = useState<Entrypoint | undefined>(undefined)
   const [activeStep, setActiveStep] = useState<number>(0);

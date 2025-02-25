@@ -1,4 +1,4 @@
-import type { RecordValueType, InputOutput, ComputeBlock } from "@/components/CreateComputeBlockModal"
+import type { RecordValueType, InputOutput } from "@/components/CreateComputeBlockModal"
 import ConfigEnvsInputs from "@/components/inputs/ConfigEnvsInputs"
 
 type ConfigBoxProps = {

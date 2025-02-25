@@ -44,6 +44,7 @@ export default function CreateComputeBlockInformationStep({
             outputs: entrypoint.outputs.map(mapInputOutput),
             envs: entrypoint.envs || {},
           })),
+          cbc_url: repoURL
         };
 
         setComputeBlock(mappedComputeBlock);
