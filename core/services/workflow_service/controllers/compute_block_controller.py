@@ -1,20 +1,18 @@
 from fastapi import HTTPException
 import requests
 import os
-import uuid
 from typing import List, Dict, Optional, Union
 
 from sqlalchemy.orm import Session
 from utils.database.session_injector import get_database
 from services.workflow_service.models.block import Block
 from services.workflow_service.models.entrypoint import Entrypoint
-from services.workflow_service.models.inputoutput import (
-    InputOutputType, DataType, InputOutput
-)
+from services.workflow_service.models.inputoutput import InputOutput
 
 from scystream.sdk.config import SDKConfig, load_config
 
 TEMP_DIR = "tmp/"
+# TODO: ENV Var?
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 os.makedirs(TEMP_DIR, exist_ok=True)

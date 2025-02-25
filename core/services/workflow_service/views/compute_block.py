@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends
 
 from utils.errors.error import handle_error
 from services.workflow_service.schemas.compute_block import (
-    ComputeBlockInformationRequest, ComputeBlockInformationResponse, CreateComputeBlockRequest,
-    CreateComputeBlockResponse
+    ComputeBlockInformationRequest, ComputeBlockInformationResponse,
+    CreateComputeBlockRequest, CreateComputeBlockResponse
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,

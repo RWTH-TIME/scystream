@@ -47,7 +47,8 @@ class InputOutputDTO(BaseModel):
         type: Literal["Input", "Output"]
     ):
         return InputOutput(
-            type=InputOutputType.INPUT if type == "Input" else InputOutputType.OUTPUT,
+            type=(InputOutputType.INPUT if type ==
+                  "Input" else InputOutputType.OUTPUT),
             name=input_output.name,
             data_type=input_output.data_type,
             description=input_output.description,
