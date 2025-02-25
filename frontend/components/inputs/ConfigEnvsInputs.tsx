@@ -43,28 +43,28 @@ export default function ConfigEnvsInputs({ pairs, onUpdate }: ConfigEnvsInputsPr
           {typeof value === "boolean" ? (
             <Dropdown
               options={[true, false]}
-              selectedValue={value}
+              selectedValue={value ?? false}
               onSelect={(val: boolean) => handleChange(key, val)}
               renderOption={renderOption}
               renderSelected={renderOption}
             />
           ) : Array.isArray(value) ? (
             <MultiSelectInput<string | number | boolean>
-              options={value}
+              options={value ?? []}
               selectedValues={value}
               getValue={(value) => value.toString()}
               onChange={(updatedList) => handleChange(key, updatedList as RecordValueType)}
             />
           ) : typeof value === "number" ? (
             <Input
-              value={value}
+              value={value ?? NaN}
               onChange={(text) => handleChange(key, parseFloat(text))}
               type="number"
               min="0"
             />
           ) : (
             <Input
-              value={value as string}
+              value={value ?? ""}
               onChange={(text) => handleChange(key, text)}
               type="text"
             />

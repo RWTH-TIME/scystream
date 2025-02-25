@@ -1,12 +1,12 @@
 import { AlertType, useAlert } from "@/hooks/useAlert";
 import { useGetComputeBlockInfoMutation } from "@/mutations/computeBlockMutation";
-import type { PageProps, ComputeBlock, Entrypoint, InputOutput } from "@/components/CreateComputeBlockModal";
+import { type PageProps, type Entrypoint, type InputOutput, type ComputeBlockDraft, InputOutputType } from "@/components/CreateComputeBlockModal";
 import { useState } from "react";
 import LoadingAndError from "@/components/LoadingAndError";
 import Input from "@/components/inputs/Input";
 
 const mapInputOutput = (data: InputOutput) => ({
-  type: data.data_type === "file" ? "file" : "db_table",
+  type: data.data_type === InputOutputType.FILE ? "file" : "db_table",
   name: data.name,
   data_type: data.data_type,
   description: data.description || "",
@@ -31,7 +31,7 @@ export default function CreateComputeBlockInformationStep({
       });
 
       if (setComputeBlock) {
-        const mappedComputeBlock: ComputeBlock = {
+        const mappedComputeBlock: ComputeBlockDraft = {
           name: cb.name,
           description: cb.description,
           custom_name: "",

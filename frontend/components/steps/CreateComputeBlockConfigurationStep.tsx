@@ -2,10 +2,6 @@ import type { InputOutput, PageProps, RecordValueType } from "@/components/Creat
 import LoadingAndError from "@/components/LoadingAndError";
 import ConfigBox from "../ConfigBox";
 import { useEffect, useState } from "react";
-import type { InputOutputDTO } from "@/mutations/computeBlockMutation";
-import { useCreateComputeBlockMutation, type CreateComputeBlockDTO } from "@/mutations/computeBlockMutation";
-import { useAlert } from "@/hooks/useAlert";
-import { useSelectedProject } from "@/hooks/useSelectedProject";
 
 function isValid(value: RecordValueType) {
   if (value === null || value === undefined) return false;
@@ -33,14 +29,11 @@ export default function CreateComputeBlockConfigurationStep({
   onPrev,
   selectedEntrypoint,
   computeBlock,
-  setSelectedEntrypoint
+  setSelectedEntrypoint,
+  loading
 }: PageProps) {
   const [customName, setCustomName] = useState(computeBlock?.custom_name || "");
   const [formValid, setFormValid] = useState<boolean>(false)
-
-  const { selectedProject } = useSelectedProject()
-  const { setAlert } = useAlert();
-  const { mutateAsync, isPending: loading } = useCreateComputeBlockMutation(setAlert)
 
   function updateConfig(section: "envs" | "inputs" | "outputs", key: string, value: RecordValueType) {
     if (!selectedEntrypoint || !setSelectedEntrypoint) return;
@@ -73,43 +66,6 @@ export default function CreateComputeBlockConfigurationStep({
       }
       return updatedEntrypoint;
     });
-  }
-
-  function mapInputOutputToDTO(inputOutput: InputOutput): InputOutputDTO {
-    return {
-      name: inputOutput.name,
-      data_type: inputOutput.data_type,
-      description: inputOutput.description,
-      config: inputOutput.config,
-    }
-  }
-
-  async function createComputeBlock() {
-    if (!selectedProject || !computeBlock || !selectedEntrypoint) return
-
-    const cb_dto: CreateComputeBlockDTO = {
-      project_id: selectedProject.uuid,
-      cbc_url: computeBlock.cbc_url,
-      name: computeBlock.name,
-      custom_name: computeBlock.custom_name, // TODO: always ""?
-      description: computeBlock.description,
-      author: computeBlock.author,
-      image: computeBlock.image,
-      selected_entrypoint: {
-        name: selectedEntrypoint.name,
-        description: selectedEntrypoint.description,
-        inputs: selectedEntrypoint.inputs.map(mapInputOutputToDTO),
-        outputs: selectedEntrypoint.outputs.map(mapInputOutputToDTO),
-        envs: selectedEntrypoint.envs
-      },
-      x_pos: 1, // TODO
-      y_pos: 2, // TODO
-    }
-
-    const cb = await mutateAsync(cb_dto)
-    console.log(cb)
-
-    onNext()
   }
 
   useEffect(() => {
@@ -182,7 +138,7 @@ export default function CreateComputeBlockConfigurationStep({
           type="button"
           className={`w-[78px] h-[36px] px-4 py-2 rounded ${!formValid ? "bg-gray-200 cursor-not-allowed" : "bg-blue-500 text-white hover:bg-blue-600"}`}
           disabled={!formValid}
-          onClick={createComputeBlock}
+          onClick={onNext}
         >
           <LoadingAndError loading={loading} iconSize={21}>
             Create

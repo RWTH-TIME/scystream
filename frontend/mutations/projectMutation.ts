@@ -5,8 +5,7 @@ import { QueryKeys } from "./queryKeys"
 import { api } from "@/utils/axios"
 import { AlertType, type SetAlertType } from "@/hooks/useAlert"
 import displayStandardAxiosErrors from "@/utils/errors"
-import { InputTypes } from "@/components/nodes/ComputeBlockNode"
-import type { ComputeBlock } from "@/components/nodes/ComputeBlockNode"
+import { InputOutputType, type ComputeBlock } from "@/components/CreateComputeBlockModal"
 
 const GET_PROJECTS_ENDPOINT = "project/read_all"
 const CREATE_PROJECT_ENDPOINT = "project"
@@ -32,47 +31,45 @@ const MOCK_DAG_DATA: Node[][] = [
       position: { x: 250, y: 5 },
       type: "computeBlock",
       data: {
-        uuid: uuidv4(),
+        id: uuidv4(),
         name: "Crawl Tagesschau",
-        selectedEntrypoint: "crawl_tagesschau",
+        description: "Crawls news articles from Tagesschau",
+        custom_name: "crawler-tagesschau",
         author: "Jon Doe",
-        dockerImage: "ghcr.io/RWTH-TIME/crawler",
-        inputs: [
-          {
-            description: "URLs Files",
-            type: InputTypes.FILE,
-            config: {
-              MINIO_ENDPOINT: "localhost:9000",
-              MINIO_PORT: 5432,
+        image: "ghcr.io/RWTH-TIME/crawler",
+        cbc_url: "http://example.com/crawl",
+        selected_entrypoint: {
+          id: uuidv4(),
+          name: "crawl_news",
+          description: "Entry point for crawling news",
+          inputs: [
+            {
+              id: uuidv4(),
+              type: "input",
+              name: "URL Files",
+              description: "URLs Files",
+              data_type: InputOutputType.FILE,
+              config: {
+                MINIO_ENDPOINT: "localhost:9000",
+                MINIO_PORT: 5432,
+              },
             },
-          },
-        ],
-        outputs: [
-          {
-            description: "Processed Data",
-            type: InputTypes.FILE,
-            config: {
-              MINIO_ENDPOINT: "localhost:9000",
-              MINIO_PORT: 5432,
+          ],
+          outputs: [
+            {
+              id: uuidv4(),
+              type: "output",
+              name: "Processed Data",
+              description: "Processed news articles",
+              data_type: InputOutputType.FILE,
+              config: {
+                MINIO_ENDPOINT: "localhost:9000",
+                MINIO_PORT: 5432,
+              },
             },
-          },
-          {
-            description: "Processed Data",
-            type: InputTypes.DB,
-            config: {
-              MINIO_ENDPOINT: "localhost:9000",
-              MINIO_PORT: 5432,
-            },
-          },
-          {
-            description: "Processed Data",
-            type: InputTypes.DB,
-            config: {
-              MINIO_ENDPOINT: "localhost:9000",
-              MINIO_PORT: 5432,
-            },
-          },
-        ],
+          ],
+          envs: {},
+        },
       },
     },
     {
@@ -80,85 +77,49 @@ const MOCK_DAG_DATA: Node[][] = [
       position: { x: 300, y: 150 },
       type: "computeBlock",
       data: {
-        uuid: uuidv4(),
+        id: uuidv4(),
         name: "Topic Modelling",
-        selectedEntrypoint: "topic_modelling",
+        description: "Performs topic modelling on text data",
+        custom_name: "topic-model",
         author: "Markus Meilenstein",
-        dockerImage: "ghcr.io/RWTH-TIME/nlp",
-        inputs: [
-          {
-            description: "Text Files",
-            type: InputTypes.DB,
-            config: {
-              MINIO_ENDPOINT: "localhost:9000",
-              MINIO_PORT: 5432,
+        image: "ghcr.io/RWTH-TIME/nlp",
+        cbc_url: "http://example.com/nlp",
+        selected_entrypoint: {
+          id: uuidv4(),
+          name: "topic_analysis",
+          description: "Entry point for topic modeling",
+          inputs: [
+            {
+              id: uuidv4(),
+              type: "input",
+              name: "Text Files",
+              description: "Input text for topic modeling",
+              data_type: InputOutputType.DB,
+              config: {
+                MINIO_ENDPOINT: "localhost:9000",
+                MINIO_PORT: 5432,
+              },
             },
-          },
-        ],
-        outputs: [
-          {
-            description: "Topic Model",
-            type: InputTypes.FILE,
-            config: {
-              MINIO_ENDPOINT: "localhost:9000",
-              MINIO_PORT: 5432,
+          ],
+          outputs: [
+            {
+              id: uuidv4(),
+              type: "output",
+              name: "Topic Model",
+              description: "Generated topic model",
+              data_type: InputOutputType.FILE,
+              config: {
+                MINIO_ENDPOINT: "localhost:9000",
+                MINIO_PORT: 5432,
+              },
             },
-          },
-        ],
+          ],
+          envs: {},
+        },
       },
     },
   ],
-  [
-    {
-      id: "node-1-cb-uuid",
-      position: { x: 0, y: 0 },
-      type: "computeBlock",
-      data: {
-        uuid: uuidv4(),
-        name: "Crawl Tagesschau",
-        selectedEntrypoint: "crawl_tagesschau",
-        author: "Jon Doe",
-        dockerImage: "ghcr.io/RWTH-TIME/crawler",
-        inputs: [
-          {
-            description: "URLs Files",
-            type: InputTypes.FILE,
-            config: {
-              MINIO_ENDPOINT: "localhost:9000",
-              MINIO_PORT: 5432,
-            },
-          },
-        ],
-        outputs: [
-          {
-            description: "Processed Data",
-            type: InputTypes.FILE,
-            config: {
-              MINIO_ENDPOINT: "localhost:9000",
-              MINIO_PORT: 5432,
-            },
-          },
-          {
-            description: "Processed Data",
-            type: InputTypes.DB,
-            config: {
-              MINIO_ENDPOINT: "localhost:9000",
-              MINIO_PORT: 5432,
-            },
-          },
-          {
-            description: "Processed Data",
-            type: InputTypes.DB,
-            config: {
-              MINIO_ENDPOINT: "localhost:9000",
-              MINIO_PORT: 5432,
-            },
-          },
-        ],
-      },
-    },
-  ]
-]
+];
 
 type ProjectDTO = {
   name: string,
@@ -225,7 +186,7 @@ function useProjectDetailsQuery(id: string | undefined) {
       const response = await api.get(GET_PROJECT_DETAILS_ENDPOINT)
       return response.data
       */
-      return MOCK_DAG_DATA[Math.random() < 0.5 ? 1 : 0]
+      return MOCK_DAG_DATA[0]
     },
     enabled: !!id
   })

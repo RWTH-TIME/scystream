@@ -1,5 +1,8 @@
 import type { DragEvent } from "react"
 import { useState, useCallback, useMemo, useEffect } from "react"
+import type {
+  XYPosition
+} from "@xyflow/react";
 import {
   ReactFlow,
   Controls,
@@ -10,13 +13,13 @@ import {
   useReactFlow
 } from "@xyflow/react"
 import { PlayArrow, Widgets, Save, Delete } from "@mui/icons-material"
-import type { ComputeBlock } from "./nodes/ComputeBlockNode"
 import ComputeBlockNode from "./nodes/ComputeBlockNode"
 import "@xyflow/react/dist/style.css"
 import LoadingAndError from "./LoadingAndError"
 import DeleteProjectModal from "./DeleteProjectModal"
 import EditProjectDraggable from "./EditProjectDraggable"
 import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
+import type { ComputeBlock } from "./CreateComputeBlockModal";
 import CreateComputeBlockModal from "./CreateComputeBlockModal"
 import type { Node } from "@/mutations/projectMutation"
 import { useProjectDetailsQuery } from "@/mutations/projectMutation"
@@ -37,7 +40,7 @@ export default function Workbench() {
   const [nodes, setNodes] = useState<FlowNode<Node>[]>([])
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
   const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false)
-  const [type, setType] = useState<string | null>(null)
+  const [dropCoordinates, setDropCoordinates] = useState<XYPosition>({ x: 0, y: 0 })
 
   useEffect(() => {
     if (projectDetails) {
@@ -51,13 +54,28 @@ export default function Workbench() {
     []
   )
 
-  const onDragStart = (event: DragEvent<HTMLButtonElement>, nodeType: string) => {
-    setType(nodeType)
+  const onNodeCreated = useCallback((newNodeData: ComputeBlock) => {
+    const newNode: FlowNode<Node> = {
+      id: newNodeData.id,
+      type: "computeBlock",
+      position: {
+        x: newNodeData.x_pos,
+        y: newNodeData.y_pos,
+      },
+      dropCoordinates,
+      // @ts-expect-error label is somehow not recognized here from the type: maybe fix: FlowNode<Node<ComputeBlock>>
+      data: newNodeData,
+    }
+
+    setNodes((nds) => [...nds, newNode])
+
+  }, [dropCoordinates])
+
+  const onDragStart = (event: DragEvent<HTMLButtonElement>) => {
     event.dataTransfer.effectAllowed = "move"
   }
 
   const onDragOver = useCallback((event: DragEvent) => {
-    console.log(event)
     event.preventDefault()
     event.dataTransfer.dropEffect = "move"
   }, [])
@@ -65,31 +83,13 @@ export default function Workbench() {
   const onDrop = useCallback(
     (event: DragEvent) => {
       event.preventDefault()
-
-      setCreateComputeBlockOpen(true)
-
-      if (!type) return
-
-      const position = screenToFlowPosition({
+      setDropCoordinates(screenToFlowPosition({
         x: event.clientX,
-        y: event.clientY,
-      })
-
-      // TODO: We need some kind of unique identifier in the data before creating in the backend
-      // Think about a way
-      const newNode: FlowNode<Node> = {
-        id: `${type}_${nodes.length + 1}`,
-        type: "computeBlock",
-        position,
-        // @ts-expect-error label is somehow not recognized here from the type: maybe fix: FlowNode<Node<ComputeBlock>>
-        data: { label: `${type} Node` },
-      }
-
-      // TODO: Startup the CreateComputeBlock configuration
-
-      setNodes((nds) => [...nds, newNode])
+        y: event.clientY
+      }))
+      setCreateComputeBlockOpen(true)
     },
-    [type, nodes, screenToFlowPosition]
+    [screenToFlowPosition]
   )
 
   if (!selectedProject) {
@@ -105,6 +105,8 @@ export default function Workbench() {
       <CreateComputeBlockModal
         isOpen={createComputeBlockOpen}
         onClose={() => setCreateComputeBlockOpen(false)}
+        dropCoordinates={dropCoordinates}
+        onNodeCreated={onNodeCreated}
       />
       {selectedComputeBlock ? <EditComputeBlockDraggable /> : <EditProjectDraggable />}
       <div className="flex absolute justify-between flex-row p-5 gap-3 right-0 bg-inherit z-30">
@@ -112,7 +114,7 @@ export default function Workbench() {
           <button
             onClick={() => console.log("Add Component clicked")}
             className="p-2 bg-gray-100 rounded-md text-gray-800 hover:bg-gray-200 transition-all duration-200"
-            onDragStart={(event) => onDragStart(event, "computeBlock")}
+            onDragStart={(event) => onDragStart(event)}
             draggable
           >
             <Widgets fontSize="small" />

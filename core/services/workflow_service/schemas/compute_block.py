@@ -32,7 +32,7 @@ class InputOutputDTO(BaseModel):
     @classmethod
     def from_input_output(cls, name: str, input_output):
         return cls(
-            id=input_output.uuid,
+            id=getattr(input_output, "uuid", None),
             name=name,
             data_type=(DataType.FILE if input_output.type ==
                        "file" else DataType.DBINPUT),

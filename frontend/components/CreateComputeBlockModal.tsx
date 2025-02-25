@@ -4,14 +4,27 @@ import { Step, StepLabel, Stepper } from "@mui/material";
 import CreateComputeBlockInformationStep from "./steps/CreateComputeBlockInformationStep";
 import CreateComputeBlockEntrypointStep from "./steps/CreateComputeBlockEntrypointStep";
 import CreateComputeBlockConfigurationStep from "./steps/CreateComputeBlockConfigurationStep";
+import type { DropCoordinatesType } from "./Workbench";
+import { useSelectedProject } from "@/hooks/useSelectedProject";
+import type { CreateComputeBlockDTO, InputOutputDTO } from "@/mutations/computeBlockMutation";
+import { useCreateComputeBlockMutation } from "@/mutations/computeBlockMutation";
+import { useAlert } from "@/hooks/useAlert";
+import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock";
 
 
-type CreateComputeBlockModalProps = Omit<ModalProps, "children">;
+type CreateComputeBlockModalProps = Omit<ModalProps, "children"> & {
+  dropCoordinates: DropCoordinatesType,
+  onNodeCreated: (newNodeData: ComputeBlock) => void,
+};
 
-export type InputOutputType = "file" | "db_table";
+export enum InputOutputType {
+  FILE = "file",
+  DB = "db_table"
+}
 export type RecordValueType = string | number | boolean | string[] | number[] | boolean[] | null
 
 export type InputOutput = {
+  id?: string,
   type: string,
   name: string,
   data_type: InputOutputType,
@@ -21,6 +34,7 @@ export type InputOutput = {
 
 
 export type Entrypoint = {
+  id?: string,
   name: string,
   description: string,
   inputs: InputOutput[],
@@ -28,30 +42,43 @@ export type Entrypoint = {
   envs: Record<string, RecordValueType>,
 }
 
-export type ComputeBlock = {
+type BaseComputeBlock = {
   name: string,
   description: string,
   custom_name: string,
   author: string,
   image: string,
-  entrypoints: Entrypoint[],
   cbc_url: string,
-}
+};
+
+export type ComputeBlockDraft = BaseComputeBlock & {
+  entrypoints: Entrypoint[],
+};
+
+export type ComputeBlock = BaseComputeBlock & {
+  id: string,
+  selected_entrypoint: Entrypoint,
+  x_pos: number,
+  y_pos: number,
+};
 
 export type PageProps = {
   onNext: () => void,
   onPrev?: () => void,
-  computeBlock?: ComputeBlock,
-  setComputeBlock?: React.Dispatch<React.SetStateAction<ComputeBlock>>,
+  computeBlock?: ComputeBlockDraft,
+  setComputeBlock?: React.Dispatch<React.SetStateAction<ComputeBlockDraft>>,
   setSelectedEntrypoint?: React.Dispatch<React.SetStateAction<Entrypoint | undefined>>,
   selectedEntrypoint?: Entrypoint,
+  loading?: boolean,
 }
 
 export default function CreateComputeBlockModal({
   isOpen,
   onClose,
+  dropCoordinates,
+  onNodeCreated
 }: CreateComputeBlockModalProps) {
-  const [computeBlockDraft, setComputeBlockDraft] = useState<ComputeBlock>({
+  const [computeBlockDraft, setComputeBlockDraft] = useState<ComputeBlockDraft>({
     name: "",
     description: "",
     custom_name: "",
@@ -61,7 +88,10 @@ export default function CreateComputeBlockModal({
     cbc_url: "",
   });
   const [selectedEntrypoint, setSelectedEntrypoint] = useState<Entrypoint | undefined>(undefined)
-  const [activeStep, setActiveStep] = useState<number>(0);
+  const [activeStep, setActiveStep] = useState<number>(0)
+  const { selectedProject } = useSelectedProject()
+  const { setAlert } = useAlert()
+  const { mutateAsync, isPending: loading } = useCreateComputeBlockMutation(setAlert)
 
   const stepsInformation = [
     { label: "CBC" },
@@ -81,6 +111,43 @@ export default function CreateComputeBlockModal({
     }
   };
 
+  function mapInputOutputToDTO(inputOutput: InputOutput): InputOutputDTO {
+    return {
+      name: inputOutput.name,
+      data_type: inputOutput.data_type,
+      description: inputOutput.description,
+      config: inputOutput.config,
+    }
+  }
+
+  async function handleCreate() {
+    if (!selectedProject || !computeBlockDraft || !selectedEntrypoint) return
+
+    const cb_dto: CreateComputeBlockDTO = {
+      project_id: selectedProject.uuid,
+      cbc_url: computeBlockDraft.cbc_url,
+      name: computeBlockDraft.name,
+      custom_name: computeBlockDraft.custom_name, // TODO: always ""?
+      description: computeBlockDraft.description,
+      author: computeBlockDraft.author,
+      image: computeBlockDraft.image,
+      selected_entrypoint: {
+        name: selectedEntrypoint.name,
+        description: selectedEntrypoint.description,
+        inputs: selectedEntrypoint.inputs.map(mapInputOutputToDTO),
+        outputs: selectedEntrypoint.outputs.map(mapInputOutputToDTO),
+        envs: selectedEntrypoint.envs
+      },
+      x_pos: dropCoordinates.x,
+      y_pos: dropCoordinates.y,
+    }
+
+    const created_cb: ComputeBlock = await mutateAsync(cb_dto)
+    onNodeCreated(created_cb)
+
+    onClose()
+  }
+
   const getStepContent = () => {
     switch (activeStep) {
       case 0:
@@ -88,7 +155,7 @@ export default function CreateComputeBlockModal({
       case 1:
         return <CreateComputeBlockEntrypointStep onNext={handleNext} onPrev={handleBack} computeBlock={computeBlockDraft} setSelectedEntrypoint={setSelectedEntrypoint} selectedEntrypoint={selectedEntrypoint} />;
       case 2:
-        return <CreateComputeBlockConfigurationStep onNext={handleNext} onPrev={handleBack} computeBlock={computeBlockDraft} selectedEntrypoint={selectedEntrypoint} setSelectedEntrypoint={setSelectedEntrypoint} />;
+        return <CreateComputeBlockConfigurationStep onNext={handleCreate} onPrev={handleBack} computeBlock={computeBlockDraft} selectedEntrypoint={selectedEntrypoint} setSelectedEntrypoint={setSelectedEntrypoint} loading={loading} />;
     }
   };
 
