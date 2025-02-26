@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from typing import List, Dict, Optional, Union, Literal
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, RootModel
 from urllib.parse import urlparse
 
 from services.workflow_service.models.inputoutput import (
@@ -9,11 +9,9 @@ from services.workflow_service.models.inputoutput import (
     InputOutput,
     InputOutputType
 )
-from services.workflow_service.models.entrypoint import Entrypoint
 from utils.config.environment import ENV
 
 
-# Helper function to validate URLs
 def _validate_url(url: str):
     parsed = urlparse(url)
     if parsed.scheme != "https":
@@ -34,8 +32,18 @@ class InputOutputDTO(BaseModel):
         return cls(
             id=getattr(input_output, "uuid", None),
             name=name,
+            data_type=(input_output.data_type),
+            description=input_output.description or "",
+            config=input_output.config or {}
+        )
+
+    @classmethod
+    def from_sdk_input_output(cls, name: str, input_output):
+        return cls(
+            id=getattr(input_output, "uuid", None),
+            name=name,
             data_type=(DataType.FILE if input_output.type ==
-                       "file" else DataType.DBINPUT),
+                       "file" else "db_table"),
             description=input_output.description or "",
             config=input_output.config or {}
         )
@@ -65,28 +73,20 @@ class EntrypointDTO(BaseModel):
     envs: Dict[str, Optional[Union[str, int, float, List, bool]]]
 
     @classmethod
-    def from_entrypoint(cls, name: str, entrypoint: Entrypoint):
+    def from_sdk_entrypoint(cls, name: str, entrypoint):
         return cls(
             name=name,
             description=entrypoint.description,
             envs=entrypoint.envs or {},
             inputs=[
-                InputOutputDTO.from_input_output(io_name, io_model)
+                InputOutputDTO.from_sdk_input_output(io_name, io_model)
                 for io_name, io_model in (entrypoint.inputs or {}).items()
             ],
             outputs=[
-                InputOutputDTO.from_input_output(io_name, io_model)
+                InputOutputDTO.from_sdk_input_output(io_name, io_model)
                 for io_name, io_model in (entrypoint.outputs or {}).items()
             ],
         )
-
-    @staticmethod
-    def _filter_and_transform(input_outputs, type_filter):
-        return [
-            InputOutputDTO.from_input_output(input_output)
-            for input_output in input_outputs
-            if input_output.type == type_filter
-        ]
 
 
 class ComputeBlockInformationRequest(BaseModel):
@@ -106,14 +106,14 @@ class ComputeBlockInformationResponse(BaseModel):
     entrypoints: List[EntrypointDTO]
 
     @classmethod
-    def from_compute_block(cls, cb):
+    def from_sdk_compute_block(cls, cb):
         return cls(
             name=cb.name,
             author=cb.author,
             description=cb.description,
             image=cb.docker_image,
             entrypoints=[
-                EntrypointDTO.from_entrypoint(name, entrypoint)
+                EntrypointDTO.from_sdk_entrypoint(name, entrypoint)
                 for name, entrypoint in cb.entrypoints.items()
             ]
         )
@@ -139,11 +139,28 @@ class CreateComputeBlockRequest(BaseModel):
 
 class CreateComputeBlockResponse(BaseModel):
     id: Optional[UUID] = None
+
+
+class PositionDTO(BaseModel):
+    x: float
+    y: float
+
+
+class NodeDataDTO(BaseModel):
+    id: UUID
     name: str
+    custom_name: str
     description: str
     author: str
     image: str
     selected_entrypoint: EntrypointDTO
+
+
+class NodeDTO(BaseModel):
+    id: UUID
+    position: PositionDTO
+    type: Literal["computeBlock"]
+    data: NodeDataDTO
 
     @classmethod
     def from_compute_block(cls, cb):
@@ -161,16 +178,29 @@ class CreateComputeBlockResponse(BaseModel):
 
         return cls(
             id=cb.uuid,
-            name=cb.name,
-            author=cb.author,
-            description=cb.description,
-            image=cb.docker_image,
-            selected_entrypoint=EntrypointDTO(
-                id=cb.selected_entrypoint.uuid,  # TODO: is null somehow
-                name=cb.selected_entrypoint.name,
-                description=cb.selected_entrypoint.description,
-                envs=cb.selected_entrypoint.envs,
-                inputs=inputs,
-                outputs=outputs
+            position=PositionDTO(
+                x=cb.x_pos,
+                y=cb.y_pos,
+            ),
+            type="computeBlock",
+            data=NodeDataDTO(
+                id=cb.uuid,
+                name=cb.name,
+                custom_name=cb.custom_name,
+                description=cb.description,
+                author=cb.author,
+                image=cb.docker_image,
+                selected_entrypoint=EntrypointDTO(
+                    id=cb.selected_entrypoint.uuid,
+                    name=cb.selected_entrypoint.name,
+                    description=cb.selected_entrypoint.description,
+                    envs=cb.selected_entrypoint.envs,
+                    inputs=inputs,
+                    outputs=outputs
+                ),
             )
         )
+
+
+class GetNodesByProjectResponse(RootModel[List[NodeDTO]]):
+    pass

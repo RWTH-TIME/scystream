@@ -13,7 +13,7 @@ class InputOutputType(enum.Enum):
 
 
 class DataType(enum.Enum):
-    DBINPUT = "db_input"
+    DBINPUT = "db_table"
     FILE = "file"
 
 

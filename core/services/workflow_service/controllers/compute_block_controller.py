@@ -2,6 +2,7 @@ from fastapi import HTTPException
 import requests
 import os
 from typing import List, Dict, Optional, Union
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 from utils.database.session_injector import get_database
@@ -81,7 +82,7 @@ def create_compute_block(
         inputs: List[InputOutput],
         outputs: List[InputOutput],
         project_id: str
-) -> Block:
+) -> UUID:
     db: Session = next(get_database())
 
     try:
@@ -122,6 +123,12 @@ def create_compute_block(
             db.flush()
 
             db.refresh(entry)
-        return db.query(Block).filter(Block.uuid == cb.uuid).first()
+        return cb.uuid
     except Exception as e:
         raise e
+
+
+def get_compute_blocks_by_project(project_id: UUID) -> List[Block]:
+    db: Session = next(get_database())
+
+    return db.query(Block).filter(Block.project_uuid == project_id).all()

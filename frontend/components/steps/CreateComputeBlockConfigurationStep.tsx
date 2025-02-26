@@ -29,10 +29,10 @@ export default function CreateComputeBlockConfigurationStep({
   onPrev,
   selectedEntrypoint,
   computeBlock,
+  setComputeBlock,
   setSelectedEntrypoint,
   loading
 }: PageProps) {
-  const [customName, setCustomName] = useState(computeBlock?.custom_name || "");
   const [formValid, setFormValid] = useState<boolean>(false)
 
   function updateConfig(section: "envs" | "inputs" | "outputs", key: string, value: RecordValueType) {
@@ -68,9 +68,15 @@ export default function CreateComputeBlockConfigurationStep({
     });
   }
 
+  function handleCustomNameChange(value: string) {
+    if (!setComputeBlock) return
+
+    setComputeBlock((prev) => ({ ...prev, custom_name: value }))
+  }
+
   useEffect(() => {
     function validateForm() {
-      if (!customName.trim()) {
+      if (!computeBlock?.custom_name.trim()) {
         setFormValid(false);
         return;
       }
@@ -82,7 +88,7 @@ export default function CreateComputeBlockConfigurationStep({
       setFormValid(isEnvsValid && isInputsValid && isOutputsValid);
     }
     validateForm();
-  }, [customName, selectedEntrypoint])
+  }, [computeBlock?.custom_name, selectedEntrypoint])
 
 
   return (
@@ -91,8 +97,8 @@ export default function CreateComputeBlockConfigurationStep({
         <label className="block text-gray-700 font-bold mb-1">Custom Name</label>
         <input
           type="text"
-          value={customName}
-          onChange={(e) => setCustomName(e.target.value)}
+          value={computeBlock?.custom_name || ""}
+          onChange={(e) => handleCustomNameChange(e.target.value)}
           placeholder="Enter a custom name"
           className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
         />

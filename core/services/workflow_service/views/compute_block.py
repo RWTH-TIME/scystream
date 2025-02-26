@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from uuid import UUID
 
 from utils.errors.error import handle_error
 from services.workflow_service.schemas.compute_block import (
     ComputeBlockInformationRequest, ComputeBlockInformationResponse,
-    CreateComputeBlockRequest, CreateComputeBlockResponse
+    CreateComputeBlockRequest, CreateComputeBlockResponse,
+    GetNodesByProjectResponse, NodeDTO
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
 )
 from services.workflow_service.controllers.compute_block_controller import (
-    request_cb_info, create_compute_block
+    request_cb_info, create_compute_block, get_compute_blocks_by_project
 )
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
@@ -24,7 +26,7 @@ async def cb_information(
         cb = request_cb_info(
             data.cbc_url,
         )
-        return ComputeBlockInformationResponse.from_compute_block(cb)
+        return ComputeBlockInformationResponse.from_sdk_compute_block(cb)
     except Exception as e:
         raise handle_error(e)
 
@@ -35,7 +37,7 @@ async def create(
     _: dict = Depends(authenticate_token)
 ):
     try:
-        cb = create_compute_block(
+        uuid = create_compute_block(
             data.name,
             data.description,
             data.author,
@@ -53,6 +55,26 @@ async def create(
              for output in data.selected_entrypoint.outputs],
             data.project_id
         )
-        return CreateComputeBlockResponse.from_compute_block(cb)
+        return CreateComputeBlockResponse(
+            id=uuid
+        )
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.get("/by_project/{project_id}",
+            response_model=GetNodesByProjectResponse)
+async def get_by_project(
+    project_id: UUID | None = None
+):
+    if not project_id:
+        raise HTTPException(status_code=422, detail="Project ID is required.")
+
+    try:
+        compute_blocks = get_compute_blocks_by_project(project_id)
+        return GetNodesByProjectResponse([
+            NodeDTO.from_compute_block(cb)
+            for cb in compute_blocks
+        ])
     except Exception as e:
         raise handle_error(e)

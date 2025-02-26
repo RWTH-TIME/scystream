@@ -22,9 +22,9 @@ import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
 import type { ComputeBlock } from "./CreateComputeBlockModal";
 import CreateComputeBlockModal from "./CreateComputeBlockModal"
 import type { Node } from "@/mutations/projectMutation"
-import { useProjectDetailsQuery } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
+import { useComputeBlocksByProjectQuery } from "@/mutations/computeBlockMutation";
 
 /**
  * Workbench Component is used to display and edit Directed Acyclic Graphs (DAGs).
@@ -33,7 +33,7 @@ import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 export default function Workbench() {
   const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
   const { selectedProject } = useSelectedProject()
-  const { data: projectDetails, isLoading, isError } = useProjectDetailsQuery(selectedProject?.uuid)
+  const { data: projectDetails, isLoading, isError } = useComputeBlocksByProjectQuery(selectedProject?.uuid)
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { screenToFlowPosition } = useReactFlow()
 
@@ -53,23 +53,6 @@ export default function Workbench() {
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds) as FlowNode<Node>[]),
     []
   )
-
-  const onNodeCreated = useCallback((newNodeData: ComputeBlock) => {
-    const newNode: FlowNode<Node> = {
-      id: newNodeData.id,
-      type: "computeBlock",
-      position: {
-        x: newNodeData.x_pos,
-        y: newNodeData.y_pos,
-      },
-      dropCoordinates,
-      // @ts-expect-error label is somehow not recognized here from the type: maybe fix: FlowNode<Node<ComputeBlock>>
-      data: newNodeData,
-    }
-
-    setNodes((nds) => [...nds, newNode])
-
-  }, [dropCoordinates])
 
   const onDragStart = (event: DragEvent<HTMLButtonElement>) => {
     event.dataTransfer.effectAllowed = "move"
@@ -106,7 +89,6 @@ export default function Workbench() {
         isOpen={createComputeBlockOpen}
         onClose={() => setCreateComputeBlockOpen(false)}
         dropCoordinates={dropCoordinates}
-        onNodeCreated={onNodeCreated}
       />
       {selectedComputeBlock ? <EditComputeBlockDraggable /> : <EditProjectDraggable />}
       <div className="flex absolute justify-between flex-row p-5 gap-3 right-0 bg-inherit z-30">

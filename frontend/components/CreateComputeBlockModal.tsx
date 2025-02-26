@@ -4,17 +4,15 @@ import { Step, StepLabel, Stepper } from "@mui/material";
 import CreateComputeBlockInformationStep from "./steps/CreateComputeBlockInformationStep";
 import CreateComputeBlockEntrypointStep from "./steps/CreateComputeBlockEntrypointStep";
 import CreateComputeBlockConfigurationStep from "./steps/CreateComputeBlockConfigurationStep";
-import type { DropCoordinatesType } from "./Workbench";
 import { useSelectedProject } from "@/hooks/useSelectedProject";
 import type { CreateComputeBlockDTO, InputOutputDTO } from "@/mutations/computeBlockMutation";
 import { useCreateComputeBlockMutation } from "@/mutations/computeBlockMutation";
 import { useAlert } from "@/hooks/useAlert";
-import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock";
+import type { XYPosition } from "@xyflow/react";
 
 
 type CreateComputeBlockModalProps = Omit<ModalProps, "children"> & {
-  dropCoordinates: DropCoordinatesType,
-  onNodeCreated: (newNodeData: ComputeBlock) => void,
+  dropCoordinates: XYPosition,
 };
 
 export enum InputOutputType {
@@ -75,8 +73,7 @@ export type PageProps = {
 export default function CreateComputeBlockModal({
   isOpen,
   onClose,
-  dropCoordinates,
-  onNodeCreated
+  dropCoordinates
 }: CreateComputeBlockModalProps) {
   const [computeBlockDraft, setComputeBlockDraft] = useState<ComputeBlockDraft>({
     name: "",
@@ -91,7 +88,7 @@ export default function CreateComputeBlockModal({
   const [activeStep, setActiveStep] = useState<number>(0)
   const { selectedProject } = useSelectedProject()
   const { setAlert } = useAlert()
-  const { mutateAsync, isPending: loading } = useCreateComputeBlockMutation(setAlert)
+  const { mutateAsync, isPending: loading } = useCreateComputeBlockMutation(setAlert, selectedProject?.uuid)
 
   const stepsInformation = [
     { label: "CBC" },
@@ -127,7 +124,7 @@ export default function CreateComputeBlockModal({
       project_id: selectedProject.uuid,
       cbc_url: computeBlockDraft.cbc_url,
       name: computeBlockDraft.name,
-      custom_name: computeBlockDraft.custom_name, // TODO: always ""?
+      custom_name: computeBlockDraft.custom_name,
       description: computeBlockDraft.description,
       author: computeBlockDraft.author,
       image: computeBlockDraft.image,
@@ -142,8 +139,7 @@ export default function CreateComputeBlockModal({
       y_pos: dropCoordinates.y,
     }
 
-    const created_cb: ComputeBlock = await mutateAsync(cb_dto)
-    onNodeCreated(created_cb)
+    await mutateAsync(cb_dto)
 
     onClose()
   }
@@ -155,7 +151,7 @@ export default function CreateComputeBlockModal({
       case 1:
         return <CreateComputeBlockEntrypointStep onNext={handleNext} onPrev={handleBack} computeBlock={computeBlockDraft} setSelectedEntrypoint={setSelectedEntrypoint} selectedEntrypoint={selectedEntrypoint} />;
       case 2:
-        return <CreateComputeBlockConfigurationStep onNext={handleCreate} onPrev={handleBack} computeBlock={computeBlockDraft} selectedEntrypoint={selectedEntrypoint} setSelectedEntrypoint={setSelectedEntrypoint} loading={loading} />;
+        return <CreateComputeBlockConfigurationStep onNext={handleCreate} onPrev={handleBack} computeBlock={computeBlockDraft} setComputeBlock={setComputeBlockDraft} selectedEntrypoint={selectedEntrypoint} setSelectedEntrypoint={setSelectedEntrypoint} loading={loading} />;
     }
   };
 

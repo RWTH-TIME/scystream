@@ -1,13 +1,13 @@
-import type { SetAlertType } from "@/hooks/useAlert";
+import { AlertType, type SetAlertType } from "@/hooks/useAlert";
 import displayStandardAxiosErrors from "@/utils/errors";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { api } from "@/utils/axios";
 import type { InputOutputType, RecordValueType } from "@/components/CreateComputeBlockModal";
 
 const GET_COMPUTE_BLOCK_INFO = "compute_block/information"
 const CREATE_COMPUTE_BLOCK = "compute_block/"
-
+const GET_COMPUTE_BLOCK_BY_PROJECT = "compute_block/by_project/"
 
 type ComputeBlockInfoDTO = {
   cbc_url: string,
@@ -59,8 +59,8 @@ export type CreateComputeBlockDTO = {
   y_pos: number,
 }
 
-export function useCreateComputeBlockMutation(setAlert: SetAlertType) {
-  // const queryClient = useQueryClient()
+export function useCreateComputeBlockMutation(setAlert: SetAlertType, project_id?: string) {
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async function createComputeBlock(compute_block: CreateComputeBlockDTO) {
@@ -68,15 +68,24 @@ export function useCreateComputeBlockMutation(setAlert: SetAlertType) {
       return response.data
     },
     onSuccess: () => {
-      // TODO: invalidate queries?
+      queryClient.invalidateQueries({ queryKey: [project_id] })
+      setAlert("Successfully created Compute Block.", AlertType.SUCCESS)
     },
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Creating Compute Block failed: ${error}`)
     }
   })
-
-
 }
 
-// TODO: export function getComputeBlockQuery()
+export function useComputeBlocksByProjectQuery(id: string | undefined) {
+  return useQuery({
+    queryKey: [id],
+    queryFn: async function getProjects() {
+      if (!id) return
+      const response = await api.get(GET_COMPUTE_BLOCK_BY_PROJECT + id)
+      return response.data
+    },
+    enabled: !!id
+  })
+}
