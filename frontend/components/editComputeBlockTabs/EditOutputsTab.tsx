@@ -1,15 +1,15 @@
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
-import ConfigBox from "./ConfigBox"
+import ConfigBox from "@/components/ConfigBox"
 
-export default function EditInputsTab() {
+export default function EditOutputsTab() {
   const { selectedComputeBlock } = useSelectedComputeBlock()
 
   return (
     <div>
       <ConfigBox
-        headline="Inputs"
-        description="Configure the Compute Blocks inputs here"
-        config={selectedComputeBlock?.selected_entrypoint.inputs || []}
+        headline="Outputs"
+        description="Configure the Compute Blocks outputs here"
+        config={selectedComputeBlock?.selected_entrypoint.outputs || []}
         updateComputeBlock={(key, value) => updateConfig("inputs", key, value)}
       />
     </div>

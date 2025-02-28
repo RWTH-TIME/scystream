@@ -12,7 +12,7 @@ from services.user_service.middleware.authenticate_token import (
 )
 from services.workflow_service.controllers.compute_block_controller import (
     request_cb_info, create_compute_block, get_compute_blocks_by_project,
-    update_compute_block
+    update_compute_block, delete_block
 )
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
@@ -94,5 +94,21 @@ async def update_cb(data: UpdateComputeBlockRequest):
         return CreateComputeBlockResponse(
             id=id
         )
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.delete("/{block_id}", status_code=200)
+async def delete_compute_block(
+    block_id: UUID | None = None
+):
+    if not block_id:
+        return HTTPException(
+            status_code=422,
+            detail="Compute Block id required."
+        )
+
+    try:
+        delete_block(block_id)
     except Exception as e:
         raise handle_error(e)

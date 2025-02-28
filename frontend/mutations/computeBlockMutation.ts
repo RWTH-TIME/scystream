@@ -1,6 +1,6 @@
 import { AlertType, type SetAlertType } from "@/hooks/useAlert";
 import displayStandardAxiosErrors from "@/utils/errors";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { api } from "@/utils/axios";
 import type { InputOutputType, RecordValueType } from "@/components/CreateComputeBlockModal";
@@ -9,6 +9,7 @@ const GET_COMPUTE_BLOCK_INFO = "compute_block/information"
 const CREATE_COMPUTE_BLOCK = "compute_block/"
 const UPDATE_COMPUTE_BLOCK = "compute_block/"
 const GET_COMPUTE_BLOCK_BY_PROJECT = "compute_block/by_project/"
+const DELETE_COMPUTE_BLOCK = "compute_block/"
 
 type ComputeBlockInfoDTO = {
   cbc_url: string,
@@ -119,21 +120,36 @@ function removeEmptyFields(obj: object): object {
   )
 }
 
-export function useUpdateComputeBlockMutation(setAlert: SetAlertType, project_id?: string) {
-  const queryClient = useQueryClient()
-
+export function useUpdateComputeBlockMutation(setAlert: SetAlertType) {
   return useMutation({
     mutationFn: async function updateComputeBlock(update_dto: UpdateComputeBlockDTO) {
       const cleaned = removeEmptyFields(update_dto)
       const response = await api.put(UPDATE_COMPUTE_BLOCK, JSON.stringify(cleaned))
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [project_id] })
-    },
+    onSuccess: () => { },
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Updating Compute Block failed: ${error}`)
+    }
+  })
+}
+
+
+export function useDeleteComputeBlockMutation(setAlert: SetAlertType, project_id?: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function deleteComputeBlock(id: string) {
+      await api.delete(DELETE_COMPUTE_BLOCK + id)
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+      console.log(`Deleting compute block failed ${error}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [project_id] })
+      setAlert("Compute block sucessfully deleted!", AlertType.SUCCESS)
     }
   })
 }

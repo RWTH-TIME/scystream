@@ -201,3 +201,19 @@ def update_compute_block(
     db.refresh(cb)
 
     return cb.uuid
+
+
+def delete_block(
+    id: UUID
+):
+    db: Session = next(get_database())
+
+    block = db.query(Block).filter_by(uuid=id).one_or_none()
+
+    if not block:
+        raise HTTPException(status_code=404, detail="Block not found.")
+
+    db.delete(block)
+    db.commit()
+
+    return

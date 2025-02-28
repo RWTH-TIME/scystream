@@ -16,16 +16,16 @@ import { PlayArrow, Widgets, Delete } from "@mui/icons-material"
 import ComputeBlockNode from "./nodes/ComputeBlockNode"
 import "@xyflow/react/dist/style.css"
 import LoadingAndError from "./LoadingAndError"
-import DeleteProjectModal from "./DeleteProjectModal"
 import EditProjectDraggable from "./EditProjectDraggable"
 import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
 import type { ComputeBlock } from "./CreateComputeBlockModal";
 import CreateComputeBlockModal from "./CreateComputeBlockModal"
-import type { Node } from "@/mutations/projectMutation"
+import { useDeleteProjectMutation, type Node } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import { useComputeBlocksByProjectQuery, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation";
 import { useAlert } from "@/hooks/useAlert";
+import DeleteModal from "./DeleteModal";
 
 /**
  * Workbench Component is used to display and edit Directed Acyclic Graphs (DAGs).
@@ -33,17 +33,26 @@ import { useAlert } from "@/hooks/useAlert";
  */
 export default function Workbench() {
   const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
-  const { selectedProject } = useSelectedProject()
+  const { selectedProject, setSelectedProject } = useSelectedProject()
   const { data: projectDetails, isLoading, isError } = useComputeBlocksByProjectQuery(selectedProject?.uuid)
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { screenToFlowPosition } = useReactFlow()
   const { setAlert } = useAlert()
-  const { mutate } = useUpdateComputeBlockMutation(setAlert, selectedProject?.uuid)
+  const { mutate } = useUpdateComputeBlockMutation(setAlert)
+  const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
 
   const [nodes, setNodes] = useState<FlowNode<Node>[]>([])
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
   const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false)
   const [dropCoordinates, setDropCoordinates] = useState<XYPosition>({ x: 0, y: 0 })
+
+  function onProjectDelete() {
+    if (selectedProject) {
+      deleteMutate(selectedProject.uuid)
+      setDeleteApproveOpen(false)
+      setSelectedProject(undefined)
+    }
+  }
 
   useEffect(() => {
     if (projectDetails) {
@@ -100,10 +109,15 @@ export default function Workbench() {
 
   return (
     <LoadingAndError loading={isLoading} error={isError}>
-      <DeleteProjectModal
+      <DeleteModal
         isOpen={deleteApproveOpen}
         onClose={() => setDeleteApproveOpen(false)}
+        onDelete={onProjectDelete}
+        loading={deleteLoading}
+        header="Delete Project"
+        desc={`Are you sure you want to delete the project: ${selectedProject?.name}`}
       />
+
       <CreateComputeBlockModal
         isOpen={createComputeBlockOpen}
         onClose={() => setCreateComputeBlockOpen(false)}
