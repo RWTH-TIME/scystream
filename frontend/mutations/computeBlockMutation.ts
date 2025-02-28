@@ -7,6 +7,7 @@ import type { InputOutputType, RecordValueType } from "@/components/CreateComput
 
 const GET_COMPUTE_BLOCK_INFO = "compute_block/information"
 const CREATE_COMPUTE_BLOCK = "compute_block/"
+const UPDATE_COMPUTE_BLOCK = "compute_block/"
 const GET_COMPUTE_BLOCK_BY_PROJECT = "compute_block/by_project/"
 
 type ComputeBlockInfoDTO = {
@@ -87,5 +88,52 @@ export function useComputeBlocksByProjectQuery(id: string | undefined) {
       return response.data
     },
     enabled: !!id
+  })
+}
+
+type UpdateInputOutputDTO = {
+  id: string,
+  config?: Record<string, RecordValueType>,
+}
+
+type UpdateEntrypointDTO = {
+  id: string,
+  inputs?: UpdateInputOutputDTO[],
+  outputs?: UpdateInputOutputDTO[],
+  envs?: Record<string, RecordValueType>,
+}
+
+type UpdateComputeBlockDTO = {
+  id: string,
+  custom_name?: string,
+  selected_entrypoint?: UpdateEntrypointDTO,
+  x_pos?: number,
+  y_pos?: number,
+}
+
+function removeEmptyFields(obj: object): object {
+  return Object.fromEntries(
+    Object.entries(obj)
+      .filter(([_, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => [key, value])
+  )
+}
+
+export function useUpdateComputeBlockMutation(setAlert: SetAlertType, project_id?: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function updateComputeBlock(update_dto: UpdateComputeBlockDTO) {
+      const cleaned = removeEmptyFields(update_dto)
+      const response = await api.put(UPDATE_COMPUTE_BLOCK, JSON.stringify(cleaned))
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [project_id] })
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+      console.error(`Updating Compute Block failed: ${error}`)
+    }
   })
 }

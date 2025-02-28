@@ -204,3 +204,24 @@ class NodeDTO(BaseModel):
 
 class GetNodesByProjectResponse(RootModel[List[NodeDTO]]):
     pass
+
+
+class UpdateInputOutputDTO(BaseModel):
+    id: UUID
+    config: Optional[Dict[str,
+                          Optional[Union[str, int, float, List, bool]]]] = None
+
+
+class UpdateEntrypointDTO(BaseModel):
+    id: UUID
+    inputs: Optional[List[UpdateInputOutputDTO]] = None
+    outputs: Optional[List[UpdateInputOutputDTO]] = None
+    envs: Dict[str, Optional[Union[str, int, float, List, bool]]] = None
+
+
+class UpdateComputeBlockRequest(BaseModel):
+    id: UUID
+    custom_name: Optional[str] = None
+    selected_entrypoint: Optional[UpdateEntrypointDTO] = None
+    x_pos: Optional[float] = None
+    y_pos: Optional[float] = None

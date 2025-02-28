@@ -18,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode,
 }>) {
   return (
-    <html data-lt-installed="true">
+    <html lang="en" data-lt-installed="true">
       <body className={inter.className}>
         <QueryProvider>
           <AlertProvider>

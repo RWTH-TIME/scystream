@@ -12,7 +12,7 @@ import {
   type Node as FlowNode,
   useReactFlow
 } from "@xyflow/react"
-import { PlayArrow, Widgets, Save, Delete } from "@mui/icons-material"
+import { PlayArrow, Widgets, Delete } from "@mui/icons-material"
 import ComputeBlockNode from "./nodes/ComputeBlockNode"
 import "@xyflow/react/dist/style.css"
 import LoadingAndError from "./LoadingAndError"
@@ -24,7 +24,8 @@ import CreateComputeBlockModal from "./CreateComputeBlockModal"
 import type { Node } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
-import { useComputeBlocksByProjectQuery } from "@/mutations/computeBlockMutation";
+import { useComputeBlocksByProjectQuery, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation";
+import { useAlert } from "@/hooks/useAlert";
 
 /**
  * Workbench Component is used to display and edit Directed Acyclic Graphs (DAGs).
@@ -36,6 +37,8 @@ export default function Workbench() {
   const { data: projectDetails, isLoading, isError } = useComputeBlocksByProjectQuery(selectedProject?.uuid)
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { screenToFlowPosition } = useReactFlow()
+  const { setAlert } = useAlert()
+  const { mutate } = useUpdateComputeBlockMutation(setAlert, selectedProject?.uuid)
 
   const [nodes, setNodes] = useState<FlowNode<Node>[]>([])
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
@@ -50,9 +53,24 @@ export default function Workbench() {
   }, [projectDetails])
 
   const onNodesChange = useCallback(
-    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds) as FlowNode<Node>[]),
+    (changes: NodeChange[]) => {
+      setNodes((nds) => applyNodeChanges(changes, nds) as FlowNode<Node>[])
+    },
     []
   )
+
+  const onNodeDragStop = useCallback(
+    (_: React.SyntheticEvent, node: FlowNode<Node>) => {
+      mutate({
+        id: node.id,
+        x_pos: node.position.x,
+        y_pos: node.position.y
+      });
+    },
+    [mutate]
+  );
+
+
 
   const onDragStart = (event: DragEvent<HTMLButtonElement>) => {
     event.dataTransfer.effectAllowed = "move"
@@ -69,7 +87,8 @@ export default function Workbench() {
       setDropCoordinates(screenToFlowPosition({
         x: event.clientX,
         y: event.clientY
-      }))
+      })
+      )
       setCreateComputeBlockOpen(true)
     },
     [screenToFlowPosition]
@@ -110,12 +129,6 @@ export default function Workbench() {
             <PlayArrow />
           </button>
           <button
-            onClick={() => console.log("Save clicked")}
-            className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200"
-          >
-            <Save />
-          </button>
-          <button
             onClick={() => setDeleteApproveOpen(true)}
             className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200"
           >
@@ -133,6 +146,7 @@ export default function Workbench() {
           onNodeClick={(_, node) => setSelectedComputeBlock(node.data as unknown as ComputeBlock)}
           onPaneClick={() => setSelectedComputeBlock(undefined)}
           onDragOver={onDragOver}
+          onNodeDragStop={onNodeDragStop}
           onDrop={onDrop}
         >
           <Background />

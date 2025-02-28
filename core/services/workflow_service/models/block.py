@@ -47,7 +47,7 @@ class Block(Base):
             ondelete="SET NULL",
             name="fk_selected_entrypoint_uuid"
         ),
-        nullable=True
+        nullable=False
     )
 
     # position on the workbench

@@ -89,12 +89,25 @@ export default function CreateComputeBlockModal({
   const { selectedProject } = useSelectedProject()
   const { setAlert } = useAlert()
   const { mutateAsync, isPending: loading } = useCreateComputeBlockMutation(setAlert, selectedProject?.uuid)
-
   const stepsInformation = [
     { label: "CBC" },
     { label: "Entrypoint" },
     { label: "Configuration" },
   ];
+
+  function reset() {
+    setComputeBlockDraft({
+      name: "",
+      description: "",
+      custom_name: "",
+      author: "",
+      image: "",
+      entrypoints: [],
+      cbc_url: "",
+    });
+    setSelectedEntrypoint(undefined);
+    setActiveStep(0);
+  };
 
   function handleNext() {
     if (activeStep < stepsInformation.length - 1) {
@@ -115,6 +128,11 @@ export default function CreateComputeBlockModal({
       description: inputOutput.description,
       config: inputOutput.config,
     }
+  }
+
+  function handleModalClose() {
+    reset();
+    onClose();
   }
 
   async function handleCreate() {
@@ -141,10 +159,10 @@ export default function CreateComputeBlockModal({
 
     await mutateAsync(cb_dto)
 
-    onClose()
+    handleModalClose()
   }
 
-  const getStepContent = () => {
+  function getStepContent() {
     switch (activeStep) {
       case 0:
         return <CreateComputeBlockInformationStep onNext={handleNext} setComputeBlock={setComputeBlockDraft} />;
@@ -155,15 +173,20 @@ export default function CreateComputeBlockModal({
     }
   };
 
+
+
+
   return (
-    <Modal onClose={onClose} isOpen={isOpen}>
-      <Stepper activeStep={activeStep} >
-        {stepsInformation.map((step, index) => (
-          <Step key={index}>
-            <StepLabel>{step.label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
+    <Modal onClose={handleModalClose} isOpen={isOpen}>
+      <div className="w-[97%]">
+        <Stepper activeStep={activeStep} >
+          {stepsInformation.map((step, index) => (
+            <Step key={index}>
+              <StepLabel>{step.label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      </div>
       {getStepContent()}
     </Modal>
   );

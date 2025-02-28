@@ -10,7 +10,7 @@ SQLALCHEMY_DATABASE_URL = (
 )
 
 # db connection
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_size=20, max_overflow=30)
 
 SessionLocal = sessionmaker(bind=engine)
 

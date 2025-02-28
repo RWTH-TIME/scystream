@@ -8,7 +8,12 @@ from sqlalchemy.orm import Session
 from utils.database.session_injector import get_database
 from services.workflow_service.models.block import Block
 from services.workflow_service.models.entrypoint import Entrypoint
-from services.workflow_service.models.inputoutput import InputOutput
+from services.workflow_service.models.inputoutput import (
+    InputOutput, InputOutputType
+)
+from services.workflow_service.schemas.compute_block import (
+    UpdateEntrypointDTO, UpdateInputOutputDTO
+)
 
 from scystream.sdk.config import SDKConfig, load_config
 
@@ -132,3 +137,67 @@ def get_compute_blocks_by_project(project_id: UUID) -> List[Block]:
     db: Session = next(get_database())
 
     return db.query(Block).filter(Block.project_uuid == project_id).all()
+
+
+def _update_io(
+        to_be_io: Optional[List[UpdateInputOutputDTO]],
+        io_type: InputOutputType,
+        entrypoint: Entrypoint
+):
+    if to_be_io is None:
+        return
+
+    existing_io = {
+        io.uuid: io for io in entrypoint.input_outputs if io.type == io_type
+    }
+
+    for io_update_data in to_be_io:
+        if not io_update_data.id or io_update_data.id not in existing_io:
+            continue
+
+        io = existing_io[io_update_data.id]
+
+        # Update Config Dict
+        if io_update_data.config:
+            io.config = {**io.config, **io_update_data.config}
+
+
+def update_compute_block(
+    id: UUID,
+    custom_name: Optional[str] = None,
+    selected_entrypoint: Optional[UpdateEntrypointDTO] = None,
+    x_pos: Optional[float] = None,
+    y_pos: Optional[float] = None,
+) -> UUID:
+    db: Session = next(get_database())
+
+    cb = db.query(Block).filter_by(uuid=id).one_or_none()
+
+    if not cb:
+        raise HTTPException(status_code=400, detail="Block not found.")
+
+    # Simple Attributes
+    for attr, value in {
+        "custom_name": custom_name,
+        "x_pos": x_pos,
+        "y_pos": y_pos,
+    }.items():
+        if value is not None:
+            setattr(cb, attr, value)
+
+    entrypoint = cb.selected_entrypoint
+    if selected_entrypoint:
+        # update envs
+        if selected_entrypoint.envs:
+            entrypoint.envs = {**entrypoint.envs, **selected_entrypoint.envs}
+
+        # Update Inputs/Outputs
+        _update_io(selected_entrypoint.inputs,
+                   InputOutputType.INPUT, entrypoint)
+        _update_io(selected_entrypoint.outputs,
+                   InputOutputType.OUTPUT, entrypoint)
+
+    db.commit()
+    db.refresh(cb)
+
+    return cb.uuid

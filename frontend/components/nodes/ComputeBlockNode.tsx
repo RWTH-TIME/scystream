@@ -46,29 +46,47 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
   };
 
   return (
-    <div>
-      <div className={`flex flex-col bg-gray-50 border ${selectedComputeBlock?.id === data.id ? "border-blue-400" : "border-gray-300"} rounded shadow-md p-3 space-y-4 text-sm w-64`}>
-        <div className="flex place-content-between items-center">
-          <div className="text-lg font-bold text-gray-800">{data.custom_name}</div>
+    <div className="flex justify-center items-center p-4">
+      <div
+        className={`w-full max-w-sm bg-white border rounded-lg shadow-lg p-6 ${selectedComputeBlock?.id === data.id ? "border-blue-400" : "border-gray-300"
+          } transition duration-150 ease-in-out hover:bg-gray-50 hover:shadow-xl`}
+      >
+        <div className="flex justify-between items-center">
+          <h3 className="text-xl font-semibold text-gray-800">{data.custom_name}</h3>
         </div>
-        <span className="w-full h-[1px] bg-black"></span>
-        <div className="flex flex-col space-y-2">
+        <div className="flex items-center">
+          <h3 className="text-sm text-gray-600">{data.name}</h3>
+        </div>
+
+        <hr className="border-t border-gray-200 my-3" />
+
+        <div className="space-y-2">
           <div>
-            <span className="font-medium text-gray-600">Entrypoint</span><br />
-            {data.selected_entrypoint.name}
+            <span className="block text-sm font-medium text-gray-600">Description</span>
+            <p className="text-sm text-gray-800">{data.description}</p>
           </div>
           <div>
-            <span className="font-medium text-gray-600">Author</span><br />
-            {data.author}
+            <span className="block text-sm font-medium text-gray-600">Entrypoint: {data.selected_entrypoint.name}</span>
+            <p className="text-sm text-gray-800">{data.selected_entrypoint.description}</p>
           </div>
+
           <div>
-            <span className="font-medium text-gray-600">Image:</span><br />
-            {data.image}
+            <span className="block text-sm font-medium text-gray-600">Author</span>
+            <p className="text-sm text-gray-800">{data.author}</p>
+          </div>
+
+          <div>
+            <span className="block text-sm font-medium text-gray-600">Image</span>
+            <p className="text-sm text-gray-800">{data.image}</p>
           </div>
         </div>
-        {renderHandles(data.selected_entrypoint.inputs, "target", Position.Left)}
-        {renderHandles(data.selected_entrypoint.outputs, "target", Position.Right)}
+
+        <div className="space-y-2">
+          {renderHandles(data.selected_entrypoint.inputs, "target", Position.Left)}
+          {renderHandles(data.selected_entrypoint.outputs, "target", Position.Right)}
+        </div>
       </div>
     </div>
-  )
+  );
+
 }

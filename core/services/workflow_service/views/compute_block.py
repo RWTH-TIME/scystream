@@ -5,13 +5,14 @@ from utils.errors.error import handle_error
 from services.workflow_service.schemas.compute_block import (
     ComputeBlockInformationRequest, ComputeBlockInformationResponse,
     CreateComputeBlockRequest, CreateComputeBlockResponse,
-    GetNodesByProjectResponse, NodeDTO
+    GetNodesByProjectResponse, NodeDTO, UpdateComputeBlockRequest
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
 )
 from services.workflow_service.controllers.compute_block_controller import (
-    request_cb_info, create_compute_block, get_compute_blocks_by_project
+    request_cb_info, create_compute_block, get_compute_blocks_by_project,
+    update_compute_block
 )
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
@@ -76,5 +77,22 @@ async def get_by_project(
             NodeDTO.from_compute_block(cb)
             for cb in compute_blocks
         ])
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.put("/", response_model=CreateComputeBlockResponse)
+async def update_cb(data: UpdateComputeBlockRequest):
+    try:
+        id = update_compute_block(
+            id=data.id,
+            custom_name=data.custom_name,
+            selected_entrypoint=data.selected_entrypoint,
+            x_pos=data.x_pos,
+            y_pos=data.y_pos
+        )
+        return CreateComputeBlockResponse(
+            id=id
+        )
     except Exception as e:
         raise handle_error(e)
