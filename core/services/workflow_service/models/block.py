@@ -1,5 +1,5 @@
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, String,  ForeignKey, Table, Integer, Float
+from sqlalchemy import Column, String,  ForeignKey, Table, Float
 from sqlalchemy.orm import relationship, foreign
 
 import uuid
@@ -33,21 +33,13 @@ class Block(Base):
                                      ondelete="CASCADE",
                                      name="fk_project_uuid"))
 
-    # airflow-Task specific columns
-    priority_weight = Column(Integer, nullable=True)
-    retries = Column(Integer, default=0)
-    # delay in seconds before rerun of pipeline after fail
-    retry_delay = Column(Integer, default=300)
-    # schedule_interval = Column(String, nullable=True)
-
     # sdk specific columns, set by user
     custom_name = Column(String(100), nullable=False)
     description = Column(String(100), nullable=True)
     author = Column(String(100), nullable=True)
     docker_image = Column(String(150), nullable=False)
-    repo_url = Column(String(100), nullable=False)
+    cbc_url = Column(String(100), nullable=False)
 
-    # \\TODO: fix relationship btw entrypoint and block
     selected_entrypoint_uuid = Column(
         UUID(as_uuid=True),
         ForeignKey(
@@ -55,29 +47,20 @@ class Block(Base):
             ondelete="SET NULL",
             name="fk_selected_entrypoint_uuid"
         ),
-        nullable=True
+        nullable=False
     )
 
-    # position
-    x_pos = Column(Float, nullable=True)
-    y_pos = Column(Float, nullable=True)
+    # position on the workbench
+    x_pos = Column(Float)
+    y_pos = Column(Float)
 
     project = relationship("Project", back_populates="blocks")
 
-    entrypoints = relationship(
-        Entrypoint,
-        back_populates="block",
-        cascade="all, delete-orphan",
-        foreign_keys=[Entrypoint.block_uuid]
-    )
-    # \\TODO: use join here like for upstream blocks?
-    # or use only definition in entrypoint (back_populates?)
-
     selected_entrypoint = relationship(
-        "Entrypoint",
+        Entrypoint,
         foreign_keys=[selected_entrypoint_uuid],
         uselist=False
-    )  # alembic error?
+    )
 
     upstream_blocks = relationship(
         "Block",

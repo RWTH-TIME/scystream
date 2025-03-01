@@ -1,122 +1,155 @@
-import { useEffect, useState } from "react"
-import Input from "./inputs/Input"
-import LoadingAndError from "./LoadingAndError"
-import ProjectCBSettingsDraggable from "./ProjectCBSettingsDraggable"
-import { AlertType, useAlert } from "@/hooks/useAlert"
-import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
+import { useState } from "react";
+import ProjectCBSettingsDraggable from "./ProjectCBSettingsDraggable";
+import MetadataTab from "@/components/editComputeBlockTabs/MetadataTab";
+import EditInputsOutputsTab from "@/components/editComputeBlockTabs/EditInputsOutputsTab";
+import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock";
+import type { ComputeBlock, RecordValueType } from "@/components/CreateComputeBlockModal";
+import { useUpdateComputeBlockMutation, type UpdateComputeBlockDTO, type UpdateEntrypointDTO, type UpdateInputOutputDTO } from "@/mutations/computeBlockMutation";
+import { useAlert } from "@/hooks/useAlert";
 
 export default function EditComputeBlockDraggable() {
-  const { setAlert } = useAlert()
-  const { selectedComputeBlock } = useSelectedComputeBlock()
+  const { selectedComputeBlock } = useSelectedComputeBlock();
+  const { setAlert } = useAlert();
+  const { mutateAsync, isPending } = useUpdateComputeBlockMutation(setAlert);
 
-  const [cbName, setCBName] = useState<string>(selectedComputeBlock?.name ?? "")
-  const [activeTab, setActiveTab] = useState<"metadata" | "inputs" | "outputs">("metadata") // Track the active tab
+  // We need to make a deep copy of the compute block to compare the values later on
+  const [editCB, setEditCB] = useState<ComputeBlock>(JSON.parse(JSON.stringify(selectedComputeBlock!)));
+  const [activeTab, setActiveTab] = useState<string>("metadata");
 
-  useEffect(() => {
-    setCBName(selectedComputeBlock?.name ?? "")
-  }, [selectedComputeBlock])
+  function updateConfig(section: "inputs" | "outputs" | "envs", key: string, value: RecordValueType) {
+    setEditCB((prevCB) => {
+      if (!prevCB) return prevCB;
 
-  function updateProject(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+      const updatedCB = { ...prevCB };
 
-    if (selectedComputeBlock && cbName && cbName.length > 0) {
-      // TODO: mutate
-    } else {
-      setAlert("Project Name must be set.", AlertType.ERROR)
-    }
+      if (section === "envs") {
+        updatedCB.selected_entrypoint.envs = {
+          ...updatedCB.selected_entrypoint.envs,
+          [key]: value
+        };
+      } else {
+        updatedCB.selected_entrypoint[section] = updatedCB.selected_entrypoint[section].map((io) => {
+          if (key in io.config) {
+            return {
+              ...io,
+              config: {
+                ...io.config,
+                [key]: value,
+              },
+            };
+          }
+          return io;
+        });
+      }
+      return updatedCB;
+    });
   }
 
+  function updateCustomName(newName: string) {
+    setEditCB((prevCB) => {
+      return { ...prevCB, custom_name: newName };
+    });
+  }
+
+  function buildUpdateDTO(): Partial<UpdateComputeBlockDTO> {
+    if (!selectedComputeBlock) return {};
+
+    const updateDTO: UpdateComputeBlockDTO = { id: editCB.id };
+
+    if (editCB.custom_name !== selectedComputeBlock.custom_name) {
+      updateDTO.custom_name = editCB.custom_name;
+    }
+
+    const updatedEntrypoint: UpdateEntrypointDTO = {
+      id: editCB.selected_entrypoint.id!,
+    };
+
+    const updatedInputs = editCB.selected_entrypoint.inputs
+      .filter((input) => {
+        const originalInput = selectedComputeBlock.selected_entrypoint.inputs.find(i => i.id === input.id);
+        return !originalInput || JSON.stringify(input.config) !== JSON.stringify(originalInput.config);
+      })
+      .map((input) => ({
+        id: input.id,
+        config: input.config,
+      } as UpdateInputOutputDTO));
+
+    if (updatedInputs.length > 0) {
+      updatedEntrypoint.inputs = updatedInputs;
+    }
+
+    const updatedOutputs = editCB.selected_entrypoint.outputs
+      .filter((output) => {
+        const originalOutput = selectedComputeBlock.selected_entrypoint.outputs.find(o => o.id === output.id);
+        return !originalOutput || JSON.stringify(output.config) !== JSON.stringify(originalOutput.config);
+      })
+      .map((output) => ({
+        id: output.id,
+        config: output.config,
+      } as UpdateInputOutputDTO));
+
+    if (updatedOutputs.length > 0) {
+      updatedEntrypoint.outputs = updatedOutputs;
+    }
+
+    const updatedEnvs: Record<string, RecordValueType> = {};
+    Object.keys(editCB.selected_entrypoint.envs).forEach((key) => {
+      if (editCB.selected_entrypoint.envs[key] !== selectedComputeBlock.selected_entrypoint.envs[key]) {
+        updatedEnvs[key] = editCB.selected_entrypoint.envs[key];
+      }
+    });
+
+    if (Object.keys(updatedEnvs).length > 0) {
+      updatedEntrypoint.envs = updatedEnvs;
+    }
+
+    if (Object.keys(updatedEntrypoint).length > 1) {
+      updateDTO.selected_entrypoint = updatedEntrypoint;
+    }
+
+    return updateDTO;
+  }
+
+  async function handleSave() {
+    const dto = buildUpdateDTO();
+    await mutateAsync(dto);
+  }
+
+  // Define the tabs
+  const tabs = [
+    { key: "metadata", label: "Metadata" },
+    { key: "inputs", label: "Inputs" },
+    { key: "outputs", label: "Outputs" },
+  ];
+
   return (
-    <ProjectCBSettingsDraggable>
-      {/* Tab Navigation */}
-      <div className="flex items-center border-b-2">
-        {["Metadata", "Inputs", "Outputs"].map((tab) => (
-          <button
-            key={tab}
-            className={`px-4 py-2 font-medium text-sm ${activeTab.toLowerCase() === tab.toLowerCase()
-              ? "border-b-2 border-blue-600 text-blue-600"
-              : "text-gray-600 hover:text-blue-600"
-              }`}
-            onClick={() => setActiveTab(tab.toLowerCase() as "metadata" | "inputs" | "outputs")}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      <div className="p-4">
-        {activeTab === "metadata" && (
-          <>
-            <h2 className="text-xl font-bold">
-              Compute Block <span className="text-blue-600">{selectedComputeBlock?.name}</span> Settings:
-            </h2>
-            <form onSubmit={(e) => updateProject(e)} className="mt-4 space-y-4 text-sm">
-              <div>
-                <Input
-                  type="text"
-                  value={cbName}
-                  label="Compute Block Name"
-                  onChange={setCBName}
-                />
-              </div>
-              <div>
-                <label htmlFor="entrypoint" className="block text-gray-700 font-medium">
-                  Entry Point
-                </label>
-                <select
-                  id="entrypoint"
-                  name="entrypoint"
-                  className="w-full mt-1 p-2 border border-gray-300 rounded-md"
-                >
-                  {/* Replace these options with dynamic data if needed */}
-                  <option value="main">Main</option>
-                  <option value="secondary">Secondary</option>
-                </select>
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="flex flex-col w-[78px] h-[36px] px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
-                  disabled={false}
-                >
-                  <LoadingAndError loading={false} iconSize={21}>
-                    Save
-                  </LoadingAndError>
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-
-        {activeTab === "inputs" && (
-          <div>
-            <h2 className="text-xl font-bold">Inputs</h2>
-            <p className="mt-2 text-sm text-gray-600">Define inputs for the compute block here.</p>
-            {/* Add your input-related content */}
-            <div className="mt-4">
-              <Input type="text" label="Input Name" value="" onChange={() => { }} />
-              <button className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                Add Input
-              </button>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "outputs" && (
-          <div>
-            <h2 className="text-xl font-bold">Outputs</h2>
-            <p className="mt-2 text-sm text-gray-600">Define outputs for the compute block here.</p>
-            {/* Add your output-related content */}
-            <div className="mt-4">
-              <Input type="text" label="Output Name" value="" onChange={() => { }} />
-              <button className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                Add Output
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+    <ProjectCBSettingsDraggable tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
+      {activeTab === "metadata" && (
+        <MetadataTab
+          computeBlock={editCB}
+          updateCustomName={updateCustomName}
+          updateConfig={(key, value) => updateConfig("envs", key, value)}
+          handleSave={handleSave}
+          loading={isPending}
+        />
+      )}
+      {activeTab === "inputs" && (
+        <EditInputsOutputsTab
+          inputoutputs={editCB.selected_entrypoint.inputs}
+          updateConfig={(key, value) => updateConfig("inputs", key, value)}
+          handleSave={handleSave}
+          loading={isPending}
+        />
+      )}
+      {activeTab === "outputs" && (
+        <EditInputsOutputsTab
+          inputoutputs={editCB.selected_entrypoint.outputs}
+          updateConfig={(key, value) => updateConfig("outputs", key, value)}
+          handleSave={handleSave}
+          loading={isPending}
+        />
+      )}
     </ProjectCBSettingsDraggable>
-  )
+  );
 }
+
