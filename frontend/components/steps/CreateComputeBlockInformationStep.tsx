@@ -4,6 +4,7 @@ import { type PageProps, type Entrypoint, type InputOutput, type ComputeBlockDra
 import { useState } from "react";
 import LoadingAndError from "@/components/LoadingAndError";
 import Input from "@/components/inputs/Input";
+import Button, { ButtonSentiment } from "../Button";
 
 const mapInputOutput = (data: InputOutput) => ({
   type: data.data_type === InputOutputType.FILE ? "file" : "db_table",
@@ -60,15 +61,15 @@ export default function CreateComputeBlockInformationStep({
     <form onSubmit={createComputeBlock} className="mt-4 space-y-4 text-sm">
       <Input type="text" value={repoURL} onChange={setRepoURL} label="Compute Block Config URL" />
       <div className="flex justify-end">
-        <button
+        <Button
           type="submit"
-          className={`w-[78px] h-[36px] px-4 py-2 rounded ${repoURL.length === 0 ? "bg-gray-200 cursor-not-allowed" : "text-white bg-blue-500 hover:bg-blue-600"}`}
+          sentiment={ButtonSentiment.POSITIVE}
           disabled={repoURL.length === 0}
         >
           <LoadingAndError loading={loading} iconSize={21}>
             Next
           </LoadingAndError>
-        </button>
+        </Button>
       </div>
     </form>
   )

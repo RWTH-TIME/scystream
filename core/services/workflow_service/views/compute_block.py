@@ -4,7 +4,7 @@ from uuid import UUID
 from utils.errors.error import handle_error
 from services.workflow_service.schemas.compute_block import (
     ComputeBlockInformationRequest, ComputeBlockInformationResponse,
-    CreateComputeBlockRequest, CreateComputeBlockResponse,
+    CreateComputeBlockRequest, IDResponse,
     GetNodesByProjectResponse, NodeDTO, UpdateComputeBlockRequest
 )
 from services.user_service.middleware.authenticate_token import (
@@ -32,7 +32,7 @@ async def cb_information(
         raise handle_error(e)
 
 
-@router.post("/", response_model=CreateComputeBlockResponse)
+@router.post("/", response_model=IDResponse)
 async def create(
     data: CreateComputeBlockRequest,
     _: dict = Depends(authenticate_token)
@@ -56,7 +56,7 @@ async def create(
              for output in data.selected_entrypoint.outputs],
             data.project_id
         )
-        return CreateComputeBlockResponse(
+        return IDResponse(
             id=uuid
         )
     except Exception as e:
@@ -81,7 +81,7 @@ async def get_by_project(
         raise handle_error(e)
 
 
-@router.put("/", response_model=CreateComputeBlockResponse)
+@router.put("/", response_model=IDResponse)
 async def update_cb(data: UpdateComputeBlockRequest):
     try:
         id = update_compute_block(
@@ -91,7 +91,7 @@ async def update_cb(data: UpdateComputeBlockRequest):
             x_pos=data.x_pos,
             y_pos=data.y_pos
         )
-        return CreateComputeBlockResponse(
+        return IDResponse(
             id=id
         )
     except Exception as e:

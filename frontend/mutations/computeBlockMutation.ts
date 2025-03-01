@@ -1,6 +1,6 @@
 import { AlertType, type SetAlertType } from "@/hooks/useAlert";
 import displayStandardAxiosErrors from "@/utils/errors";
-import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { api } from "@/utils/axios";
 import type { InputOutputType, RecordValueType } from "@/components/CreateComputeBlockModal";
@@ -16,16 +16,12 @@ type ComputeBlockInfoDTO = {
 }
 
 export function useGetComputeBlockInfoMutation(setAlert: SetAlertType) {
-  // const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: async function getComputeBlockFromURL(compute_block: ComputeBlockInfoDTO) {
       const response = await api.post(GET_COMPUTE_BLOCK_INFO, JSON.stringify(compute_block))
       return response.data
     },
-    onSuccess: () => {
-      // TODO: invalidate queries?
-    },
+    onSuccess: () => { },
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Getting Compute Block Info failed: ${error}`)
@@ -92,19 +88,19 @@ export function useComputeBlocksByProjectQuery(id: string | undefined) {
   })
 }
 
-type UpdateInputOutputDTO = {
+export type UpdateInputOutputDTO = {
   id: string,
   config?: Record<string, RecordValueType>,
 }
 
-type UpdateEntrypointDTO = {
+export type UpdateEntrypointDTO = {
   id: string,
   inputs?: UpdateInputOutputDTO[],
   outputs?: UpdateInputOutputDTO[],
   envs?: Record<string, RecordValueType>,
 }
 
-type UpdateComputeBlockDTO = {
+export type UpdateComputeBlockDTO = {
   id: string,
   custom_name?: string,
   selected_entrypoint?: UpdateEntrypointDTO,
@@ -122,7 +118,7 @@ function removeEmptyFields(obj: object): object {
 
 export function useUpdateComputeBlockMutation(setAlert: SetAlertType) {
   return useMutation({
-    mutationFn: async function updateComputeBlock(update_dto: UpdateComputeBlockDTO) {
+    mutationFn: async function updateComputeBlock(update_dto: Partial<UpdateComputeBlockDTO>) {
       const cleaned = removeEmptyFields(update_dto)
       const response = await api.put(UPDATE_COMPUTE_BLOCK, JSON.stringify(cleaned))
       return response.data;

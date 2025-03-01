@@ -2,6 +2,7 @@ import type { InputOutput, PageProps, RecordValueType } from "@/components/Creat
 import LoadingAndError from "@/components/LoadingAndError";
 import ConfigBox from "../ConfigBox";
 import { useEffect, useState } from "react";
+import Button, { ButtonSentiment } from "../Button";
 
 function isValid(value: RecordValueType) {
   if (value === null || value === undefined) return false;
@@ -132,25 +133,22 @@ export default function CreateComputeBlockConfigurationStep({
       )}
 
       <div className="flex justify-between">
-        <button
-          type="button"
-          className="w-[78px] h-[36px] px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600"
+        <Button
+          sentiment={ButtonSentiment.NEUTRAL}
           onClick={onPrev}
         >
           Prev
-        </button>
+        </Button>
 
-        <button
-          type="button"
-          className={`w-[78px] h-[36px] px-4 py-2 rounded ${!formValid ? "bg-gray-200 cursor-not-allowed" : "bg-blue-500 text-white hover:bg-blue-600"}`}
+        <Button
+          sentiment={ButtonSentiment.POSITIVE}
           disabled={!formValid}
           onClick={onNext}
         >
           <LoadingAndError loading={loading} iconSize={21}>
             Create
           </LoadingAndError>
-        </button>
-
+        </Button>
       </div>
     </div>
   )

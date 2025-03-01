@@ -137,8 +137,8 @@ class CreateComputeBlockRequest(BaseModel):
         return v
 
 
-class CreateComputeBlockResponse(BaseModel):
-    id: Optional[UUID] = None
+class IDResponse(BaseModel):
+    id: UUID
 
 
 class PositionDTO(BaseModel):

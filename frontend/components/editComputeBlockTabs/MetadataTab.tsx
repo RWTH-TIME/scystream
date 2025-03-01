@@ -1,35 +1,36 @@
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import ConfigBox from "@/components/ConfigBox"
 import Input from "@/components/inputs/Input"
-import { useEffect, useState } from "react"
-import { AlertType, useAlert } from "@/hooks/useAlert"
+import { useState } from "react"
+import { useAlert } from "@/hooks/useAlert"
 import LoadingAndError from "@/components/LoadingAndError"
 import DeleteModal from "../DeleteModal"
 import { useDeleteComputeBlockMutation } from "@/mutations/computeBlockMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
+import type { ComputeBlock, RecordValueType } from "../CreateComputeBlockModal"
+import Button, { ButtonSentiment } from "../Button"
 
-export default function MetadataTab() {
+type MetadataTab = {
+  computeBlock: ComputeBlock,
+  updateCustomName: (name: string) => void,
+  updateConfig: (key: string, value: RecordValueType) => void,
+  handleSave: () => void,
+  loading: boolean,
+}
+
+export default function MetadataTab({
+  computeBlock,
+  updateCustomName,
+  updateConfig,
+  handleSave,
+  loading
+}: MetadataTab) {
   const { selectedComputeBlock } = useSelectedComputeBlock()
   const { selectedProject } = useSelectedProject()
   const { setAlert } = useAlert();
   const { mutateAsync: deleteMutate, isPending: deleteLoading } = useDeleteComputeBlockMutation(setAlert, selectedProject?.uuid)
 
-  const [cbName, setCBName] = useState<string>(selectedComputeBlock?.custom_name ?? "");
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
-
-  useEffect(() => {
-    setCBName(selectedComputeBlock?.custom_name ?? "");
-  }, [selectedComputeBlock]);
-
-  function updateProject(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    if (selectedComputeBlock && cbName && cbName.length > 0) {
-      // TODO: mutate
-    } else {
-      setAlert("Project Name must be set.", AlertType.ERROR);
-    }
-  }
 
   function onCBDelete() {
     if (selectedComputeBlock) {
@@ -53,31 +54,37 @@ export default function MetadataTab() {
       </h2>
       <p className="text-sm text-gray-800">{selectedComputeBlock?.description}</p>
 
-      <form onSubmit={updateProject} className="mt-4 space-y-4 text-sm">
-        <Input type="text" value={cbName} label="Name" onChange={setCBName} />
+      <Input type="text" value={computeBlock.custom_name} label="Name" onChange={updateCustomName} />
 
-        <div className="flex justify-between">
-          <button
-            onClick={() => setDeleteApproveOpen(true)}
-            type="submit"
-            className="flex flex-col w-[78px] h-[36px] px-4 py-2 text-white bg-red-500 rounded hover:bg-red-600"
-          >
-            <LoadingAndError loading={false} iconSize={21}>
-              Delete
-            </LoadingAndError>
-          </button>
+      <div className="my-5">
+        <ConfigBox
+          headline="Envs"
+          description="Edit the Compute Blocks Envs here"
+          config={computeBlock.selected_entrypoint.envs}
+          updateComputeBlock={updateConfig}
+        />
+      </div>
+
+      <div className="flex justify-between">
+        <Button
+          onClick={() => setDeleteApproveOpen(true)}
+          sentiment={ButtonSentiment.NEGATIVE}
+        >
+          <LoadingAndError loading={deleteLoading} iconSize={21}>
+            Delete
+          </LoadingAndError>
+        </Button>
 
 
-          <button
-            type="submit"
-            className="flex flex-col w-[78px] h-[36px] px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
-          >
-            <LoadingAndError loading={false} iconSize={21}>
-              Save
-            </LoadingAndError>
-          </button>
-        </div>
-      </form>
+        <Button
+          onClick={handleSave}
+          sentiment={ButtonSentiment.POSITIVE}
+        >
+          <LoadingAndError loading={loading} iconSize={21}>
+            Save
+          </LoadingAndError>
+        </Button>
+      </div>
     </div>
   )
 }

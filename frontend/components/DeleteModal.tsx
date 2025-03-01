@@ -1,3 +1,4 @@
+import Button, { ButtonSentiment } from "./Button";
 import LoadingAndError from "./LoadingAndError"
 import Modal, { type ModalProps } from "./Modal"
 
@@ -21,26 +22,24 @@ export default function DeleteModal({
     <Modal className={className} isOpen={isOpen} onClose={onClose}>
       <h2 className="text-xl font-bold">{header}</h2>
       {desc}
-      <div className="flex justify-end mt-5">
-        <button
+      <div className="flex justify-between mt-5">
+        <Button
           type="button"
           onClick={onClose}
-          className="w-[78px] h-[36px] px-4 py-2 mr-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
+          sentiment={ButtonSentiment.NEUTRAL}
         >
           Cancel
-        </button>
-        <button
-          className="flex flex-col w-[78px] h-[36px] px-4 py-2 text-white bg-red-500 rounded hover:bg-red-600"
+        </Button>
+        <Button
           disabled={loading}
           onClick={() => onDelete()}
+          sentiment={ButtonSentiment.NEGATIVE}
         >
           <LoadingAndError loading={loading} iconSize={21}>
             Delete
           </LoadingAndError>
-        </button>
+        </Button>
       </div>
-
     </Modal>
-
   )
 }

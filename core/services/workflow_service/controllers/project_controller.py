@@ -1,14 +1,12 @@
 from uuid import UUID, uuid4
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timezone
 from typing import List
 
 from utils.database.session_injector import get_database
 from services.workflow_service.models.project import Project
 from services.user_service.models.user import User
-from services.workflow_service.models.block import Block
 
 
 def create_project(name: str, current_user_uuid: UUID) -> UUID:

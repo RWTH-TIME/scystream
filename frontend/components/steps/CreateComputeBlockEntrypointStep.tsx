@@ -1,6 +1,7 @@
 import type { PageProps, Entrypoint } from "@/components/CreateComputeBlockModal";
 import LoadingAndError from "@/components/LoadingAndError";
 import Dropdown from "../inputs/Dropdown";
+import Button, { ButtonSentiment } from "../Button";
 
 export default function CreateComputeBlockEntrypointStep({
   onNext,
@@ -45,16 +46,15 @@ export default function CreateComputeBlockEntrypointStep({
       />
 
       <div className="mt-4 flex justify-end">
-        <button
-          type="button"
-          className={`w-[78px] h-[36px] px-4 py-2 rounded ${!selectedEntrypoint ? "bg-gray-200 cursor-not-allowed" : "bg-blue-500 text-white hover:bg-blue-600"}`}
+        <Button
           disabled={!selectedEntrypoint}
           onClick={onNext}
+          sentiment={ButtonSentiment.POSITIVE}
         >
           <LoadingAndError loading={false} iconSize={21}>
             Next
           </LoadingAndError>
-        </button>
+        </Button>
       </div>
     </div>
   );
