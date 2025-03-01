@@ -215,7 +215,7 @@ services:
   
   ### spark:
   spark-master:
-    image: bitnami/spark:3.5.4
+    image: bitnami/spark:3.5.5
     environment:
       - SPARK_MODE=master
       - SPARK_MASTER_HOST=spark-master
@@ -232,7 +232,7 @@ services:
   
   # In production, there should be more workers
   spark-worker:
-    image: bitnami/spark:3.5.4
+    image: bitnami/spark:3.5.5
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER=spark://spark-master:7077
