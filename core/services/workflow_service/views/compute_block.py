@@ -5,14 +5,16 @@ from utils.errors.error import handle_error
 from services.workflow_service.schemas.compute_block import (
     ComputeBlockInformationRequest, ComputeBlockInformationResponse,
     CreateComputeBlockRequest, IDResponse,
-    GetNodesByProjectResponse, NodeDTO, UpdateComputeBlockRequest
+    GetNodesByProjectResponse, NodeDTO, UpdateComputeBlockRequest,
+    EdgeDTO
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
 )
 from services.workflow_service.controllers.compute_block_controller import (
     request_cb_info, create_compute_block, get_compute_blocks_by_project,
-    update_compute_block, delete_block
+    update_compute_block, delete_block, create_stream,
+    get_block_dependencies_for_blocks
 )
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
@@ -73,10 +75,20 @@ async def get_by_project(
 
     try:
         compute_blocks = get_compute_blocks_by_project(project_id)
-        return GetNodesByProjectResponse([
-            NodeDTO.from_compute_block(cb)
-            for cb in compute_blocks
-        ])
+
+        block_uuids = [block.uuid for block in compute_blocks]
+        dependencies = get_block_dependencies_for_blocks(block_uuids)
+        print(dependencies)
+
+        return GetNodesByProjectResponse(
+            blocks=[
+                NodeDTO.from_compute_block(cb)
+                for cb in compute_blocks
+            ],
+            edges=[EdgeDTO.from_block_dependencies(
+                dp) for dp in dependencies
+            ]
+        )
     except Exception as e:
         raise handle_error(e)
 
@@ -110,5 +122,20 @@ async def delete_compute_block(
 
     try:
         delete_block(block_id)
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.post("/edge", status_code=200)
+def create_io_stream(
+    data: EdgeDTO
+):
+    try:
+        create_stream(
+            data.source,
+            data.sourceHandle,
+            data.target,
+            data.targetHandle
+        )
     except Exception as e:
         raise handle_error(e)

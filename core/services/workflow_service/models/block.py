@@ -11,14 +11,26 @@ from services.workflow_service.models.entrypoint import Entrypoint  # noqa: F401
 # Association table for block dependencies
 block_dependencies = Table(
     "block_dependencies", Base.metadata,
+
     Column("upstream_block_uuid", UUID(as_uuid=True),
-           ForeignKey(
-               "blocks.uuid", ondelete="CASCADE", name="fk_upstream_block"),
+           ForeignKey("blocks.uuid", ondelete="CASCADE",
+                      name="fk_upstream_block"),
            primary_key=True),
+
+    Column("upstream_output_uuid", UUID(as_uuid=True),
+           ForeignKey("inputoutputs.uuid", ondelete="CASCADE",
+                      name="fk_upstream_output"),
+           nullable=False, primary_key=True),
+
     Column("downstream_block_uuid", UUID(as_uuid=True),
-           ForeignKey(
-               "blocks.uuid", ondelete="CASCADE", name="fk_downstream_block"),
-           primary_key=True)
+           ForeignKey("blocks.uuid", ondelete="CASCADE",
+                      name="fk_downstream_block"),
+           primary_key=True),
+
+    Column("downstream_input_uuid", UUID(as_uuid=True),
+           ForeignKey("inputoutputs.uuid", ondelete="CASCADE",
+                      name="fk_downstream_input"),
+           nullable=False, primary_key=True),
 )
 
 

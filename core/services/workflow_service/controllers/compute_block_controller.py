@@ -4,9 +4,10 @@ import os
 from typing import List, Dict, Optional, Union
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from utils.database.session_injector import get_database
-from services.workflow_service.models.block import Block
+from services.workflow_service.models.block import Block, block_dependencies
 from services.workflow_service.models.entrypoint import Entrypoint
 from services.workflow_service.models.inputoutput import (
     InputOutput, InputOutputType
@@ -139,6 +140,25 @@ def get_compute_blocks_by_project(project_id: UUID) -> List[Block]:
     return db.query(Block).filter(Block.project_uuid == project_id).all()
 
 
+def get_block_dependencies_for_blocks(
+    block_ids: List[UUID]
+) -> list:
+    db: Session = next(get_database())
+
+    query = select(
+        block_dependencies.c.upstream_block_uuid,
+        block_dependencies.c.upstream_output_uuid,
+        block_dependencies.c.downstream_block_uuid,
+        block_dependencies.c.downstream_input_uuid
+    ).where(
+        block_dependencies.c.upstream_block_uuid.in_(block_ids) |
+        block_dependencies.c.downstream_block_uuid.in_(block_ids)
+    )
+
+    # Fetch the dependencies
+    return db.execute(query).fetchall()
+
+
 def _update_io(
         to_be_io: Optional[List[UpdateInputOutputDTO]],
         io_type: InputOutputType,
@@ -217,3 +237,22 @@ def delete_block(
     db.commit()
 
     return
+
+
+def create_stream(
+    from_block_uuid: UUID,
+    from_output_uuid: UUID,
+    to_block_uuid: UUID,
+    to_input_uuid: UUID
+):
+    db: Session = next(get_database())
+
+    dependency = {
+        "upstream_block_uuid": from_block_uuid,
+        "upstream_output_uuid": from_output_uuid,
+        "downstream_block_uuid": to_block_uuid,
+        "downstream_input_uuid": to_input_uuid,
+    }
+
+    db.execute(block_dependencies.insert().values(dependency))
+    db.commit()

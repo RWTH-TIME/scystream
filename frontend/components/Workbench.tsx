@@ -1,8 +1,6 @@
 import type { DragEvent } from "react"
 import { useState, useCallback, useMemo, useEffect } from "react"
-import type {
-  XYPosition
-} from "@xyflow/react";
+import type { XYPosition, Edge, Connection } from "@xyflow/react"
 import {
   ReactFlow,
   Controls,
@@ -10,7 +8,8 @@ import {
   applyNodeChanges,
   type NodeChange,
   type Node as FlowNode,
-  useReactFlow
+  useReactFlow,
+  ConnectionMode
 } from "@xyflow/react"
 import { PlayArrow, Widgets, Delete } from "@mui/icons-material"
 import ComputeBlockNode from "./nodes/ComputeBlockNode"
@@ -18,14 +17,14 @@ import "@xyflow/react/dist/style.css"
 import LoadingAndError from "./LoadingAndError"
 import EditProjectDraggable from "./EditProjectDraggable"
 import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
-import type { ComputeBlock } from "./CreateComputeBlockModal";
+import type { ComputeBlock } from "./CreateComputeBlockModal"
 import CreateComputeBlockModal from "./CreateComputeBlockModal"
 import { useDeleteProjectMutation, type Node } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
-import { useComputeBlocksByProjectQuery, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation";
-import { useAlert } from "@/hooks/useAlert";
-import DeleteModal from "./DeleteModal";
+import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation"
+import { AlertType, useAlert } from "@/hooks/useAlert"
+import DeleteModal from "./DeleteModal"
 
 /**
  * Workbench Component is used to display and edit Directed Acyclic Graphs (DAGs).
@@ -40,8 +39,10 @@ export default function Workbench() {
   const { setAlert } = useAlert()
   const { mutate } = useUpdateComputeBlockMutation(setAlert)
   const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
+  const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert)
 
   const [nodes, setNodes] = useState<FlowNode<Node>[]>([])
+  const [edges, setEdges] = useState<Edge[]>([])
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
   const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false)
   const [dropCoordinates, setDropCoordinates] = useState<XYPosition>({ x: 0, y: 0 })
@@ -56,8 +57,8 @@ export default function Workbench() {
 
   useEffect(() => {
     if (projectDetails) {
-      // TODO: Fix this type workaround below (mega ugly)
-      setNodes(projectDetails as unknown as FlowNode<Node>[])
+      setNodes(projectDetails.blocks as unknown as FlowNode<Node>[])
+      setEdges(projectDetails.edges)
     }
   }, [projectDetails])
 
@@ -79,8 +80,6 @@ export default function Workbench() {
     [mutate]
   );
 
-
-
   const onDragStart = (event: DragEvent<HTMLButtonElement>) => {
     event.dataTransfer.effectAllowed = "move"
   }
@@ -96,12 +95,72 @@ export default function Workbench() {
       setDropCoordinates(screenToFlowPosition({
         x: event.clientX,
         y: event.clientY
-      })
-      )
+      }))
       setCreateComputeBlockOpen(true)
     },
     [screenToFlowPosition]
   )
+
+  const onConnect = useCallback(
+    (connection: Connection) => {
+
+      const existingEdge = edges.find(
+        (edge) =>
+          edge.targetHandle === connection.targetHandle
+      );
+      // If a connection already exists, do not add it
+      if (existingEdge) {
+        setAlert("This output is already connected to an input.", AlertType.ERROR)
+        return;
+      }
+
+
+      // Proceed with adding the connection if it's not already present
+      const sourceNode = nodes.find((node) => node.id === connection.source);
+      const targetNode = nodes.find((node) => node.id === connection.target);
+
+      if (sourceNode && targetNode) {
+        const sourceHandle = sourceNode.data.selected_entrypoint?.outputs?.find(
+          (output) => output.id === connection.sourceHandle
+        );
+        const targetHandle = targetNode.data.selected_entrypoint?.inputs?.find(
+          (input) => input.id === connection.targetHandle
+        );
+
+        // Check if types are compatible
+        if (sourceHandle && targetHandle) {
+          const sourceType = sourceHandle.data_type;
+          const targetType = targetHandle.data_type;
+
+          if (sourceType === targetType) {
+            const dto = {
+              source: connection.source,
+              sourceHandle: connection.sourceHandle!,
+              target: connection.target,
+              targetHandle: connection.targetHandle!
+            }
+
+            edgeMutate(dto)
+            setEdges((eds) => [
+              ...eds,
+              {
+                id: `${connection.sourceHandle}-${connection.targetHandle}`,
+                source: connection.source,
+                target: connection.target,
+                sourceHandle: connection.sourceHandle,
+                targetHandle: connection.targetHandle,
+              },
+            ]);
+          } else {
+            // Handle the case where types do not match
+            setAlert("Incompatible connection types!", AlertType.ERROR)
+          }
+        }
+      }
+    },
+    [edges, nodes, setAlert, edgeMutate] // Ensure edges and nodes are dependencies to keep the state up-to-date
+  );
+
 
   if (!selectedProject) {
     return <div>Select a Project</div>
@@ -154,14 +213,17 @@ export default function Workbench() {
         <ReactFlow
           nodeTypes={nodeTypes}
           nodes={nodes}
+          edges={edges}
           onNodesChange={onNodesChange}
           fitView
-          // TODO: fix the ugly type workaround
           onNodeClick={(_, node) => setSelectedComputeBlock(node.data as unknown as ComputeBlock)}
           onPaneClick={() => setSelectedComputeBlock(undefined)}
           onDragOver={onDragOver}
           onNodeDragStop={onNodeDragStop}
           onDrop={onDrop}
+          onConnect={onConnect}
+          connectionMode={ConnectionMode.Loose}
+          nodesConnectable={true}
         >
           <Background />
           <Controls position="top-left" />
@@ -170,3 +232,4 @@ export default function Workbench() {
     </LoadingAndError>
   )
 }
+

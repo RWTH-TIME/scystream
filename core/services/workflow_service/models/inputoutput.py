@@ -1,9 +1,9 @@
-import enum
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, String, ForeignKey, Enum, JSON
-from sqlalchemy.orm import relationship
-import uuid
 from utils.database.connection import Base
+import uuid
+from sqlalchemy.orm import relationship
+from sqlalchemy import Column, String, ForeignKey, Enum, JSON
+from sqlalchemy.dialects.postgresql import UUID
+import enum
 
 
 # Enum for Input/Output type

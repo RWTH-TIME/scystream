@@ -10,6 +10,7 @@ const CREATE_COMPUTE_BLOCK = "compute_block/"
 const UPDATE_COMPUTE_BLOCK = "compute_block/"
 const GET_COMPUTE_BLOCK_BY_PROJECT = "compute_block/by_project/"
 const DELETE_COMPUTE_BLOCK = "compute_block/"
+const CREATE_EDGE = "compute_block/edge/"
 
 type ComputeBlockInfoDTO = {
   cbc_url: string,
@@ -146,6 +147,27 @@ export function useDeleteComputeBlockMutation(setAlert: SetAlertType, project_id
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [project_id] })
       setAlert("Compute block sucessfully deleted!", AlertType.SUCCESS)
+    }
+  })
+}
+
+type EdgeDTO = {
+  source: string,
+  sourceHandle: string,
+  target: string,
+  targetHandle: string,
+}
+
+export function useCreateEdgeMutation(setAlert: SetAlertType) {
+  return useMutation({
+    mutationFn: async function createEdge(data: EdgeDTO) {
+      await api.post(CREATE_EDGE, JSON.stringify(data))
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+      console.log(`Creating Edge failed ${error}`)
+    },
+    onSuccess: () => {
     }
   })
 }

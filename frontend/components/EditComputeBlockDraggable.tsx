@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProjectCBSettingsDraggable from "./ProjectCBSettingsDraggable";
 import MetadataTab from "@/components/editComputeBlockTabs/MetadataTab";
 import EditInputsOutputsTab from "@/components/editComputeBlockTabs/EditInputsOutputsTab";
@@ -15,6 +15,8 @@ export default function EditComputeBlockDraggable() {
   // We need to make a deep copy of the compute block to compare the values later on
   const [editCB, setEditCB] = useState<ComputeBlock>(JSON.parse(JSON.stringify(selectedComputeBlock!)));
   const [activeTab, setActiveTab] = useState<string>("metadata");
+
+  useEffect(() => { setEditCB(JSON.parse(JSON.stringify(selectedComputeBlock))) }, [selectedComputeBlock])
 
   function updateConfig(section: "inputs" | "outputs" | "envs", key: string, value: RecordValueType) {
     setEditCB((prevCB) => {

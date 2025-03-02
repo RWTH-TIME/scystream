@@ -83,7 +83,7 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
 
         <div className="space-y-2">
           {renderHandles(data.selected_entrypoint.inputs, "target", Position.Left)}
-          {renderHandles(data.selected_entrypoint.outputs, "target", Position.Right)}
+          {renderHandles(data.selected_entrypoint.outputs, "source", Position.Right)}
         </div>
       </div>
     </div>
