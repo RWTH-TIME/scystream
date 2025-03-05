@@ -20,10 +20,6 @@ from services.workflow_service.schemas.compute_block import (
 
 from scystream.sdk.config import SDKConfig, load_config
 
-TEMP_DIR = "tmp/"
-
-os.makedirs(TEMP_DIR, exist_ok=True)
-
 
 def _convert_github_to_raw(github_url: str) -> str:
     parsed_url = urllib.parse.urlparse(github_url)
