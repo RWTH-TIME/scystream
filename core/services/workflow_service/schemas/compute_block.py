@@ -4,7 +4,7 @@ from typing import List, Dict, Optional, Union, Literal
 from pydantic import BaseModel, validator, RootModel
 from urllib.parse import urlparse
 
-from services.workflow_service.models.inputoutput import (
+from services.workflow_service.models.input_output import (
     DataType,
     InputOutput,
     InputOutputType

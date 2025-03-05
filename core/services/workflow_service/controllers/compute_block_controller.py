@@ -3,12 +3,15 @@ import requests
 import os
 from typing import List, Dict, Optional, Union
 from uuid import UUID
+import tempfile
+import urllib.parse
 
 from sqlalchemy.orm import Session
 from utils.database.session_injector import get_database
+from utils.config.environment import ENV
 from services.workflow_service.models.block import Block
 from services.workflow_service.models.entrypoint import Entrypoint
-from services.workflow_service.models.inputoutput import (
+from services.workflow_service.models.input_output import (
     InputOutput, InputOutputType
 )
 from services.workflow_service.schemas.compute_block import (
@@ -18,17 +21,19 @@ from services.workflow_service.schemas.compute_block import (
 from scystream.sdk.config import SDKConfig, load_config
 
 TEMP_DIR = "tmp/"
-# TODO: ENV Var?
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 
 def _convert_github_to_raw(github_url: str) -> str:
-    return (
-        github_url.replace("github.com", "raw.githubusercontent.com")
-        .replace("/blob/", "/")
+    parsed_url = urllib.parse.urlparse(github_url)
+
+    raw_url = parsed_url._replace(
+        netloc="raw.githubusercontent.com",
+        path=parsed_url.path.replace("/blob/", "/")
     )
+
+    return urllib.parse.urlunparse(raw_url)
 
 
 def _get_cb_info_from_repo(repo_url: str) -> Block:
@@ -39,14 +44,16 @@ def _get_cb_info_from_repo(repo_url: str) -> Block:
         response = requests.get(repo_url, timeout=10)
         response.raise_for_status()
 
-        if len(response.content) > MAX_FILE_SIZE:
+        if len(response.content) > ENV.MAX_CBC_FILE_SIZE:
             raise HTTPException(status_code=401, detail="File too large.")
 
-        fn = os.path.basename("cbc.yml")
-        fp = os.path.join(TEMP_DIR, fn)
-
-        with open(fp, "w", encoding="utf-8") as f:
-            f.write(response.text)
+        with tempfile.NamedTemporaryFile(
+                delete=False,
+                mode="w",
+                encoding="utf-8"
+        ) as tmp_file:
+            tmp_file.write(response.text)
+            temp_file_path = tmp_file.name
 
         """
         Convert to ComputeBlock
@@ -55,11 +62,11 @@ def _get_cb_info_from_repo(repo_url: str) -> Block:
         path in SDK config, use this.
         """
         SDKConfig(
-            config_path=fp
+            config_path=temp_file_path
         )
         loaded_cb = load_config()
 
-        os.remove(fp)
+        os.remove(temp_file_path)
 
         return loaded_cb
     except requests.exceptions.RequestException:
@@ -136,7 +143,7 @@ def create_compute_block(
 def get_compute_blocks_by_project(project_id: UUID) -> List[Block]:
     db: Session = next(get_database())
 
-    return db.query(Block).filter(Block.project_uuid == project_id).all()
+    return db.query(Block).filter_by(project_uuid=project_id).all()
 
 
 def _update_io(
@@ -215,5 +222,3 @@ def delete_block(
 
     db.delete(block)
     db.commit()
-
-    return
