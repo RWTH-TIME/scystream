@@ -43,29 +43,27 @@ jobs:
       changed_migration_files: ${{ steps.migration-changes.outputs.all_changed_files }}
       changed_model_files: ${{ steps.model-changes.outputs.all_changed_files }}
 
-# This was removed as alembic migrations had to be edited, see:
-# https://github.com/sqlalchemy/alembic/issues/1612
-#  prevent-changes:
-#    runs-on: ubuntu-latest
-#    needs: detect-diffs
-#    steps:
-#      - name: Checkout Repository 
-#        uses: actions/checkout@v4
-#        with:
-#          fetch-depth: 0
-#          ref: ${{ github.base_ref }}
-#      
-#      - name: prevent-changes-to-existing-migrations
-#        run: |
-#          EXISTING_MIGRATIONS=$(git ls-tree -r HEAD --name-only | grep "core/alembic/versions/.*\.py")
-#          CHANGED_MIGRATION_FILES="${{ needs.detect-diffs.outputs.changed_migration_files }}"
-#          
-#          for changed_migration in $CHANGED_MIGRATION_FILES; do
-#            if echo $EXISTING_MIGRATIONS | grep "$changed_migration"; then
-#              echo "An already existing migration should not be edited!"
-#              exit 1
-#            fi
-#          done
+  prevent-changes:
+    runs-on: ubuntu-latest
+    needs: detect-diffs
+    steps:
+      - name: Checkout Repository 
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.base_ref }}
+      
+      - name: prevent-changes-to-existing-migrations
+        run: |
+          EXISTING_MIGRATIONS=$(git ls-tree -r HEAD --name-only | grep "core/alembic/versions/.*\.py")
+          CHANGED_MIGRATION_FILES="${{ needs.detect-diffs.outputs.changed_migration_files }}"
+          
+          for changed_migration in $CHANGED_MIGRATION_FILES; do
+            if echo $EXISTING_MIGRATIONS | grep "$changed_migration"; then
+              echo "An already existing migration should not be edited!"
+              exit 1
+            fi
+          done
 
   check-missing-imports:
     runs-on: ubuntu-latest
