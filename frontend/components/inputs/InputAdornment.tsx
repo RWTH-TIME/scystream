@@ -8,7 +8,6 @@ import { VisibilityOff } from "@mui/icons-material"
 /**
  * This component can be passed to the Input Component as leading or trailing icon
  */
-
 type InputAdornmentIconTypes = "email" | "password" | "visibility" | "visibilityOff"
 
 export type InputAdornmentProps = {

@@ -10,7 +10,7 @@ export default function EditProjectDraggable() {
   const { setAlert } = useAlert()
   const { selectedProject, setSelectedProject } = useSelectedProject()
   const [projectName, setProjectName] = useState<string>(selectedProject?.name ?? "")
-  const [activeTab, setActiveTab] = useState<"metadata">("metadata") // Single tab for now
+  const [activeTab, setActiveTab] = useState<string>("metadata") // Single tab for now
 
   const { mutate, isPending: loading } = useUpdateProjectMutation(setAlert)
 
@@ -28,20 +28,13 @@ export default function EditProjectDraggable() {
     }
   }
 
-  return (
-    <ProjectCBSettingsDraggable>
-      <div className="flex items-center border-b-2">
-        <button
-          className={`px-4 py-2 font-medium text-sm ${activeTab === "metadata"
-            ? "border-b-2 border-blue-600 text-blue-600"
-            : "text-gray-600 hover:text-blue-600"
-            }`}
-          onClick={() => setActiveTab("metadata")}
-        >
-          Metadata
-        </button>
-      </div>
+  const tabs = [
+    { key: "metadata", label: "Metadata" },
+  ];
 
+
+  return (
+    <ProjectCBSettingsDraggable tabs={tabs} activeTab="metadata" setActiveTab={setActiveTab}>
       <div className="p-4">
         {activeTab === "metadata" && (
           <>

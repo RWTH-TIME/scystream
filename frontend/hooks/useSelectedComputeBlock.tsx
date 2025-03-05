@@ -1,9 +1,9 @@
+import type { ComputeBlock } from "@/components/CreateComputeBlockModal"
 import React, { createContext, useContext, useState, type PropsWithChildren } from "react"
-import type { ComputeBlock } from "@/components/nodes/ComputeBlockNode"
 
 type SelectedComputeBlockContextType = {
   selectedComputeBlock: ComputeBlock | undefined,
-  setSelectedComputeBlock: (computeBlock: ComputeBlock | undefined) => void
+  setSelectedComputeBlock: (computeBlock: ComputeBlock | undefined) => void,
 }
 
 const initialState: SelectedComputeBlockContextType = {

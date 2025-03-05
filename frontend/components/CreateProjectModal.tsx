@@ -4,6 +4,7 @@ import Modal, { type ModalProps } from "./Modal"
 import LoadingAndError from "./LoadingAndError"
 import { useCreateProjectMutation } from "@/mutations/projectMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
+import Button, { ButtonSentiment } from "./Button"
 
 type CreateProjectModalProps = Omit<ModalProps, "children">;
 
@@ -42,23 +43,23 @@ export default function CreateProjectModal({
             onChange={setProjectName}
           />
         </div>
-        <div className="flex justify-end">
-          <button
+        <div className="flex justify-between">
+          <Button
             type="button"
             onClick={onClose}
-            className="w-[78px] h-[36px] px-4 py-2 mr-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
+            sentiment={ButtonSentiment.NEUTRAL}
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="flex flex-col w-[78px] h-[36px] px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
             disabled={loading}
+            sentiment={ButtonSentiment.POSITIVE}
           >
             <LoadingAndError loading={loading} iconSize={21}>
               Create
             </LoadingAndError>
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
