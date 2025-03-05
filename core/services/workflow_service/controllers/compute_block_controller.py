@@ -256,3 +256,23 @@ def create_stream(
 
     db.execute(block_dependencies.insert().values(dependency))
     db.commit()
+
+
+def update_input_output(
+    id: UUID,
+    config: Dict[str,
+                 Optional[Union[str, int, float, List, bool]]]
+) -> UUID:
+    db: Session = next(get_database())
+
+    io = db.query(InputOutput).filter_by(uuid=id).one_or_none()
+
+    if not io:
+        raise HTTPException(status_code=400, detail="Input/Output not found.")
+
+    io.config = {**io.config, **config}
+
+    db.commit()
+    db.refresh(io)
+
+    return io.uuid

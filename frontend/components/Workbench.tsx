@@ -17,12 +17,12 @@ import "@xyflow/react/dist/style.css"
 import LoadingAndError from "./LoadingAndError"
 import EditProjectDraggable from "./EditProjectDraggable"
 import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
-import type { ComputeBlock } from "./CreateComputeBlockModal"
+import type { ComputeBlock, InputOutputType  } from "@/components/CreateComputeBlockModal"
 import CreateComputeBlockModal from "./CreateComputeBlockModal"
 import { useDeleteProjectMutation, type Node } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
-import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation"
+import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useUpdateComputeBlockMutation, useUpdateInputOutputMutation } from "@/mutations/computeBlockMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import DeleteModal from "./DeleteModal"
 
@@ -37,9 +37,10 @@ export default function Workbench() {
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { screenToFlowPosition } = useReactFlow()
   const { setAlert } = useAlert()
-  const { mutate } = useUpdateComputeBlockMutation(setAlert)
+  const { mutate: updateBlockMutate } = useUpdateComputeBlockMutation(setAlert)
   const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
   const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert)
+  const { mutate: updateInputOutputMutate } = useUpdateInputOutputMutation(setAlert, selectedProject?.uuid)
 
   const [nodes, setNodes] = useState<FlowNode<Node>[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
@@ -54,6 +55,8 @@ export default function Workbench() {
       setSelectedProject(undefined)
     }
   }
+
+
 
   useEffect(() => {
     if (projectDetails) {
@@ -71,13 +74,13 @@ export default function Workbench() {
 
   const onNodeDragStop = useCallback(
     (_: React.SyntheticEvent, node: FlowNode<Node>) => {
-      mutate({
+      updateBlockMutate({
         id: node.id,
         x_pos: node.position.x,
         y_pos: node.position.y
       });
     },
-    [mutate]
+    [updateBlockMutate]
   );
 
   const onDragStart = (event: DragEvent<HTMLButtonElement>) => {
@@ -108,9 +111,10 @@ export default function Workbench() {
         (edge) =>
           edge.targetHandle === connection.targetHandle
       );
+
       // If a connection already exists, do not add it
       if (existingEdge) {
-        setAlert("This output is already connected to an input.", AlertType.ERROR)
+        setAlert("This output is already gt! connected to an input.", AlertType.ERROR)
         return;
       }
 
@@ -132,6 +136,8 @@ export default function Workbench() {
           const sourceType = sourceHandle.data_type;
           const targetType = targetHandle.data_type;
 
+
+          switchPrefixes(sourceHandle, targetHandle, InputOutputType[sourceHandle.data_type])
           if (sourceType === targetType) {
             const dto = {
               source: connection.source,
@@ -139,6 +145,11 @@ export default function Workbench() {
               target: connection.target,
               targetHandle: connection.targetHandle!
             }
+
+            // Overwrite the target's config by the source's configs
+            updateInputOutputMutate({
+
+            })
 
             edgeMutate(dto)
             setEdges((eds) => [
@@ -158,7 +169,7 @@ export default function Workbench() {
         }
       }
     },
-    [edges, nodes, setAlert, edgeMutate] // Ensure edges and nodes are dependencies to keep the state up-to-date
+    [edges, nodes, setAlert, edgeMutate]
   );
 
 

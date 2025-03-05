@@ -13,8 +13,9 @@ class InputOutputType(enum.Enum):
 
 
 class DataType(enum.Enum):
-    DBINPUT = "db_table"
+    PGTABLE = "pg_table"
     FILE = "file"
+    CUSTOM = "custom"
 
 
 class InputOutput(Base):

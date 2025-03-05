@@ -6,7 +6,7 @@ from services.workflow_service.schemas.compute_block import (
     ComputeBlockInformationRequest, ComputeBlockInformationResponse,
     CreateComputeBlockRequest, IDResponse,
     GetNodesByProjectResponse, NodeDTO, UpdateComputeBlockRequest,
-    EdgeDTO
+    EdgeDTO, UpdateInputOutputDTO
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
@@ -14,7 +14,7 @@ from services.user_service.middleware.authenticate_token import (
 from services.workflow_service.controllers.compute_block_controller import (
     request_cb_info, create_compute_block, get_compute_blocks_by_project,
     update_compute_block, delete_block, create_stream,
-    get_block_dependencies_for_blocks
+    get_block_dependencies_for_blocks, update_input_output
 )
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
@@ -78,7 +78,6 @@ async def get_by_project(
 
         block_uuids = [block.uuid for block in compute_blocks]
         dependencies = get_block_dependencies_for_blocks(block_uuids)
-        print(dependencies)
 
         return GetNodesByProjectResponse(
             blocks=[
@@ -137,5 +136,19 @@ def create_io_stream(
             data.target,
             data.targetHandle
         )
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.put("/input_output", response_model=IDResponse)
+async def update_input_output_config(
+    data: UpdateInputOutputDTO,
+):
+    try:
+        id = update_input_output(
+            data.id,
+            data.config
+        )
+        return IDResponse(id=id)
     except Exception as e:
         raise handle_error(e)

@@ -20,6 +20,14 @@ def _validate_url(url: str):
         raise ValueError("Untrusted Domain.")
 
 
+def _get_io_data_type(type: str) -> str:
+    data_type_map = {
+        DataType.FILE.value: DataType.FILE.value,
+        DataType.PGTABLE.value: DataType.PGTABLE.value,
+    }
+    return data_type_map.get(type, DataType.CUSTOM.value)
+
+
 class InputOutputDTO(BaseModel):
     id: Optional[UUID] = None
     name: str
@@ -42,8 +50,7 @@ class InputOutputDTO(BaseModel):
         return cls(
             id=getattr(input_output, "uuid", None),
             name=name,
-            data_type=(DataType.FILE if input_output.type ==
-                       "file" else "db_table"),
+            data_type=_get_io_data_type(input_output.type),
             description=input_output.description or "",
             config=input_output.config or {}
         )

@@ -11,6 +11,7 @@ const UPDATE_COMPUTE_BLOCK = "compute_block/"
 const GET_COMPUTE_BLOCK_BY_PROJECT = "compute_block/by_project/"
 const DELETE_COMPUTE_BLOCK = "compute_block/"
 const CREATE_EDGE = "compute_block/edge/"
+const UPDATE_INPUT_OUTPUT = "compute_block/input_output/"
 
 type ComputeBlockInfoDTO = {
   cbc_url: string,
@@ -168,6 +169,26 @@ export function useCreateEdgeMutation(setAlert: SetAlertType) {
       console.log(`Creating Edge failed ${error}`)
     },
     onSuccess: () => {
+    }
+  })
+}
+
+type UpdateInputOutputDTO = {
+  id: string,
+  config: Record<string, RecordValueType>
+}
+
+export function useUpdateInputOutputMutation(setAlert: setAlertType, projectID?: string) {
+  return useMutation({
+    mutationFn: async function updateInputOutput(data: UpdateInputOutputDTO) {
+      await api.post(UPDATE_INPUT_OUTPUT, JSON.stringify(data))
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosError(error, setAlert)
+      console.log(`Updating Input/Output failed ${error}`)
+    },
+    onSuccess: () => {
+
     }
   })
 }

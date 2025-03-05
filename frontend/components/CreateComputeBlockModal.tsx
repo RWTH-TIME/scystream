@@ -17,9 +17,17 @@ type CreateComputeBlockModalProps = Omit<ModalProps, "children"> & {
 
 export enum InputOutputType {
   FILE = "file",
-  DB = "db_table"
+  DB = "pg_table",
+  CUSTOM = "custom"
+}
+
+// The InputOutputTypeDefaults proivde a list of default config keys, the InputOutputTypes contain.
+export enum InputOutputTypeDefaults {
+  FILE = ["BUCKET_NAME", "FILE_NAME", "FILE_PATH", "S3_ACCESS_KEY", "S3_HOST", "S3_PORT", "S3_SECRET_KEY"],
+  DB = ["PG_USER", "PG_PASS", "PG_HOST", "PG_PORT", "DB_TABLE"],
 }
 export type RecordValueType = string | number | boolean | string[] | number[] | boolean[] | null
+
 
 export type InputOutput = {
   id?: string,

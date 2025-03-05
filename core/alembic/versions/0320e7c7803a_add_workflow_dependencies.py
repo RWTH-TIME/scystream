@@ -45,7 +45,7 @@ def upgrade() -> None:
                     sa.Column('type', sa.Enum('INPUT', 'OUTPUT',
                               name='inputoutputtype'), nullable=False),
                     sa.Column('name', sa.String(length=100), nullable=True),
-                    sa.Column('data_type', sa.Enum('DBINPUT', 'FILE',
+                    sa.Column('data_type', sa.Enum('PGTABLE', 'FILE', 'CUSTOM',
                                                    name='datatype'), nullable=False),
                     sa.Column('description', sa.String(
                         length=500), nullable=True),
