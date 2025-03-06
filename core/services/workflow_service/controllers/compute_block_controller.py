@@ -13,13 +13,14 @@ from services.workflow_service.models.block import Block, block_dependencies
 from utils.config.environment import ENV
 from services.workflow_service.models.entrypoint import Entrypoint
 from services.workflow_service.models.input_output import (
-    InputOutput, InputOutputType
+    InputOutput, InputOutputType, DataType
 )
 from services.workflow_service.schemas.compute_block import (
     UpdateEntrypointDTO, UpdateInputOutputDTO
 )
 
 from scystream.sdk.config import SDKConfig, load_config
+from scystream.sdk.env.settings import PostgresSettings, FileSettings
 
 
 def _convert_github_to_raw(github_url: str) -> str:
@@ -240,23 +241,68 @@ def delete_block(
     db.commit()
 
 
-def create_stream(
+def create_stream_and_update_target_cfg(
     from_block_uuid: UUID,
     from_output_uuid: UUID,
     to_block_uuid: UUID,
-    to_input_uuid: UUID
+    to_input_uuid: UUID,
+    cfg: Optional[Dict[str,
+                       Optional[Union[str, int, float, List, bool]]]] = None
+
 ):
     db: Session = next(get_database())
 
-    dependency = {
-        "upstream_block_uuid": from_block_uuid,
-        "upstream_output_uuid": from_output_uuid,
-        "downstream_block_uuid": to_block_uuid,
-        "downstream_input_uuid": to_input_uuid,
-    }
+    try:
+        with db.begin():
+            dependency = {
+                "upstream_block_uuid": from_block_uuid,
+                "upstream_output_uuid": from_output_uuid,
+                "downstream_block_uuid": to_block_uuid,
+                "downstream_input_uuid": to_input_uuid,
+            }
 
-    db.execute(block_dependencies.insert().values(dependency))
-    db.commit()
+            db.execute(block_dependencies.insert().values(dependency))
+
+            # Compare the cfgs, overwrite the cfgs
+            target_io = db.query(InputOutput).filter_by(
+                uuid=to_input_uuid).one_or_none()
+            source_io = db.query(InputOutput).filter_by(
+                uuid=from_output_uuid).one_or_none()
+
+            # Handle custom aswell
+            if (target_io.data_type != source_io.data_type) or (target_io.data_type is DataType.CUSTOM):
+                return target_io.uuid
+
+            settings_class = {
+                DataType.FILE: FileSettings,
+                DataType.PGTABLE: PostgresSettings
+            }.get(target_io.data_type)
+
+            default_keys = settings_class.__annotations__.keys()
+            new_cfg = target_io.config.copy() if target_io.config else {}
+
+            # TODO: What happens with not fitting keys?
+            # TODO: test this
+            if source_io.config:
+                input_keys = {key: key for key in source_io.config}
+                output_keys = {key: key for key in target_io.config}
+
+                for dk in default_keys:
+                    input_key = next(
+                        (key for key in input_keys if dk in key), None)
+                    output_key = next(
+                        (key for key in output_keys if dk in key), None)
+
+                    if input_key and output_key:
+                        new_cfg[output_key] = source_io.config[input_key]
+                        print(f"Updated: {
+                              output_key} <- {source_io.config[input_key]} (from {input_key})")
+
+            target_io.config = new_cfg
+
+            return target_io.uuid
+    except Exception as e:
+        raise e
 
 
 def update_input_output(

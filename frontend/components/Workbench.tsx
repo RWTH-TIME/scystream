@@ -17,7 +17,7 @@ import "@xyflow/react/dist/style.css"
 import LoadingAndError from "./LoadingAndError"
 import EditProjectDraggable from "./EditProjectDraggable"
 import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
-import type { ComputeBlock, InputOutputType  } from "@/components/CreateComputeBlockModal"
+import type { ComputeBlock, InputOutput } from "@/components/CreateComputeBlockModal";
 import CreateComputeBlockModal from "./CreateComputeBlockModal"
 import { useDeleteProjectMutation, type Node } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
@@ -39,8 +39,7 @@ export default function Workbench() {
   const { setAlert } = useAlert()
   const { mutate: updateBlockMutate } = useUpdateComputeBlockMutation(setAlert)
   const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
-  const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert)
-  const { mutate: updateInputOutputMutate } = useUpdateInputOutputMutation(setAlert, selectedProject?.uuid)
+  const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, selectedProject?.uuid)
 
   const [nodes, setNodes] = useState<FlowNode<Node>[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
@@ -55,8 +54,6 @@ export default function Workbench() {
       setSelectedProject(undefined)
     }
   }
-
-
 
   useEffect(() => {
     if (projectDetails) {
@@ -114,7 +111,7 @@ export default function Workbench() {
 
       // If a connection already exists, do not add it
       if (existingEdge) {
-        setAlert("This output is already gt! connected to an input.", AlertType.ERROR)
+        setAlert("This output is already connected to an input.", AlertType.ERROR)
         return;
       }
 
@@ -125,10 +122,10 @@ export default function Workbench() {
 
       if (sourceNode && targetNode) {
         const sourceHandle = sourceNode.data.selected_entrypoint?.outputs?.find(
-          (output) => output.id === connection.sourceHandle
+          (output: InputOutput) => output.id === connection.sourceHandle
         );
         const targetHandle = targetNode.data.selected_entrypoint?.inputs?.find(
-          (input) => input.id === connection.targetHandle
+          (input: InputOutput) => input.id === connection.targetHandle
         );
 
         // Check if types are compatible
@@ -136,8 +133,6 @@ export default function Workbench() {
           const sourceType = sourceHandle.data_type;
           const targetType = targetHandle.data_type;
 
-
-          switchPrefixes(sourceHandle, targetHandle, InputOutputType[sourceHandle.data_type])
           if (sourceType === targetType) {
             const dto = {
               source: connection.source,
@@ -145,11 +140,6 @@ export default function Workbench() {
               target: connection.target,
               targetHandle: connection.targetHandle!
             }
-
-            // Overwrite the target's config by the source's configs
-            updateInputOutputMutate({
-
-            })
 
             edgeMutate(dto)
             setEdges((eds) => [

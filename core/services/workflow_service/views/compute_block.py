@@ -13,7 +13,7 @@ from services.user_service.middleware.authenticate_token import (
 )
 from services.workflow_service.controllers.compute_block_controller import (
     request_cb_info, create_compute_block, get_compute_blocks_by_project,
-    update_compute_block, delete_block, create_stream,
+    update_compute_block, delete_block, create_stream_and_update_target_cfg,
     get_block_dependencies_for_blocks, update_input_output
 )
 
@@ -125,17 +125,18 @@ async def delete_compute_block(
         raise handle_error(e)
 
 
-@router.post("/edge", status_code=200)
-def create_io_stream(
+@router.post("/edge", response_model=IDResponse)
+def create_io_stream_and_update_io_cfg(
     data: EdgeDTO
 ):
     try:
-        create_stream(
+        id = create_stream_and_update_target_cfg(
             data.source,
             data.sourceHandle,
             data.target,
             data.targetHandle
         )
+        return IDResponse(id=id)
     except Exception as e:
         raise handle_error(e)
 

@@ -21,11 +21,13 @@ export enum InputOutputType {
   CUSTOM = "custom"
 }
 
-// The InputOutputTypeDefaults proivde a list of default config keys, the InputOutputTypes contain.
-export enum InputOutputTypeDefaults {
-  FILE = ["BUCKET_NAME", "FILE_NAME", "FILE_PATH", "S3_ACCESS_KEY", "S3_HOST", "S3_PORT", "S3_SECRET_KEY"],
-  DB = ["PG_USER", "PG_PASS", "PG_HOST", "PG_PORT", "DB_TABLE"],
-}
+// The InputOutputTypeDefaults provide a list of default config keys that the InputOutputTypes contain.
+export const InputOutputTypeDefaults: Record<InputOutputType, string[]> = {
+  [InputOutputType.FILE]: ["BUCKET_NAME", "FILE_NAME", "FILE_PATH", "S3_ACCESS_KEY", "S3_HOST", "S3_PORT", "S3_SECRET_KEY"],
+  [InputOutputType.DB]: ["PG_USER", "PG_PASS", "PG_HOST", "PG_PORT", "DB_TABLE"],
+  [InputOutputType.CUSTOM]: []
+};
+
 export type RecordValueType = string | number | boolean | string[] | number[] | boolean[] | null
 
 
