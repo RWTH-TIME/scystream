@@ -13,7 +13,10 @@ class Entrypoint(Base):
     description = Column(String(500), nullable=True)
     envs = Column(JSON, nullable=False)
 
-    block = relationship("Block", back_populates="selected_entrypoint")
+    block = relationship(
+        "Block", back_populates="selected_entrypoint",
+        cascade="all, delete-orphan"
+    )
 
     input_outputs = relationship("InputOutput", back_populates="entrypoint",
                                  cascade="all, delete-orphan")

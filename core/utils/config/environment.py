@@ -29,12 +29,6 @@ class Settings(BaseSettings):
     TRUSTED_CBC_DOMAINS: List[str] = ["github.com"]
     MAX_CBC_FILE_SIZE: int = 10 * 1024 * 1024  # 10 MB
 
-    """
-    TODO: The secret identifiers could be defined by the SDK in the future
-    """
-    SECRET_KEYS_FILE_CFG: List[str] = ["S3_ACCESS_KEY", "S3_SECRET_KEY"]
-    SECRET_KEYS_PGTABLE_CFG: List[str] = ["PG_PASS"]
-
     DEFAULT_CB_CONFIG_S3_HOST: str = "data-minio"
     DEFAULT_CB_CONFIG_S3_PORT: str = "9001"
     DEFAULT_CB_CONFIG_S3_ACCESS_KEY: str = "access"
