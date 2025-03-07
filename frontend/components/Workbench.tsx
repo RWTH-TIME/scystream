@@ -1,12 +1,11 @@
 import type { DragEvent } from "react"
 import { useState, useCallback, useMemo, useEffect } from "react"
-import type { XYPosition, Edge, Connection } from "@xyflow/react"
+import type { Edge, Connection } from "@xyflow/react"
 import {
   ReactFlow,
   Controls,
   Background,
   applyNodeChanges,
-  type NodeChange,
   useReactFlow,
   ConnectionMode
 } from "@xyflow/react"
@@ -23,40 +22,107 @@ import { useDeleteProjectMutation } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import type { EdgeDTO } from "@/mutations/computeBlockMutation";
-import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMutation, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation"
+import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMutation, useUpdateComputeBlockCoords } from "@/mutations/computeBlockMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import DeleteModal from "./DeleteModal"
 
-/**
- * Workbench Component is used to display and edit Directed Acyclic Graphs (DAGs).
- * TODO: Split this Component into multiple smaller ones
- */
-export default function Workbench() {
-  const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
-  const { selectedProject, setSelectedProject } = useSelectedProject()
-  const { data: projectDetails, isLoading, isError } = useComputeBlocksByProjectQuery(selectedProject?.uuid)
-  const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
-  const { screenToFlowPosition, fitView } = useReactFlow()
-  const { setAlert } = useAlert()
-  const { mutate: updateBlockMutate } = useUpdateComputeBlockMutation(setAlert, selectedProject?.uuid, true)
-  const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
-  const { mutate: deleteEdgeMutate } = useDeleteEdgeMutation(setAlert)
-  const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, selectedProject?.uuid)
 
+function useGraphData(selectedProjectUUID: string | undefined) {
+  const { data: projectDetails, isLoading, isError } = useComputeBlocksByProjectQuery(selectedProjectUUID)
   const [nodes, setNodes] = useState<ComputeBlockNodeType[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
-  const [selectedEdge, setSelectedEdge] = useState<Edge | undefined>(undefined);
-  const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
-  const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false)
-  const [dropCoordinates, setDropCoordinates] = useState<XYPosition>({ x: 0, y: 0 })
+  const [selectedEdge, setSelectedEdge] = useState<Edge | undefined>(undefined)
+  const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
+  const { setAlert } = useAlert();
 
-  function onProjectDelete() {
-    if (selectedProject) {
-      deleteMutate(selectedProject.uuid)
-      setDeleteApproveOpen(false)
-      setSelectedProject(undefined)
+  useEffect(() => {
+    if (projectDetails) {
+      setNodes(projectDetails.blocks)
+      setEdges(projectDetails.edges)
+      if (selectedComputeBlock?.id) {
+        // If the projectDetails have been updated, and the user currently selected a
+        // compute Block, update the data of the selectedCompute block. It might have changed
+        setSelectedComputeBlock(projectDetails.blocks.find((block: ComputeBlock) => block.id === selectedComputeBlock.id).data)
+      }
+
     }
+  }, [projectDetails, selectedComputeBlock, setSelectedComputeBlock])
+
+  return {
+    nodes,
+    edges,
+    selectedEdge,
+    selectedComputeBlock,
+    setSelectedComputeBlock,
+    isLoading,
+    isError,
+    setNodes,
+    setEdges,
+    setSelectedEdge,
+    setAlert
   }
+}
+
+type NodeControlProps = {
+  onDragStart: React.DragEventHandler<HTMLButtonElement>,
+}
+
+function NodeControls({ onDragStart }: NodeControlProps) {
+  return (
+    <div className="justify-self-start h-12 flex flex-col items-start p-1 bg-white rounded-lg shadow-lg space-y-3">
+      <button
+        onClick={() => console.log("Add Component clicked")}
+        className="p-2 bg-gray-100 rounded-md text-gray-800 hover:bg-gray-200 transition-all duration-200"
+        onDragStart={onDragStart}
+        draggable
+      >
+        <Widgets fontSize="small" />
+      </button>
+    </div>
+  )
+}
+
+type ActionButtonsProps = {
+  onPlayClick: () => void,
+  onDeleteClick: () => void,
+}
+
+function ActionButtons({ onPlayClick, onDeleteClick }: ActionButtonsProps) {
+  return (
+    <div className="flex justify-self-end gap-3">
+      <button
+        onClick={onPlayClick}
+        className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200"
+      >
+        <PlayArrow />
+      </button>
+      <button
+        onClick={onDeleteClick}
+        className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200"
+      >
+        <Delete />
+      </button>
+    </div>
+  )
+}
+
+export function Workbench() {
+  const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
+  const { selectedProject, setSelectedProject } = useSelectedProject()
+  const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
+
+  const { nodes, edges, selectedEdge, setSelectedEdge, isLoading, isError, setNodes, setAlert } = useGraphData(selectedProject?.uuid)
+
+  const { screenToFlowPosition, fitView } = useReactFlow()
+
+  const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
+  const { mutate: deleteEdgeMutate } = useDeleteEdgeMutation(setAlert, selectedProject?.uuid)
+  const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, selectedProject?.uuid)
+  const { mutate: updateBlockMutate } = useUpdateComputeBlockCoords(setAlert, selectedProject?.uuid)
+
+  const [deleteApproveOpen, setDeleteApproveOpen] = useState(false);
+  const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false);
+  const [dropCoordinates, setDropCoordinates] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     setTimeout(() => {
@@ -67,7 +133,6 @@ export default function Workbench() {
   useEffect(() => {
     const onDeleteEdge = () => {
       if (selectedEdge) {
-        setEdges((prevEdges) => prevEdges.filter((e) => e.id !== selectedEdge.id))
         setSelectedEdge(undefined);
         deleteEdgeMutate(selectedEdge as EdgeDTO)
       }
@@ -82,26 +147,20 @@ export default function Workbench() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [selectedEdge, deleteEdgeMutate])
+  }, [selectedEdge, deleteEdgeMutate, setSelectedEdge])
 
-  useEffect(() => {
-    if (projectDetails) {
-      if (selectedComputeBlock?.id) {
-        // If the projectDetails have been updated, and the user currently selected a
-        // compute block, update the data of this computeBlock
-        setSelectedComputeBlock(projectDetails.blocks.find((block: ComputeBlock) => block.id === selectedComputeBlock.id).data)
-      }
-      setNodes(projectDetails.blocks)
-      setEdges(projectDetails.edges)
+
+  function onProjectDelete() {
+    if (selectedProject) {
+      deleteMutate(selectedProject.uuid)
+      setDeleteApproveOpen(false)
+      setSelectedProject(undefined)
     }
-  }, [projectDetails, selectedComputeBlock, setSelectedComputeBlock])
+  }
 
-  const onNodesChange = useCallback(
-    (changes: NodeChange[]) => {
-      setNodes((nds) => applyNodeChanges(changes, nds) as ComputeBlockNodeType[])
-    },
-    []
-  )
+  const onDragStart = (event: React.DragEvent<HTMLButtonElement>) => {
+    event.dataTransfer.effectAllowed = "move";
+  };
 
   const onNodeDragStop = useCallback(
     (_: React.SyntheticEvent, node: ComputeBlockNodeType) => {
@@ -113,10 +172,6 @@ export default function Workbench() {
     },
     [updateBlockMutate]
   );
-
-  const onDragStart = (event: DragEvent<HTMLButtonElement>) => {
-    event.dataTransfer.effectAllowed = "move"
-  }
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault()
@@ -134,7 +189,6 @@ export default function Workbench() {
     },
     [screenToFlowPosition]
   )
-
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -170,16 +224,6 @@ export default function Workbench() {
 
           if (sourceType === targetType) {
             edgeMutate(connection as EdgeDTO)
-            setEdges((eds) => [
-              ...eds,
-              {
-                id: `${connection.sourceHandle}-${connection.targetHandle}`,
-                source: connection.source,
-                target: connection.target,
-                sourceHandle: connection.sourceHandle,
-                targetHandle: connection.targetHandle,
-              },
-            ]);
           } else {
             // Handle the case where types do not match
             setAlert("Incompatible connection types!", AlertType.ERROR)
@@ -190,9 +234,8 @@ export default function Workbench() {
     [edges, nodes, setAlert, edgeMutate]
   );
 
-
   if (!selectedProject) {
-    return <div>Select a Project</div>
+    return <div>Select a Project!</div>
   }
 
   return (
@@ -211,48 +254,29 @@ export default function Workbench() {
         onClose={() => setCreateComputeBlockOpen(false)}
         dropCoordinates={dropCoordinates}
       />
+
       {selectedComputeBlock ? <EditComputeBlockDraggable /> : <EditProjectDraggable />}
+
       <div className="flex absolute justify-between flex-row p-5 gap-3 right-0 bg-inherit z-30">
-        <div className="justify-self-start h-12 flex flex-col items-start p-1 bg-white rounded-lg shadow-lg space-y-3">
-          <button
-            onClick={() => console.log("Add Component clicked")}
-            className="p-2 bg-gray-100 rounded-md text-gray-800 hover:bg-gray-200 transition-all duration-200"
-            onDragStart={(event) => onDragStart(event)}
-            draggable
-          >
-            <Widgets fontSize="small" />
-          </button>
-        </div>
-        <div className="flex justify-self-end gap-3">
-          <button
-            onClick={() => console.log("Play clicked")}
-            className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200"
-          >
-            <PlayArrow />
-          </button>
-          <button
-            onClick={() => setDeleteApproveOpen(true)}
-            className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200"
-          >
-            <Delete />
-          </button>
-        </div>
+        <NodeControls onDragStart={onDragStart} />
+        <ActionButtons onPlayClick={() => console.log("Play clicked")} onDeleteClick={() => setDeleteApproveOpen(true)} />
       </div>
+
       <div className="h-full">
         <ReactFlow
           nodeTypes={nodeTypes}
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
-          onNodeClick={(_, node: ComputeBlockNodeType) => setSelectedComputeBlock(node.data)}
+          onNodesChange={(changes) => setNodes((nds) => applyNodeChanges(changes, nds))}
+          onNodeClick={(_, node) => setSelectedComputeBlock(node.data)}
           onPaneClick={() => setSelectedComputeBlock(undefined)}
           onDragOver={onDragOver}
           onNodeDragStop={onNodeDragStop}
+          onEdgeClick={(_, edge) => setSelectedEdge(edge)}
           onDrop={onDrop}
           onConnect={onConnect}
           connectionMode={ConnectionMode.Loose}
           nodesConnectable={true}
-          onEdgeClick={(_: React.MouseEvent, edge: Edge) => setSelectedEdge(edge)}
         >
           <Background />
           <Controls position="top-left" />
@@ -261,4 +285,3 @@ export default function Workbench() {
     </LoadingAndError>
   )
 }
-

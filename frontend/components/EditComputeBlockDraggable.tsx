@@ -121,7 +121,6 @@ export default function EditComputeBlockDraggable() {
     await mutateAsync(dto);
   }
 
-  // Define the tabs
   const tabs = [
     { key: "metadata", label: "Metadata" },
     { key: "inputs", label: "Inputs" },
