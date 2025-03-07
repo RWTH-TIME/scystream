@@ -2,7 +2,7 @@ from fastapi import HTTPException
 import requests
 import os
 from typing import List, Dict, Optional, Union
-from uuid import UUID
+from uuid import UUID, uuid4
 import tempfile
 import urllib.parse
 
@@ -21,6 +21,33 @@ from services.workflow_service.schemas.compute_block import (
 
 from scystream.sdk.config import SDKConfig, load_config
 from scystream.sdk.env.settings import PostgresSettings, FileSettings
+from scystream.sdk.config.models import ComputeBlock
+
+# TODO: Hash the secrets
+
+
+FILE_CFG_DEFAULTS = {
+    "S3_HOST": ENV.DEFAULT_CB_CONFIG_S3_HOST,
+    "S3_PORT": ENV.DEFAULT_CB_CONFIG_S3_PORT,
+    "S3_ACCESS_KEY": ENV.DEFAULT_CB_CONFIG_S3_ACCESS_KEY,
+    "S3_SECRET_KEY": ENV.DEFAULT_CB_CONFIG_S3_SECRET_KEY,
+    "BUCKET_NAME": ENV.DEFAULT_CB_CONFIG_S3_BUCKET_NAME,
+    "FILE_PATH": ENV.DEFAULT_CB_CONFIG_S3_FILE_PATH,
+    "FILE_NAME": f"file_{uuid4()}",
+}
+
+PG_CFG_DEFAULTS = {
+    "PG_USER": ENV.DEFAULT_CB_CONFIG_PG_USER,
+    "PG_PASS": ENV.DEFAULT_CB_CONFIG_PG_PASS,
+    "PG_HOST": ENV.DEFAULT_CB_CONFIG_S3_HOST,
+    "PG_PORT": ENV.DEFAULT_CB_CONFIG_PG_PORT,
+    "DB_TABLE": f"table_{uuid4()}",
+}
+
+SETTINGS_CLASS = {
+    DataType.FILE: FileSettings,
+    DataType.PGTABLE: PostgresSettings
+}
 
 
 def _convert_github_to_raw(github_url: str) -> str:
@@ -34,7 +61,7 @@ def _convert_github_to_raw(github_url: str) -> str:
     return urllib.parse.urlunparse(raw_url)
 
 
-def _get_cb_info_from_repo(repo_url: str) -> Block:
+def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
     if "github.com" in repo_url:
         repo_url = _convert_github_to_raw(repo_url)
 
@@ -73,8 +100,61 @@ def _get_cb_info_from_repo(repo_url: str) -> Block:
             os.remove(temp_file_path)
 
 
-def request_cb_info(repo_url: str) -> Block:
-    return _get_cb_info_from_repo(repo_url)
+def request_cb_info(repo_url: str) -> ComputeBlock:
+    cb = _get_cb_info_from_repo(repo_url)
+
+    for entry_name, entry in cb.entrypoints.items():
+        for on, output in entry.outputs.items():
+            # Determine the type and the default values
+            o_type = (
+                DataType.FILE if output.type == "file"
+                else DataType.PGTABLE
+            )
+            default_values = (
+                FILE_CFG_DEFAULTS if o_type is DataType.FILE
+                else PG_CFG_DEFAULTS
+            )
+
+            # Update the config with default values
+            output.config = _updated_configs_with_values(
+                output, default_values, o_type
+            )
+
+    return cb
+
+
+def _updated_configs_with_values(
+        io: InputOutput,
+        default_values: dict,
+        type: DataType
+) -> dict:
+    """
+    Returns a new config dict with default keys replaced by values from
+    default_values.
+
+    Parameters:
+    - io: InputOutput object whose config will be updated.
+    - default_values: Dict mapping default keys to their replacement values.
+
+    Returns:
+    - A new config dictionary with updated values.
+    """
+    new_config = io.config.copy() if io.config else {}
+
+    settings_class = SETTINGS_CLASS.get(type)
+    if not settings_class:
+        return new_config
+
+    default_keys = settings_class.__annotations__.keys()
+    cfg_keys = {key: key for key in new_config}
+
+    for dk in default_keys:
+        key = next((k for k in cfg_keys if dk in k), None)
+        if key and dk in default_values:
+            # Only replace if default_values[dk] is set
+            new_config[key] = default_values[dk]
+
+    return new_config
 
 
 def create_compute_block(
@@ -109,8 +189,8 @@ def create_compute_block(
             # (2) Create Input/Outputs
             input_outputs = inputs + outputs
 
-            for io_item in input_outputs:
-                io_item.entrypoint_uuid = entry.uuid
+            for o in input_outputs:
+                o.entrypoint_uuid = entry.uuid
 
             if input_outputs:
                 db.bulk_save_objects(input_outputs)
@@ -293,33 +373,15 @@ def create_stream_and_update_target_cfg(
             ):
                 return target_io.uuid
 
-            settings_class = {
-                DataType.FILE: FileSettings,
-                DataType.PGTABLE: PostgresSettings
-            }.get(target_io.data_type)
+            settings_class = SETTINGS_CLASS.get(target_io.data_type)
+            default_keys = set(settings_class.__annotations__.keys())
+            extracted_defaults = {
+                dk: value for key, value in source_io.config.items()
+                if (dk := next((d for d in default_keys if d in key), None))
+            }
 
-            default_keys = settings_class.__annotations__.keys()
-            new_cfg = target_io.config.copy() if target_io.config else {}
-
-            if source_io.config:
-                input_keys = {key: key for key in source_io.config}
-                output_keys = {key: key for key in target_io.config}
-
-                for dk in default_keys:
-                    input_key = next(
-                        (key for key in input_keys if dk in key), None)
-                    output_key = next(
-                        (key for key in output_keys if dk in key), None)
-
-                    if input_key and output_key:
-                        new_cfg[output_key] = source_io.config[input_key]
-                        print(f"""
-                              Updated: {output_key}
-                              <- {source_io.config[input_key]}
-                              (from {input_key})
-                              """)
-
-            target_io.config = new_cfg
+            target_io.config = _updated_configs_with_values(
+                target_io, extracted_defaults, target_io.data_type)
 
             return target_io.uuid
     except Exception as e:
