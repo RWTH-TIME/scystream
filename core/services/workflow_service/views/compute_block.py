@@ -14,7 +14,7 @@ from services.user_service.middleware.authenticate_token import (
 from services.workflow_service.controllers.compute_block_controller import (
     request_cb_info, create_compute_block, get_compute_blocks_by_project,
     update_compute_block, delete_block, create_stream_and_update_target_cfg,
-    get_block_dependencies_for_blocks, update_input_output
+    get_block_dependencies_for_blocks, update_input_output, delete_edge
 )
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
@@ -137,6 +137,21 @@ def create_io_stream_and_update_io_cfg(
             data.targetHandle
         )
         return IDResponse(id=id)
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.post("/edge/delete", status_code=200)
+def delete_stream(
+    data: EdgeDTO
+):
+    try:
+        delete_edge(
+            data.source,
+            data.sourceHandle,
+            data.target,
+            data.targetHandle
+        )
     except Exception as e:
         raise handle_error(e)
 

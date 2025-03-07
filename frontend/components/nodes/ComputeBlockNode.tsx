@@ -3,6 +3,14 @@ import React from "react"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import type { ComputeBlock, InputOutput } from "../CreateComputeBlockModal";
 import { InputOutputType } from "../CreateComputeBlockModal"
+import type { XYPosition, Node } from "@xyflow/react"
+
+export interface ComputeBlockNodeType extends Node {
+  id: string,
+  position: XYPosition,
+  type: string,
+  data: ComputeBlock,
+}
 
 /*
 * The Compute block node is a node for our Workbench Component.

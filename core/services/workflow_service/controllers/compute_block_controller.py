@@ -6,8 +6,8 @@ from uuid import UUID
 import tempfile
 import urllib.parse
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import select, case, asc, delete
+from sqlalchemy.orm import Session, contains_eager
 from utils.database.session_injector import get_database
 from services.workflow_service.models.block import Block, block_dependencies
 from utils.config.environment import ENV
@@ -59,18 +59,18 @@ def _get_cb_info_from_repo(repo_url: str) -> Block:
         into the load_config() function directly, without specifying the
         path in SDK config, use this.
         """
-        SDKConfig(
-            config_path=temp_file_path
-        )
+        sdk_config = SDKConfig()
+        sdk_config.set_config_path(temp_file_path)
         loaded_cb = load_config()
-
-        os.remove(temp_file_path)
 
         return loaded_cb
     except requests.exceptions.RequestException:
         raise HTTPException(status_code=500, detail="Could not query file.")
     except HTTPException as e:
         raise e
+    finally:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
 
 
 def request_cb_info(repo_url: str) -> Block:
@@ -141,7 +141,27 @@ def create_compute_block(
 def get_compute_blocks_by_project(project_id: UUID) -> List[Block]:
     db: Session = next(get_database())
 
-    return db.query(Block).filter_by(project_uuid=project_id).all()
+    order_case = case(
+        (InputOutput.data_type == DataType.FILE, 1),
+        (InputOutput.data_type == DataType.PGTABLE, 2),
+        (InputOutput.data_type == DataType.CUSTOM, 3),
+        else_=4
+    )
+
+    blocks = (
+        db.query(Block)
+        .join(Block.selected_entrypoint)
+        .outerjoin(Entrypoint.input_outputs)
+        .filter(Block.project_uuid == project_id)
+        .order_by(order_case, asc(InputOutput.name))
+        .options(
+            contains_eager(Block.selected_entrypoint)
+            .contains_eager(Entrypoint.input_outputs)
+        )
+        .all()
+    )
+
+    return blocks
 
 
 def get_block_dependencies_for_blocks(
@@ -246,9 +266,6 @@ def create_stream_and_update_target_cfg(
     from_output_uuid: UUID,
     to_block_uuid: UUID,
     to_input_uuid: UUID,
-    cfg: Optional[Dict[str,
-                       Optional[Union[str, int, float, List, bool]]]] = None
-
 ):
     db: Session = next(get_database())
 
@@ -269,8 +286,11 @@ def create_stream_and_update_target_cfg(
             source_io = db.query(InputOutput).filter_by(
                 uuid=from_output_uuid).one_or_none()
 
-            # Handle custom aswell
-            if (target_io.data_type != source_io.data_type) or (target_io.data_type is DataType.CUSTOM):
+            # Custom inputs are not overwritten
+            if (
+                    (target_io.data_type != source_io.data_type) or
+                    (target_io.data_type is DataType.CUSTOM)
+            ):
                 return target_io.uuid
 
             settings_class = {
@@ -281,8 +301,6 @@ def create_stream_and_update_target_cfg(
             default_keys = settings_class.__annotations__.keys()
             new_cfg = target_io.config.copy() if target_io.config else {}
 
-            # TODO: What happens with not fitting keys?
-            # TODO: test this
             if source_io.config:
                 input_keys = {key: key for key in source_io.config}
                 output_keys = {key: key for key in target_io.config}
@@ -295,14 +313,36 @@ def create_stream_and_update_target_cfg(
 
                     if input_key and output_key:
                         new_cfg[output_key] = source_io.config[input_key]
-                        print(f"Updated: {
-                              output_key} <- {source_io.config[input_key]} (from {input_key})")
+                        print(f"""
+                              Updated: {output_key}
+                              <- {source_io.config[input_key]}
+                              (from {input_key})
+                              """)
 
             target_io.config = new_cfg
 
             return target_io.uuid
     except Exception as e:
         raise e
+
+
+def delete_edge(
+    from_block_uuid: UUID,
+    from_output_uuid: UUID,
+    to_block_uuid: UUID,
+    to_input_uuid: UUID,
+):
+    db: Session = next(get_database())
+
+    stmt = delete(block_dependencies).where(
+        block_dependencies.c.upstream_block_uuid == from_block_uuid,
+        block_dependencies.c.upstream_output_uuid == from_output_uuid,
+        block_dependencies.c.downstream_block_uuid == to_block_uuid,
+        block_dependencies.c.downstream_input_uuid == to_input_uuid,
+    )
+
+    db.execute(stmt)
+    db.commit()
 
 
 def update_input_output(

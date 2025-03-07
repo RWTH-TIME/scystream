@@ -7,11 +7,11 @@ import {
   Background,
   applyNodeChanges,
   type NodeChange,
-  type Node as FlowNode,
   useReactFlow,
   ConnectionMode
 } from "@xyflow/react"
 import { PlayArrow, Widgets, Delete } from "@mui/icons-material"
+import type { ComputeBlockNodeType } from "./nodes/ComputeBlockNode";
 import ComputeBlockNode from "./nodes/ComputeBlockNode"
 import "@xyflow/react/dist/style.css"
 import LoadingAndError from "./LoadingAndError"
@@ -19,10 +19,11 @@ import EditProjectDraggable from "./EditProjectDraggable"
 import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
 import type { ComputeBlock, InputOutput } from "@/components/CreateComputeBlockModal";
 import CreateComputeBlockModal from "./CreateComputeBlockModal"
-import { useDeleteProjectMutation, type Node } from "@/mutations/projectMutation"
+import { useDeleteProjectMutation } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
-import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useUpdateComputeBlockMutation, useUpdateInputOutputMutation } from "@/mutations/computeBlockMutation"
+import type { EdgeDTO } from "@/mutations/computeBlockMutation";
+import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMutation, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import DeleteModal from "./DeleteModal"
 
@@ -35,14 +36,16 @@ export default function Workbench() {
   const { selectedProject, setSelectedProject } = useSelectedProject()
   const { data: projectDetails, isLoading, isError } = useComputeBlocksByProjectQuery(selectedProject?.uuid)
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
-  const { screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition, fitView } = useReactFlow()
   const { setAlert } = useAlert()
-  const { mutate: updateBlockMutate } = useUpdateComputeBlockMutation(setAlert)
+  const { mutate: updateBlockMutate } = useUpdateComputeBlockMutation(setAlert, selectedProject?.uuid, true)
   const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
+  const { mutate: deleteEdgeMutate } = useDeleteEdgeMutation(setAlert)
   const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, selectedProject?.uuid)
 
-  const [nodes, setNodes] = useState<FlowNode<Node>[]>([])
+  const [nodes, setNodes] = useState<ComputeBlockNodeType[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
+  const [selectedEdge, setSelectedEdge] = useState<Edge | undefined>(undefined);
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
   const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false)
   const [dropCoordinates, setDropCoordinates] = useState<XYPosition>({ x: 0, y: 0 })
@@ -56,21 +59,52 @@ export default function Workbench() {
   }
 
   useEffect(() => {
+    setTimeout(() => {
+      fitView();
+    }, 50);
+  }, [fitView, selectedProject])
+
+  useEffect(() => {
+    const onDeleteEdge = () => {
+      if (selectedEdge) {
+        setEdges((prevEdges) => prevEdges.filter((e) => e.id !== selectedEdge.id))
+        setSelectedEdge(undefined);
+        deleteEdgeMutate(selectedEdge as EdgeDTO)
+      }
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Delete" || event.key === "Backspace") {
+        if (selectedEdge) {
+          onDeleteEdge();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [selectedEdge, deleteEdgeMutate])
+
+  useEffect(() => {
     if (projectDetails) {
-      setNodes(projectDetails.blocks as unknown as FlowNode<Node>[])
+      if (selectedComputeBlock?.id) {
+        // If the projectDetails have been updated, and the user currently selected a
+        // compute block, update the data of this computeBlock
+        setSelectedComputeBlock(projectDetails.blocks.find((block: ComputeBlock) => block.id === selectedComputeBlock.id).data)
+      }
+      setNodes(projectDetails.blocks)
       setEdges(projectDetails.edges)
     }
-  }, [projectDetails])
+  }, [projectDetails, selectedComputeBlock, setSelectedComputeBlock])
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      setNodes((nds) => applyNodeChanges(changes, nds) as FlowNode<Node>[])
+      setNodes((nds) => applyNodeChanges(changes, nds) as ComputeBlockNodeType[])
     },
     []
   )
 
   const onNodeDragStop = useCallback(
-    (_: React.SyntheticEvent, node: FlowNode<Node>) => {
+    (_: React.SyntheticEvent, node: ComputeBlockNodeType) => {
       updateBlockMutate({
         id: node.id,
         x_pos: node.position.x,
@@ -100,6 +134,7 @@ export default function Workbench() {
     },
     [screenToFlowPosition]
   )
+
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -134,14 +169,7 @@ export default function Workbench() {
           const targetType = targetHandle.data_type;
 
           if (sourceType === targetType) {
-            const dto = {
-              source: connection.source,
-              sourceHandle: connection.sourceHandle!,
-              target: connection.target,
-              targetHandle: connection.targetHandle!
-            }
-
-            edgeMutate(dto)
+            edgeMutate(connection as EdgeDTO)
             setEdges((eds) => [
               ...eds,
               {
@@ -216,8 +244,7 @@ export default function Workbench() {
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
-          fitView
-          onNodeClick={(_, node) => setSelectedComputeBlock(node.data as unknown as ComputeBlock)}
+          onNodeClick={(_, node: ComputeBlockNodeType) => setSelectedComputeBlock(node.data)}
           onPaneClick={() => setSelectedComputeBlock(undefined)}
           onDragOver={onDragOver}
           onNodeDragStop={onNodeDragStop}
@@ -225,6 +252,7 @@ export default function Workbench() {
           onConnect={onConnect}
           connectionMode={ConnectionMode.Loose}
           nodesConnectable={true}
+          onEdgeClick={(_: React.MouseEvent, edge: Edge) => setSelectedEdge(edge)}
         >
           <Background />
           <Controls position="top-left" />

@@ -11,6 +11,7 @@ const UPDATE_COMPUTE_BLOCK = "compute_block/"
 const GET_COMPUTE_BLOCK_BY_PROJECT = "compute_block/by_project/"
 const DELETE_COMPUTE_BLOCK = "compute_block/"
 const CREATE_EDGE = "compute_block/edge/"
+const DELETE_EDGE = "compute_block/edge/delete"
 
 type ComputeBlockInfoDTO = {
   cbc_url: string,
@@ -117,14 +118,23 @@ function removeEmptyFields(obj: object): object {
   )
 }
 
-export function useUpdateComputeBlockMutation(setAlert: SetAlertType) {
+export function useUpdateComputeBlockMutation(setAlert: SetAlertType, project_id?: string, only_coords: boolean = false) {
+  const queryClient = useQueryClient()
+
   return useMutation({
     mutationFn: async function updateComputeBlock(update_dto: Partial<UpdateComputeBlockDTO>) {
       const cleaned = removeEmptyFields(update_dto)
       const response = await api.put(UPDATE_COMPUTE_BLOCK, JSON.stringify(cleaned))
       return response.data;
     },
-    onSuccess: () => { },
+    onSuccess: () => {
+      if (project_id) {
+        queryClient.invalidateQueries({ queryKey: [project_id] })
+        if (!only_coords) {
+          setAlert("Compute block sucessfully updated!", AlertType.SUCCESS)
+        }
+      }
+    },
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Updating Compute Block failed: ${error}`)
@@ -142,7 +152,7 @@ export function useDeleteComputeBlockMutation(setAlert: SetAlertType, project_id
     },
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
-      console.log(`Deleting compute block failed ${error}`)
+      console.error(`Deleting compute block failed ${error}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [project_id] })
@@ -151,7 +161,7 @@ export function useDeleteComputeBlockMutation(setAlert: SetAlertType, project_id
   })
 }
 
-type EdgeDTO = {
+export type EdgeDTO = {
   source: string,
   sourceHandle: string,
   target: string,
@@ -166,10 +176,23 @@ export function useCreateEdgeMutation(setAlert: SetAlertType, project_id?: strin
     },
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
-      console.log(`Creating Edge failed ${error}`)
+      console.error(`Creating Edge failed ${error}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [project_id] })
     }
+  })
+}
+
+export function useDeleteEdgeMutation(setAlert: SetAlertType) {
+  return useMutation({
+    mutationFn: async function deleteEdge(data: EdgeDTO) {
+      await api.post(DELETE_EDGE, JSON.stringify(data))
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+      console.error(`Creating Edge failed ${error}`)
+    },
+    onSuccess: () => { }
   })
 }
