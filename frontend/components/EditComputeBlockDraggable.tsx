@@ -144,6 +144,7 @@ export default function EditComputeBlockDraggable() {
           updateConfig={(key, value) => updateConfig("inputs", key, value)}
           handleSave={handleSave}
           loading={isPending}
+          type="Input"
         />
       )}
       {activeTab === "outputs" && (
@@ -152,6 +153,7 @@ export default function EditComputeBlockDraggable() {
           updateConfig={(key, value) => updateConfig("outputs", key, value)}
           handleSave={handleSave}
           loading={isPending}
+          type="Output"
         />
       )}
     </ProjectCBSettingsDraggable>
