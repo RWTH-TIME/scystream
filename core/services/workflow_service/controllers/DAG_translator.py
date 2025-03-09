@@ -7,6 +7,8 @@ from uuid import UUID
 from services.workflow_service.controllers.project_controller \
     import read_project
 
+DAG_DIRECTORY = "aifrlow-dags"
+
 
 def translate_project_to_dag(project_uuid: UUID):
     """
@@ -26,27 +28,23 @@ def translate_project_to_dag(project_uuid: UUID):
 
         entrypoint = block.selected_entrypoint
 
-        if not block.selected_entrypoint:
-            raise HTTPException(404, detail="No entrypoint has been selected.")
-
         envs = entrypoint.envs
-        configs = [io.config for io in entrypoint.inputoutputs]
+        configs = [io.config for io in entrypoint.input_outputs]
+        merged_configs = {k: v for d in configs for k, v in d.items()}
 
         graph.add_node(block.uuid, **{
             "uuid": block.uuid,
             "name": block.name,
-            "block_type": block.block_type.value,
-            "priority": block.priority_weight,
-            "retries": block.retries,
-            "retry_delay": block.retry_delay,
-            "environment": {**envs, **configs},  # correct concatenation?
+            "image": block.docker_image,
+            "entry_name": block.selected_entrypoint.name,
+            "environment": {**envs, **merged_configs},
         })
 
     # Add edges (dependencies)
     for block in project.blocks:
         for upstream in block.upstream_blocks:
-            upstream_task_id = f"task_{str(upstream.uuid).replace('-', '')}"
-            current_task_id = f"task_{str(block.uuid).replace('-', '')}"
+            upstream_task_id = upstream.uuid
+            current_task_id = block.uuid
             graph.add_edge(upstream_task_id, current_task_id)
 
     # Ensure the graph is a DAG
@@ -70,40 +68,40 @@ def translate_project_to_dag(project_uuid: UUID):
     # Generate Python DAG file
     parts = []
     parts = [dag_template.render(
-        dag_id=f"dag_{project_uuid.replace('-', '_')}"
+        dag_id=f"dag_{str(project_uuid).replace('-', '_')}"
     )]
 
     # Convert to Airflow-compatible representation
     for node, data in graph.nodes(data=True):
+        task_id = str(node).replace("-", "_")
+        print(data["entry_name"])
         parts.append(
             algorithm_template.render(
-                task_id=node,
-                image="scystreamworker",
+                task_id=task_id,
+                image=data["image"],
                 name=data["name"],
                 uuid=data["uuid"],
-                command=(
-                    "sh -c 'python bv-c \"from scystream.sdk.scheduler import "
-                    "Scheduler;"
-                    "Scheduler.execute_function(\\\"function_name\\\")"
-                    "\"'"
-                ),
+                entry_name=data["entry_name"],
                 project=str(project_uuid),
-                algorithm=data["block_type"],
-                enviroment=data["enviroment"],
+                environment=data["environment"],
                 local_storage_path_external="/tmp/scystream-data",
             )
         )
 
-    dependencies = [dependency_template.render(
-        from_task=from_task, to_task=to_task)
-        for from_task, to_task in graph.edges]
-
+    dependencies = [
+        dependency_template.render(
+            from_task=str(from_task).replace("-", "_"),
+            to_task=str(to_task).replace("-", "_")
+        )
+        for from_task, to_task in graph.edges
+    ]
     parts.extend(dependencies)
 
     # Write the generated DAG to a Python file
-    filename = os.path.join(
-        "~/airflow/dags/", f"dag_{project_uuid.replace('-', '_')}.py"
-    )
+    os.makedirs(DAG_DIRECTORY, exist_ok=True)
+    filename = os.path.join(DAG_DIRECTORY, f"dag_{
+                            str(project_uuid).replace('-', '_')}.py")
 
+    # Write the generated DAG to a Python file
     with open(filename, "w") as f:
         f.write("\n".join(parts))
