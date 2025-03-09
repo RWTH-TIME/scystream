@@ -3,6 +3,14 @@ import React from "react"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import type { ComputeBlock, InputOutput } from "../CreateComputeBlockModal";
 import { InputOutputType } from "../CreateComputeBlockModal"
+import type { XYPosition, Node } from "@xyflow/react"
+
+export interface ComputeBlockNodeType extends Node {
+  id: string,
+  position: XYPosition,
+  type: string,
+  data: ComputeBlock,
+}
 
 /*
 * The Compute block node is a node for our Workbench Component.
@@ -18,6 +26,10 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
     [InputOutputType.DB]: {
       backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22white%22><path d=%22M12 2C6.48 2 2 3.57 2 5.5v13c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5v-13C22 3.57 17.52 2 12 2zM4 8.48c2.37.95 5.24 1.52 8 1.52s5.63-.57 8-1.52V12c-2.37.95-5.24 1.52-8 1.52s-5.63-.57-8-1.52V8.48zm16 10c-2.37.95-5.24 1.52-8 1.52s-5.63-.57-8-1.52v-2.92c2.37.95 5.24 1.52 8 1.52s5.63-.57 8-1.52v2.92z%22/></svg>')",
       backgroundColor: "#4DB6AC",
+    },
+    [InputOutputType.CUSTOM]: {
+      backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22white%22><path d=%22M12 2L2 7l10 5 10-5-10-5zm0 8.75L4 7l8-4 8 4-8 3.75zm-6 4.25v4.5L12 22l6-3.5v-4.5L12 19l-6-4z%22/></svg>')",
+      backgroundColor: "#FFB74D",
     },
   };
 
@@ -83,7 +95,7 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
 
         <div className="space-y-2">
           {renderHandles(data.selected_entrypoint.inputs, "target", Position.Left)}
-          {renderHandles(data.selected_entrypoint.outputs, "target", Position.Right)}
+          {renderHandles(data.selected_entrypoint.outputs, "source", Position.Right)}
         </div>
       </div>
     </div>

@@ -28,10 +28,7 @@ def upgrade() -> None:
                     sa.ForeignKeyConstraint(['downstream_block_uuid'], [
                         'blocks.uuid'], name='fk_downstream_block', ondelete='CASCADE'),
                     sa.ForeignKeyConstraint(['upstream_block_uuid'], [
-                        'blocks.uuid'], name='fk_upstream_block', ondelete='CASCADE'),
-                    sa.PrimaryKeyConstraint(
-                        'upstream_block_uuid', 'downstream_block_uuid')
-                    )
+                        'blocks.uuid'], name='fk_upstream_block', ondelete='CASCADE'),)
     op.create_table('entrypoints',
                     sa.Column('uuid', sa.UUID(), nullable=False),
                     sa.Column('name', sa.String(length=100), nullable=False),
@@ -48,7 +45,7 @@ def upgrade() -> None:
                     sa.Column('type', sa.Enum('INPUT', 'OUTPUT',
                               name='inputoutputtype'), nullable=False),
                     sa.Column('name', sa.String(length=100), nullable=True),
-                    sa.Column('data_type', sa.Enum('DBINPUT', 'FILE',
+                    sa.Column('data_type', sa.Enum('PGTABLE', 'FILE', 'CUSTOM',
                                                    name='datatype'), nullable=False),
                     sa.Column('description', sa.String(
                         length=500), nullable=True),

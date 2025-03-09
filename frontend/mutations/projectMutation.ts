@@ -4,19 +4,11 @@ import { QueryKeys } from "./queryKeys"
 import { api } from "@/utils/axios"
 import { AlertType, type SetAlertType } from "@/hooks/useAlert"
 import displayStandardAxiosErrors from "@/utils/errors"
-import { type ComputeBlock } from "@/components/CreateComputeBlockModal"
 
 const GET_PROJECTS_ENDPOINT = "project/read_all"
 const CREATE_PROJECT_ENDPOINT = "project"
 const DELETE_PROJECT_ENDPOINT = "project/"
 const UPDATE_PROJECT_ENDPOINT = "project/"
-
-export type Node = {
-  id: string,
-  position: { x: number, y: number },
-  type: string,
-  data: ComputeBlock,
-}
 
 type ProjectDTO = {
   name: string,
