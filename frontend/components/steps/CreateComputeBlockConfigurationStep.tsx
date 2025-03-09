@@ -5,9 +5,7 @@ import { useEffect, useState } from "react";
 import Button, { ButtonSentiment } from "../Button";
 
 function isValid(value: RecordValueType) {
-  if (value === null || value === undefined) return false;
   if (Array.isArray(value) && value.length === 0) return false;
-  if (typeof value === "number" && isNaN(value)) return false;
   return true;
 }
 

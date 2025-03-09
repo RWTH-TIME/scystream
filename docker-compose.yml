@@ -8,6 +8,7 @@ x-airflow-common:
     AIRFLOW_GID: 0
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow/airflow
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres-airflow/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis-airflow:6379/0
     AIRFLOW__CORE__FERNET_KEY: ''
@@ -24,7 +25,8 @@ x-airflow-common:
     - airflow-logs:/opt/airflow/logs
     - airflow-config:/opt/airflow/config
     - airflow-plugins:/opt/airflow/plugins
-  user: "${AIRFLOW_UID:-50000}:0"
+    - /var/run/docker.sock:/var/run/docker.sock
+  user: "0:0"
   depends_on:
     &airflow-common-depends-on
     redis-airflow:
@@ -77,10 +79,6 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-    # TODO: Check if only the airflow scheduler needs to be in data-processing network
-    # Info: The Airflow-Scheduler needs to schedule the dockerContainers in the data-processing network
-    networks:
-      - data-processing
 
   airflow-worker:
     <<: *airflow-common

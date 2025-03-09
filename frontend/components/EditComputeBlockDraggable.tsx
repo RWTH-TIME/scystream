@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProjectCBSettingsDraggable from "./ProjectCBSettingsDraggable";
 import MetadataTab from "@/components/editComputeBlockTabs/MetadataTab";
 import EditInputsOutputsTab from "@/components/editComputeBlockTabs/EditInputsOutputsTab";
@@ -6,15 +6,21 @@ import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock";
 import type { ComputeBlock, RecordValueType } from "@/components/CreateComputeBlockModal";
 import { useUpdateComputeBlockMutation, type UpdateComputeBlockDTO, type UpdateEntrypointDTO, type UpdateInputOutputDTO } from "@/mutations/computeBlockMutation";
 import { useAlert } from "@/hooks/useAlert";
+import { useSelectedProject } from "@/hooks/useSelectedProject";
 
 export default function EditComputeBlockDraggable() {
   const { selectedComputeBlock } = useSelectedComputeBlock();
+  const { selectedProject } = useSelectedProject();
   const { setAlert } = useAlert();
-  const { mutateAsync, isPending } = useUpdateComputeBlockMutation(setAlert);
+  const { mutateAsync, isPending } = useUpdateComputeBlockMutation(setAlert, selectedProject?.uuid);
 
   // We need to make a deep copy of the compute block to compare the values later on
   const [editCB, setEditCB] = useState<ComputeBlock>(JSON.parse(JSON.stringify(selectedComputeBlock!)));
   const [activeTab, setActiveTab] = useState<string>("metadata");
+
+  useEffect(() => {
+    setEditCB(JSON.parse(JSON.stringify(selectedComputeBlock)))
+  }, [selectedComputeBlock])
 
   function updateConfig(section: "inputs" | "outputs" | "envs", key: string, value: RecordValueType) {
     setEditCB((prevCB) => {
@@ -26,7 +32,7 @@ export default function EditComputeBlockDraggable() {
         updatedCB.selected_entrypoint.envs = {
           ...updatedCB.selected_entrypoint.envs,
           [key]: value
-        };
+        }
       } else {
         updatedCB.selected_entrypoint[section] = updatedCB.selected_entrypoint[section].map((io) => {
           if (key in io.config) {
@@ -115,7 +121,6 @@ export default function EditComputeBlockDraggable() {
     await mutateAsync(dto);
   }
 
-  // Define the tabs
   const tabs = [
     { key: "metadata", label: "Metadata" },
     { key: "inputs", label: "Inputs" },
@@ -139,6 +144,7 @@ export default function EditComputeBlockDraggable() {
           updateConfig={(key, value) => updateConfig("inputs", key, value)}
           handleSave={handleSave}
           loading={isPending}
+          type="Input"
         />
       )}
       {activeTab === "outputs" && (
@@ -147,6 +153,7 @@ export default function EditComputeBlockDraggable() {
           updateConfig={(key, value) => updateConfig("outputs", key, value)}
           handleSave={handleSave}
           loading={isPending}
+          type="Output"
         />
       )}
     </ProjectCBSettingsDraggable>

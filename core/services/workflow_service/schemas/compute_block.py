@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from typing import List, Dict, Optional, Union, Literal
-from pydantic import BaseModel, validator, RootModel
+from pydantic import BaseModel, validator
 from urllib.parse import urlparse
 
 from services.workflow_service.models.input_output import (
@@ -18,6 +18,14 @@ def _validate_url(url: str):
         raise ValueError("Insecure URL! Only HTTPs URLs are allowed.")
     if parsed.netloc not in ENV.TRUSTED_CBC_DOMAINS:
         raise ValueError("Untrusted Domain.")
+
+
+def _get_io_data_type(type: str) -> str:
+    data_type_map = {
+        DataType.FILE.value: DataType.FILE.value,
+        DataType.PGTABLE.value: DataType.PGTABLE.value,
+    }
+    return data_type_map.get(type, DataType.CUSTOM.value)
 
 
 class InputOutputDTO(BaseModel):
@@ -42,8 +50,7 @@ class InputOutputDTO(BaseModel):
         return cls(
             id=getattr(input_output, "uuid", None),
             name=name,
-            data_type=(DataType.FILE if input_output.type ==
-                       "file" else "db_table"),
+            data_type=_get_io_data_type(input_output.type),
             description=input_output.description or "",
             config=input_output.config or {}
         )
@@ -202,8 +209,27 @@ class NodeDTO(BaseModel):
         )
 
 
-class GetNodesByProjectResponse(RootModel[List[NodeDTO]]):
-    pass
+class EdgeDTO(BaseModel):
+    id: Optional[str] = None
+    source: UUID
+    target: UUID
+    sourceHandle: UUID
+    targetHandle: UUID
+
+    @classmethod
+    def from_block_dependencies(cls, bd):
+        return cls(
+            id=f"{bd.upstream_output_uuid}-{bd.downstream_input_uuid}",
+            source=bd.upstream_block_uuid,
+            targetHandle=bd.downstream_input_uuid,
+            target=bd.downstream_block_uuid,
+            sourceHandle=bd.upstream_output_uuid,
+        )
+
+
+class GetNodesByProjectResponse(BaseModel):
+    blocks: List[NodeDTO]
+    edges: List[EdgeDTO]
 
 
 class UpdateInputOutputDTO(BaseModel):
