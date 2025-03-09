@@ -24,8 +24,6 @@ from scystream.sdk.env.settings import PostgresSettings, FileSettings
 from scystream.sdk.config.models import ComputeBlock
 
 # TODO: Hash the secrets
-
-
 FILE_CFG_DEFAULTS = {
     "S3_HOST": ENV.DEFAULT_CB_CONFIG_S3_HOST,
     "S3_PORT": ENV.DEFAULT_CB_CONFIG_S3_PORT,
@@ -295,7 +293,7 @@ def _update_io(
     to_be_io: Optional[List[UpdateInputOutputDTO]],
     io_type: InputOutputType,
     entrypoint: Entrypoint,
-    db: Session  # Pass database session to query dependencies
+    db: Session
 ):
     if to_be_io is None or entrypoint is None:
         return
@@ -353,7 +351,7 @@ def update_compute_block(
     db: Session = next(get_database())
 
     try:
-        with db.begin():  # Ensures atomic transaction
+        with db.begin():
             cb = db.query(Block).filter_by(uuid=id).one_or_none()
 
             if not cb:

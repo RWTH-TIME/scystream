@@ -1,14 +1,14 @@
-import { useState } from "react";
-import Modal, { type ModalProps } from "./Modal";
-import { Step, StepLabel, Stepper } from "@mui/material";
-import CreateComputeBlockInformationStep from "./steps/CreateComputeBlockInformationStep";
-import CreateComputeBlockEntrypointStep from "./steps/CreateComputeBlockEntrypointStep";
-import CreateComputeBlockConfigurationStep from "./steps/CreateComputeBlockConfigurationStep";
-import { useSelectedProject } from "@/hooks/useSelectedProject";
-import type { CreateComputeBlockDTO, InputOutputDTO } from "@/mutations/computeBlockMutation";
-import { useCreateComputeBlockMutation } from "@/mutations/computeBlockMutation";
-import { useAlert } from "@/hooks/useAlert";
-import type { XYPosition } from "@xyflow/react";
+import { useState } from "react"
+import Modal, { type ModalProps } from "./Modal"
+import { Step, StepLabel, Stepper } from "@mui/material"
+import CreateComputeBlockInformationStep from "./steps/CreateComputeBlockInformationStep"
+import CreateComputeBlockEntrypointStep from "./steps/CreateComputeBlockEntrypointStep"
+import CreateComputeBlockConfigurationStep from "./steps/CreateComputeBlockConfigurationStep"
+import { useSelectedProject } from "@/hooks/useSelectedProject"
+import type { CreateComputeBlockDTO, InputOutputDTO } from "@/mutations/computeBlockMutation"
+import { useCreateComputeBlockMutation } from "@/mutations/computeBlockMutation"
+import { useAlert } from "@/hooks/useAlert"
+import type { XYPosition } from "@xyflow/react"
 
 
 type CreateComputeBlockModalProps = Omit<ModalProps, "children"> & {
