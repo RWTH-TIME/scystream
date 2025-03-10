@@ -20,7 +20,6 @@ def login(email: str, password: str) -> Tuple[str, str]:
     The login function takes email, and password.
     Returns a tuple of access_token and refresh_token
     """
-
     db: Session = next(get_database())
     user: User = db.query(User).filter_by(email=email).first()
 

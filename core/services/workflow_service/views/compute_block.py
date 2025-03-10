@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
+import logging
 
 from utils.errors.error import handle_error
 from services.workflow_service.schemas.compute_block import (
@@ -31,6 +32,7 @@ async def cb_information(
         )
         return ComputeBlockInformationResponse.from_sdk_compute_block(cb)
     except Exception as e:
+        logging.error(f"Error getting compute block information: {e}")
         raise handle_error(e)
 
 
@@ -62,6 +64,7 @@ async def create(
             id=uuid
         )
     except Exception as e:
+        logging.error(f"Error creating compute block: {e}")
         raise handle_error(e)
 
 
@@ -89,6 +92,7 @@ async def get_by_project(
             ]
         )
     except Exception as e:
+        logging.error(f"Error getting compute blocks by project: {e}")
         raise handle_error(e)
 
 
@@ -106,6 +110,7 @@ async def update_cb(data: UpdateComputeBlockRequest):
             id=id
         )
     except Exception as e:
+        logging.error(f"Error getting compute blocks by project: {e}")
         raise handle_error(e)
 
 
@@ -122,6 +127,7 @@ async def delete_compute_block(
     try:
         delete_block(block_id)
     except Exception as e:
+        logging.error(f"Error deleting compute block: {e}")
         raise handle_error(e)
 
 
@@ -138,6 +144,7 @@ def create_io_stream_and_update_io_cfg(
         )
         return IDResponse(id=id)
     except Exception as e:
+        logging.error(f"Error creating an edge and configuring input: {e}")
         raise handle_error(e)
 
 
@@ -153,4 +160,5 @@ def delete_stream(
             data.targetHandle
         )
     except Exception as e:
+        logging.error(f"Error deleting an edge: {e}")
         raise handle_error(e)
