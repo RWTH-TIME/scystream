@@ -8,15 +8,16 @@ type EditInputsOutputsTabProps = {
   updateConfig: (key: string, value: RecordValueType) => void,
   handleSave: () => void,
   loading: boolean,
+  type: "Input" | "Output",
 }
 
-export default function EditInputsOutputsTab({ inputoutputs, updateConfig, handleSave, loading }: EditInputsOutputsTabProps) {
+export default function EditInputsOutputsTab({ inputoutputs, updateConfig, handleSave, loading, type }: EditInputsOutputsTabProps) {
 
   return (
     <div>
       <ConfigBox
-        headline="Inputs"
-        description="Configure the Compute Blocks inputs here"
+        headline={type.toString()}
+        description={`Configure the Compute Blocks ${type.toLowerCase()}s here`}
         config={inputoutputs}
         updateComputeBlock={updateConfig}
       />

@@ -4,10 +4,10 @@ import { ReactFlowProvider } from "@xyflow/react"
 import PageWithHeader from "@/components/layout/PageWithHeader"
 import ProjectList from "@/components/ProjectList"
 import useAuth from "@/hooks/useAuth"
-import Workbench from "@/components/Workbench"
 import LoadingAndError from "@/components/LoadingAndError"
 import { SelectedProjectProvider } from "@/hooks/useSelectedProject"
 import { SelectedComputeBlockProvider } from "@/hooks/useSelectedComputeBlock"
+import { Workbench } from "@/components/Workbench"
 
 export default function Dashboard() {
   const { loading } = useAuth()

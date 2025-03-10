@@ -1,18 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
+import logging
 
 from utils.errors.error import handle_error
 from services.workflow_service.schemas.compute_block import (
     ComputeBlockInformationRequest, ComputeBlockInformationResponse,
     CreateComputeBlockRequest, IDResponse,
-    GetNodesByProjectResponse, NodeDTO, UpdateComputeBlockRequest
+    GetNodesByProjectResponse, NodeDTO, UpdateComputeBlockRequest,
+    EdgeDTO
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
 )
 from services.workflow_service.controllers.compute_block_controller import (
     request_cb_info, create_compute_block, get_compute_blocks_by_project,
-    update_compute_block, delete_block
+    update_compute_block, delete_block, create_stream_and_update_target_cfg,
+    get_block_dependencies_for_blocks, delete_edge
 )
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
@@ -29,6 +32,7 @@ async def cb_information(
         )
         return ComputeBlockInformationResponse.from_sdk_compute_block(cb)
     except Exception as e:
+        logging.error(f"Error getting compute block information: {e}")
         raise handle_error(e)
 
 
@@ -60,6 +64,7 @@ async def create(
             id=uuid
         )
     except Exception as e:
+        logging.error(f"Error creating compute block: {e}")
         raise handle_error(e)
 
 
@@ -73,11 +78,21 @@ async def get_by_project(
 
     try:
         compute_blocks = get_compute_blocks_by_project(project_id)
-        return GetNodesByProjectResponse([
-            NodeDTO.from_compute_block(cb)
-            for cb in compute_blocks
-        ])
+
+        block_uuids = [block.uuid for block in compute_blocks]
+        dependencies = get_block_dependencies_for_blocks(block_uuids)
+
+        return GetNodesByProjectResponse(
+            blocks=[
+                NodeDTO.from_compute_block(cb)
+                for cb in compute_blocks
+            ],
+            edges=[EdgeDTO.from_block_dependencies(
+                dp) for dp in dependencies
+            ]
+        )
     except Exception as e:
+        logging.error(f"Error getting compute blocks by project: {e}")
         raise handle_error(e)
 
 
@@ -95,6 +110,7 @@ async def update_cb(data: UpdateComputeBlockRequest):
             id=id
         )
     except Exception as e:
+        logging.error(f"Error getting compute blocks by project: {e}")
         raise handle_error(e)
 
 
@@ -111,4 +127,38 @@ async def delete_compute_block(
     try:
         delete_block(block_id)
     except Exception as e:
+        logging.error(f"Error deleting compute block: {e}")
+        raise handle_error(e)
+
+
+@router.post("/edge", response_model=IDResponse)
+def create_io_stream_and_update_io_cfg(
+    data: EdgeDTO
+):
+    try:
+        id = create_stream_and_update_target_cfg(
+            data.source,
+            data.sourceHandle,
+            data.target,
+            data.targetHandle
+        )
+        return IDResponse(id=id)
+    except Exception as e:
+        logging.error(f"Error creating an edge and configuring input: {e}")
+        raise handle_error(e)
+
+
+@router.post("/edge/delete", status_code=200)
+def delete_stream(
+    data: EdgeDTO
+):
+    try:
+        delete_edge(
+            data.source,
+            data.sourceHandle,
+            data.target,
+            data.targetHandle
+        )
+    except Exception as e:
+        logging.error(f"Error deleting an edge: {e}")
         raise handle_error(e)
