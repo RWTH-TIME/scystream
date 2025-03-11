@@ -1,3 +1,7 @@
+networks:
+  airflow:
+  data_processing:
+
 x-airflow-common:
   &airflow-common
   image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.9.1}
@@ -21,7 +25,7 @@ x-airflow-common:
     AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: 0
     # AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
-    - ./core/airflow-dags:/opt/airflow/dags
+    - airflow-dags:/opt/airflow/dags
     - airflow-logs:/opt/airflow/logs
     - airflow-config:/opt/airflow/config
     - airflow-plugins:/opt/airflow/plugins
@@ -32,8 +36,7 @@ x-airflow-common:
     redis-airflow:
       condition: service_healthy
     postgres-airflow:
-      condition: service_healthy 
-    
+      condition: service_healthy
 
 services:
   ### airflow:
@@ -49,7 +52,9 @@ services:
       retries: 50
       start_period: 30s
     restart: always
-  
+    networks:
+      - airflow
+
   postgres-airflow:
     image: postgres:14
     environment:
@@ -64,6 +69,8 @@ services:
       retries: 5
       start_period: 5s
     restart: always
+    networks:
+      - airflow
 
   airflow-scheduler:
     <<: *airflow-common
@@ -79,6 +86,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - airflow
 
   airflow-worker:
     <<: *airflow-common
@@ -101,6 +110,9 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - data_processing
+      - airflow
 
   airflow-triggerer:
     <<: *airflow-common
@@ -116,7 +128,9 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-    
+    networks:
+      - airflow
+
   airflow-init:
     <<: *airflow-common
     entrypoint: /bin/bash
@@ -180,6 +194,8 @@ services:
     user: "0:0"
     volumes:
       - airflow-sources:/sources
+    networks:
+      - airflow
 
   airflow-cli:
     <<: *airflow-common
@@ -192,6 +208,8 @@ services:
     command:
       - bash
       - -c
+      - airflow
+    networks:
       - airflow
   
   airflow-webserver:
@@ -210,6 +228,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - airflow
   
   ### spark:
   spark-master:
@@ -225,8 +245,6 @@ services:
     ports:
       - "8080:8080" # web ui
       - "7077:7077" # master port
-    networks:
-      - data-processing
   
   # In production, there should be more workers
   spark-worker:
@@ -238,8 +256,6 @@ services:
       - SPARK_WORKER_CORES=1
     depends_on:
       - spark-master
-    networks:
-      - data-processing
   
   # The postgres we offer the compute blocks to save data at
   data-postgres:
@@ -250,8 +266,6 @@ services:
       - POSTGRES_DB=postgres
     ports:
       - "5433:5432"
-    networks:
-      - data-processing
 
   # The minio we offer the comput block to save files at
   data-minio:
@@ -265,9 +279,9 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
-    networks:
-      - data-processing
     command: server /data --console-address ":9001"
+    networks:
+      - data_processing
 
   ### application:
   frontend:
@@ -288,6 +302,8 @@ services:
         condition: service_started
       core-postgres:
         condition: service_healthy
+    volumes:
+      - airflow-dags:/app/airflow-dags
 
   core-postgres:
     image: postgres:17
@@ -330,13 +346,10 @@ services:
     ports:
       - "3010:3000"
 
-networks:
-  data-processing:
-    driver: bridge
-
 volumes:
   postgres-airflow-volume:
   airflow-plugins:
+  airflow-dags:
   airflow-logs:
   airflow-config:
   airflow-sources:

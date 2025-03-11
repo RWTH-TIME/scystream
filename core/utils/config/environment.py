@@ -29,11 +29,11 @@ class Settings(BaseSettings):
     TRUSTED_CBC_DOMAINS: List[str] = ["github.com"]
     MAX_CBC_FILE_SIZE: int = 10 * 1024 * 1024  # 10 MB
 
-    DEFAULT_CB_CONFIG_S3_HOST: str = "data-minio"
-    DEFAULT_CB_CONFIG_S3_PORT: str = "9001"
-    DEFAULT_CB_CONFIG_S3_ACCESS_KEY: str = "access"
-    DEFAULT_CB_CONFIG_S3_SECRET_KEY: str = "secret"
-    DEFAULT_CB_CONFIG_S3_BUCKET_NAME: str = "data_tf_bucket"
+    DEFAULT_CB_CONFIG_S3_HOST: str = "http://data-minio"
+    DEFAULT_CB_CONFIG_S3_PORT: str = "9000"
+    DEFAULT_CB_CONFIG_S3_ACCESS_KEY: str = "minioadmin"
+    DEFAULT_CB_CONFIG_S3_SECRET_KEY: str = "minioadmin"
+    DEFAULT_CB_CONFIG_S3_BUCKET_NAME: str = "dataBucket"
     DEFAULT_CB_CONFIG_S3_FILE_PATH: str = "/"
 
     DEFAULT_CB_CONFIG_PG_USER: str = "postgres"

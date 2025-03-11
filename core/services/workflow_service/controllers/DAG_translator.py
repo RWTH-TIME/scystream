@@ -3,11 +3,12 @@ from jinja2 import Environment, FileSystemLoader
 from fastapi import HTTPException
 import networkx as nx
 from uuid import UUID
+import json
 
 from services.workflow_service.controllers.project_controller \
     import read_project
 
-DAG_DIRECTORY = "aifrlow-dags"
+DAG_DIRECTORY = "airflow-dags"
 
 
 def translate_project_to_dag(project_uuid: UUID):
@@ -30,7 +31,24 @@ def translate_project_to_dag(project_uuid: UUID):
 
         envs = entrypoint.envs
         configs = [io.config for io in entrypoint.input_outputs]
-        merged_configs = {k: v for d in configs for k, v in d.items()}
+        merged_configs = {}
+
+        # First, add all envs to merged_configs with string representation
+        for k, v in envs.items():
+            if isinstance(v, list):  # Check if the value is a list
+                # Convert the list to its string representation
+                merged_configs[k] = json.dumps(v)
+            else:
+                merged_configs[k] = str(v)  # Convert other values to string
+
+        # Now, add all configs to merged_configs with string representation
+        for d in configs:
+            for k, v in d.items():
+                if isinstance(v, list):  # Check if the value is a list
+                    # Convert the list to its string representation
+                    merged_configs[k] = json.dumps(v)
+                else:
+                    merged_configs[k] = str(v)  # Convert other values to strin
 
         graph.add_node(block.uuid, **{
             "uuid": block.uuid,
@@ -77,7 +95,7 @@ def translate_project_to_dag(project_uuid: UUID):
         print(data["entry_name"])
         parts.append(
             algorithm_template.render(
-                task_id=task_id,
+                task_id=f"task_{task_id}",
                 image=data["image"],
                 name=data["name"],
                 uuid=data["uuid"],
@@ -90,8 +108,8 @@ def translate_project_to_dag(project_uuid: UUID):
 
     dependencies = [
         dependency_template.render(
-            from_task=str(from_task).replace("-", "_"),
-            to_task=str(to_task).replace("-", "_")
+            from_task=f"task_{str(from_task).replace("-", "_")}",
+            to_task=f"task_{str(to_task).replace("-", "_")}"
         )
         for from_task, to_task in graph.edges
     ]
