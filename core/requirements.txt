@@ -1,10 +1,10 @@
 uvicorn==0.34.0
-fastapi==0.115.10
+fastapi==0.115.11
 pydantic==2.10.6
 pydantic-settings==2.8.1
 SQLAlchemy==2.0.38
 psycopg2-binary==2.9.10
-alembic==1.14.1
+alembic==1.15.1
 bcrypt==4.3.0
 pyjwt==2.10.1
 requests==2.32.3
