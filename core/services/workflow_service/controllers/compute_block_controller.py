@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 import requests
 import os
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Literal
 from uuid import UUID, uuid4
 import tempfile
 import urllib.parse
@@ -306,6 +306,31 @@ def get_block_dependencies_for_blocks(
     return db.execute(query).fetchall()
 
 
+def _check_config_keys_mismatch(
+        config_type: Literal["envs", "io"],
+        original_config: dict,
+        update_config: dict,
+        entity_id: UUID,
+):
+    """
+    Check if the keys in the original config and update config are the same.
+    If not, raise an Exception.
+    """
+    original_keys = set(original_config.keys())
+    update_keys = set(update_config.keys())
+
+    if original_keys != update_keys:
+        logging.debug(f"Key mismatch found for {
+                      config_type} in entity {entity_id}:")
+        logging.debug(f"Original {config_type} keys: {original_keys}")
+        logging.debug(f"Updated {config_type} keys: {update_keys}")
+        raise HTTPException(
+            status_code=422,
+            detail=f"Updated {config_type} keys do not match with original {
+                config_type} keys of {config_type} with id {entity_id}"
+        )
+
+
 def _update_io(
     to_be_io: Optional[List[UpdateInputOutputDTO]],
     io_type: InputOutputType,
@@ -332,6 +357,12 @@ def _update_io(
 
         # Update Config Dict
         if io_update_data.config:
+            _check_config_keys_mismatch(
+                config_type="io",
+                original_config=io.config,
+                update_config=io_update_data.config,
+                entity_id=io.uuid,
+            )
             io.config = {**io.config, **io_update_data.config}
 
             # If it's an OUTPUT, check for connected inputs that can
@@ -350,20 +381,22 @@ def _update_io(
 
                 downstream_inputs = [row[0] for row in result]
 
-            if downstream_inputs:
-                logging.debug("Updating connected input configs.")
-                downstream_ios = db.query(InputOutput).filter(
-                    InputOutput.uuid.in_(downstream_inputs)
-                ).all()
+                if downstream_inputs:
+                    logging.debug("Updating connected input configs.")
+                    downstream_ios = db.query(InputOutput).filter(
+                        InputOutput.uuid.in_(downstream_inputs)
+                    ).all()
 
-                # Apply the same config update to connected inputs
-                # We are sure here that the downstream has the same type
-                for downstream_io in downstream_ios:
-                    update_dict = _extract_default_keys_to_update_values(io)
-                    downstream_io.config = _updated_configs_with_values(
-                        downstream_io, update_dict, downstream_io.data_type)
-                    logging.debug(f"Updated input config with id {
-                        downstream_io.uuid}")
+                    # Apply the same config update to connected inputs
+                    # We are sure here that the downstream has the same type
+                    for downstream_io in downstream_ios:
+                        update_dict = _extract_default_keys_to_update_values(
+                            io)
+                        downstream_io.config = _updated_configs_with_values(
+                            downstream_io, update_dict, downstream_io.data_type
+                        )
+                        logging.debug(f"Updated input config with id {
+                            downstream_io.uuid}")
 
 
 def update_compute_block(
@@ -396,8 +429,17 @@ def update_compute_block(
             if selected_entrypoint and entrypoint:
                 # Update envs safely
                 if selected_entrypoint.envs:
+                    _check_config_keys_mismatch(
+                        config_type="envs",
+                        original_config=entrypoint.envs,
+                        update_config=selected_entrypoint.envs,
+                        entity_id=entrypoint.uuid
+                    )
                     logging.debug("Updating Compute Blocks envs.")
-                    entrypoint.envs.update(selected_entrypoint.envs)
+                    entrypoint.envs = {
+                        **entrypoint.envs,
+                        **selected_entrypoint.envs
+                    }
 
                 _update_io(selected_entrypoint.inputs,
                            InputOutputType.INPUT, entrypoint, db)
@@ -408,7 +450,6 @@ def update_compute_block(
             db.refresh(cb)
 
         return cb.uuid
-
     except Exception as e:
         raise e
 

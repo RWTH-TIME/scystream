@@ -1,4 +1,5 @@
 networks:
+  core:
   airflow:
   data_processing:
 
@@ -21,7 +22,7 @@ x-airflow-common:
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
-    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 5
+    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 0
     AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: 0
     # AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
@@ -230,6 +231,7 @@ services:
         condition: service_completed_successfully
     networks:
       - airflow
+      - core
   
   ### spark:
   spark-master:
@@ -245,6 +247,8 @@ services:
     ports:
       - "8080:8080" # web ui
       - "7077:7077" # master port
+    networks:
+      - data_processing
   
   # In production, there should be more workers
   spark-worker:
@@ -256,6 +260,8 @@ services:
       - SPARK_WORKER_CORES=1
     depends_on:
       - spark-master
+    networks:
+      - data_processing
   
   # The postgres we offer the compute blocks to save data at
   data-postgres:
@@ -266,6 +272,8 @@ services:
       - POSTGRES_DB=postgres
     ports:
       - "5433:5432"
+    networks:
+      - data_processing
 
   # The minio we offer the comput block to save files at
   data-minio:
@@ -289,6 +297,8 @@ services:
     restart: always
     ports:
       - "8000:80"
+    networks:
+      - core
   
   core:
     build: core
@@ -297,6 +307,7 @@ services:
       - "4000:4000"
     environment:
       EXTERNAL_URL: "http://localhost:8000"
+      AIRFLOW_HOST: "http://airflow-webserver:8080/api/v1"
     depends_on:
       catapulte:
         condition: service_started
@@ -304,6 +315,8 @@ services:
         condition: service_healthy
     volumes:
       - airflow-dags:/app/airflow-dags
+    networks:
+      - core
 
   core-postgres:
     image: postgres:17
@@ -321,11 +334,15 @@ services:
       interval: 10s
       timeout: 2s
       retries: 5
+    networks:
+      - core
 
   smtp:
     image: reachfive/fake-smtp-server
     ports:
       - "1080:1080"
+    networks:
+      - core
 
   catapulte:
     build: github.com/jdrouet/catapulte
@@ -345,6 +362,8 @@ services:
       - smtp
     ports:
       - "3010:3000"
+    networks:
+      - core
 
 volumes:
   postgres-airflow-volume:

@@ -35,7 +35,6 @@ export default function ConfigEnvsInputs({ pairs, onUpdate }: ConfigEnvsInputsPr
 
   return (
     <div className="border border-gray-300 rounded-lg p-4 shadow-sm">
-      {/* Small clickable area (chevron icon) */}
       <div
         className="flex items-center justify-start cursor-pointer py-2 transition-all duration-300 border-gray-200"
         onClick={() => setExpanded(!expanded)}
@@ -56,7 +55,6 @@ export default function ConfigEnvsInputs({ pairs, onUpdate }: ConfigEnvsInputsPr
         <span className="ml-2 text-md font-medium">{expanded ? "Hide Configuration" : "Show Configuration"}</span>
       </div>
 
-      {/* Animated expansion */}
       <div
         className={`overflow-hidden transition-max-height duration-500 ease-in-out ${expanded ? "max-h-screen" : "max-h-0"}`}
       >

@@ -1,5 +1,6 @@
 from sqlalchemy import exc
 from fastapi import HTTPException
+from airflow_client.client import ApiException
 from psycopg2 import Error as PostgresError
 from psycopg2.errors import (
     UniqueViolation,
@@ -7,6 +8,7 @@ from psycopg2.errors import (
     NotNullViolation,
 )
 import logging
+
 
 """
 The handleError function is intented to be used in our views
@@ -30,6 +32,11 @@ def handle_error(error: Exception) -> None:
             raise HTTPException(
                 409, detail=f"db integrity violated: {error_msg}"
             )
+    elif isinstance(error, ApiException):
+        logging.error(
+            f"API Exception ocurred when contacting Airflow: {error}")
+        raise HTTPException(
+            500, detail="While talking to Airflow an error occured.")
     elif isinstance(error, HTTPException):
         # HTTPExceptions are already in the right format
         raise error
