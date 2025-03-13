@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, MouseEventHandler, PropsWithChildren } from "react";
+import type { ButtonHTMLAttributes, MouseEventHandler, PropsWithChildren } from "react"
 
 export enum ButtonSentiment {
   POSITIVE,
@@ -22,13 +22,13 @@ export default function Button({
   ...rest
 }: ButtonProps) {
   // Define styles based on sentiment
-  let sentimentStyles = "";
+  let sentimentStyles = ""
   if (sentiment === ButtonSentiment.POSITIVE) {
-    sentimentStyles = "bg-blue-500 hover:bg-blue-600 text-white";
+    sentimentStyles = "bg-blue-500 hover:bg-blue-600 text-white"
   } else if (sentiment === ButtonSentiment.NEGATIVE) {
-    sentimentStyles = "bg-red-500 hover:bg-red-600 text-white";
+    sentimentStyles = "bg-red-500 hover:bg-red-600 text-white"
   } else {
-    sentimentStyles = "bg-gray-200 hover:bg-gray-300 text-gray-500";
+    sentimentStyles = "bg-gray-200 hover:bg-gray-300 text-gray-500"
   }
 
   return (
@@ -41,6 +41,6 @@ export default function Button({
     >
       {children}
     </button>
-  );
+  )
 }
 

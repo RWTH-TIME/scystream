@@ -25,7 +25,7 @@ export default function MetadataTab({
   handleSave,
   loading
 }: MetadataTab) {
-  const { selectedComputeBlock } = useSelectedComputeBlock()
+  const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { selectedProject } = useSelectedProject()
   const { setAlert } = useAlert();
   const { mutateAsync: deleteMutate, isPending: deleteLoading } = useDeleteComputeBlockMutation(setAlert, selectedProject?.uuid)
@@ -34,6 +34,7 @@ export default function MetadataTab({
 
   function onCBDelete() {
     if (selectedComputeBlock) {
+      setSelectedComputeBlock(undefined)
       deleteMutate(selectedComputeBlock.id)
       setDeleteApproveOpen(false)
     }
