@@ -12,3 +12,4 @@ apache-airflow-client==2.10.0
 networkx==2.8.8
 Jinja2==3.1.6
 scystream-sdk==1.1.0
+websockets==15.0.1

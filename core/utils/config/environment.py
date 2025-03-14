@@ -29,17 +29,22 @@ class Settings(BaseSettings):
     TRUSTED_CBC_DOMAINS: List[str] = ["github.com"]
     MAX_CBC_FILE_SIZE: int = 10 * 1024 * 1024  # 10 MB
 
-    DEFAULT_CB_CONFIG_S3_HOST: str = "data-minio"
-    DEFAULT_CB_CONFIG_S3_PORT: str = "9001"
-    DEFAULT_CB_CONFIG_S3_ACCESS_KEY: str = "access"
-    DEFAULT_CB_CONFIG_S3_SECRET_KEY: str = "secret"
-    DEFAULT_CB_CONFIG_S3_BUCKET_NAME: str = "data_tf_bucket"
+    DEFAULT_CB_CONFIG_S3_HOST: str = "http://data-minio"
+    DEFAULT_CB_CONFIG_S3_PORT: str = "9000"
+    DEFAULT_CB_CONFIG_S3_ACCESS_KEY: str = "minioadmin"
+    DEFAULT_CB_CONFIG_S3_SECRET_KEY: str = "minioadmin"
+    DEFAULT_CB_CONFIG_S3_BUCKET_NAME: str = "data"
     DEFAULT_CB_CONFIG_S3_FILE_PATH: str = "/"
 
     DEFAULT_CB_CONFIG_PG_USER: str = "postgres"
     DEFAULT_CB_CONFIG_PG_PASS: str = "postgres"
     DEFAULT_CB_CONFIG_PG_HOST: str = "data-postgres"
     DEFAULT_CB_CONFIG_PG_PORT: str = "5432"
+
+    AIRFLOW_HOST: str = "http://localhost:3333/api/v1"
+    AIRFLOW_USER: str = "airflow"
+    AIRFLOW_PASS: str = "airflow"
+    AIRFLOW_DAG_DIR: str = "airflow-dags"
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8", case_sensitive=True
