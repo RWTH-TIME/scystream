@@ -25,6 +25,7 @@ import type { EdgeDTO } from "@/mutations/computeBlockMutation";
 import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMutation, useUpdateComputeBlockCoords } from "@/mutations/computeBlockMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import DeleteModal from "./DeleteModal"
+import { useTriggerWorkflowMutation } from "@/mutations/workflowMutations"
 
 
 function useGraphData(selectedProjectUUID: string | undefined) {
@@ -34,6 +35,7 @@ function useGraphData(selectedProjectUUID: string | undefined) {
   const [selectedEdge, setSelectedEdge] = useState<Edge | undefined>(undefined)
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { setAlert } = useAlert();
+
 
   useEffect(() => {
     if (projectDetails) {
@@ -119,6 +121,7 @@ export function Workbench() {
   const { mutate: deleteEdgeMutate } = useDeleteEdgeMutation(setAlert, selectedProject?.uuid)
   const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, selectedProject?.uuid)
   const { mutate: updateBlockMutate } = useUpdateComputeBlockCoords(setAlert, selectedProject?.uuid)
+  const { mutateAsync: triggerWorkflow } = useTriggerWorkflowMutation(setAlert)
 
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false);
   const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false);
@@ -234,6 +237,11 @@ export function Workbench() {
     [edges, nodes, setAlert, edgeMutate]
   );
 
+  function onPlayClicked() {
+    if (!selectedProject) return
+    triggerWorkflow(selectedProject.uuid)
+  }
+
   if (!selectedProject) {
     return <div>Select a Project!</div>
   }
@@ -259,7 +267,7 @@ export function Workbench() {
 
       <div className="flex absolute justify-between flex-row p-5 gap-3 right-0 bg-inherit z-30">
         <NodeControls onDragStart={onDragStart} />
-        <ActionButtons onPlayClick={() => console.log("Play clicked")} onDeleteClick={() => setDeleteApproveOpen(true)} />
+        <ActionButtons onPlayClick={onPlayClicked} onDeleteClick={() => setDeleteApproveOpen(true)} />
       </div>
 
       <div className="h-full">

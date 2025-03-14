@@ -13,6 +13,7 @@ from services.workflow_service.controllers import compute_block_controller
 from services.workflow_service.schemas.workflow import WorfklowValidationError
 from airflow_client.client import ApiClient, Configuration, ApiException
 from airflow_client.client.api.dag_run_api import DAGRunApi
+from airflow_client.client.model.list_dag_runs_form import ListDagRunsForm
 from airflow_client.client.model.dag_run import DAGRun
 from airflow_client.client.api.dag_api import DAGApi
 from airflow_client.client.model.dag import DAG
@@ -201,6 +202,46 @@ def trigger_workflow_run(dag_id: str):
             raise e
 
 
-# TODO: STOP workflow_run -> Abort run
-# TODO: Get workflow status
-# TODO: Get compute block status
+def get_all_dags():
+    with ApiClient(airflow_config) as api_client:
+        api = DAGApi(api_client)
+
+        try:
+            dags = api.get_dags()
+            return [d.dag_id for d in dags.dags]
+        except ApiException as e:
+            logging.error(
+                f"Exception while trying to query the DAGs from airflow: {e}")
+            raise e
+
+
+def last_dag_run_overview(dag_ids) -> dict:
+    with ApiClient(airflow_config) as api_client:
+        api = DAGRunApi(api_client)
+        most_recent_runs = {}
+
+        try:
+            all_runs = api.get_dag_runs_batch(ListDagRunsForm(
+                dag_ids=dag_ids,
+                order_by="execution_date"
+            ))
+            # We only select the newest runs per DAG
+            # Unfortunately airflow_client does not offer this out of the box
+            for run in all_runs["dag_runs"]:
+                dag_id = run["dag_id"]
+                if (
+                    dag_id not in most_recent_runs or
+                    run["execution_date"] >
+                    most_recent_runs[dag_id]["execution_date"]
+                ):
+                    most_recent_runs[dag_id] = run
+        except ApiException as e:
+            logging.error(
+                f"Exception while trying to get DAGs statuses from airflow: {
+                    e}"
+            )
+            raise e
+
+        return most_recent_runs
+
+# TODO: STOP workflow_run -> Abort run?
