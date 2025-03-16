@@ -3,6 +3,7 @@ from jinja2 import Environment, FileSystemLoader
 from fastapi import HTTPException
 import networkx as nx
 from uuid import UUID
+from typing import List
 import json
 import logging
 
@@ -10,12 +11,15 @@ from utils.config.environment import ENV
 from services.workflow_service.controllers.project_controller \
     import read_project
 from services.workflow_service.controllers import compute_block_controller
-from services.workflow_service.schemas.workflow import WorfklowValidationError
+from services.workflow_service.schemas.workflow import WorfklowValidationError, BlockStatus
 from airflow_client.client import ApiClient, Configuration, ApiException
 from airflow_client.client.api.dag_run_api import DAGRunApi
 from airflow_client.client.model.list_dag_runs_form import ListDagRunsForm
 from airflow_client.client.model.dag_run import DAGRun
 from airflow_client.client.api.dag_api import DAGApi
+from airflow_client.client.api.task_instance_api import TaskInstanceApi
+from airflow_client.client.model.task_instance_collection import \
+    TaskInstanceCollection
 from airflow_client.client.model.dag import DAG
 
 DAG_DIRECTORY = ENV.AIRFLOW_DAG_DIR
@@ -215,7 +219,7 @@ def get_all_dags():
             raise e
 
 
-def last_dag_run_overview(dag_ids) -> dict:
+def last_dag_run_overview(dag_ids: List[str]) -> dict:
     with ApiClient(airflow_config) as api_client:
         api = DAGRunApi(api_client)
         most_recent_runs = {}
@@ -243,5 +247,61 @@ def last_dag_run_overview(dag_ids) -> dict:
             raise e
 
         return most_recent_runs
+
+
+def get_latest_dag_run(project_id: UUID) -> str | None:
+    dag_id = f"dag_{str(project_id).replace("-", "_")}"
+    with ApiClient(airflow_config) as api_client:
+        api = DAGRunApi(api_client)
+
+        try:
+            dag_runs = api.get_dag_runs(
+                dag_id, limit=1, order_by="-execution_date").dag_runs
+
+            if dag_runs:
+                return dag_runs[0].dag_run_id
+            else:
+                logging.warning(f"No DAG runs found for DAG {dag_id}")
+                return None
+        except ApiException as e:
+            logging.error(f"Error fetching DAG runs for {dag_id}: {e}")
+            raise e
+
+
+def dag_status(project_id: UUID) -> dict:
+    dag_id = f"dag_{str(project_id).replace('-', '_')}"
+    latest_run_id = get_latest_dag_run(project_id)
+
+    if not latest_run_id:
+        raise HTTPException(status_code=400, detail="DAG was not yet run.")
+
+    with ApiClient(airflow_config) as api_client:
+        api = TaskInstanceApi(api_client)
+
+        task_statuses = {}
+
+        try:
+            tasks = api.get_task_instances(
+                dag_id,
+                latest_run_id
+            ).task_instances
+
+            for task in tasks:
+                task_statuses[task.task_id] = {
+                    "state": BlockStatus.from_airflow_state(
+                        task.state.value if task.state else None
+                    ).value,
+                }
+
+            return task_statuses
+        except ApiException as e:
+            logging.error(
+                f"""
+                Exception while trying to get Compute Block statuses
+                per project from airflow: {e}
+                """
+            )
+            raise e
+
 
 # TODO: STOP workflow_run -> Abort run?

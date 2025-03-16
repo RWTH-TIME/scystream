@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from uuid import UUID
 from utils.errors.error import handle_error
 import asyncio
+import logging
 
 from services.workflow_service.controllers import workflow_controller
 from services.workflow_service.schemas.workflow import WorkflowStatus
@@ -24,8 +25,26 @@ def translate_project_to_dag(
         raise handle_error(e)
 
 
+@router.post("/{project_id}/pause", status_code=200)
+def pause_dag(
+    project_id: UUID | None = None
+):
+    if not project_id:
+        raise HTTPException(status_code=422, detail="Project ID missing")
+
+    dag_id = f"dag_{str(project_id).replace("-", "_")}"
+
+    try:
+        workflow_controller.unpause_dag(dag_id, True)
+    except Exception as e:
+        raise handle_error(e)
+
+
 @router.websocket("/ws/project_status")
 async def ws_project_status(websocket: WebSocket):
+    """
+    Returns the DAG statuses
+    """
     await websocket.accept()
 
     try:
@@ -46,7 +65,29 @@ async def ws_project_status(websocket: WebSocket):
 
             await websocket.send_json(all_proj_status)
             await asyncio.sleep(5)
-    except WebSocketDisconnect as e:
-        raise handle_error(e)
+    except WebSocketDisconnect:
+        logging.info(f"Websocket disconnected for project {str(project_id)}")
+    except Exception as e:
+        logging.error(f"Error in ws_workflow_status: {e}")
+        await websocket.close(code=1011)
+
+
+@router.websocket("/ws/workflow_status/{project_id}")
+async def ws_workflow_status(websocket: WebSocket, project_id: UUID):
+    """
+    Returns the status of the blocks within a workflow
+    """
+    await websocket.accept()
+
+    try:
+        while True:
+            status = workflow_controller.dag_status(project_id)
+            await websocket.send_json(status)
+            await asyncio.sleep(5)
+    except WebSocketDisconnect:
+        logging.info(f"Websocket disconnected for project {str(project_id)}")
+    except Exception as e:
+        logging.error(f"Error in ws_workflow_status: {e}")
+        await websocket.close(code=1011)
 
 # TODO: Websocket for Compute Block Status

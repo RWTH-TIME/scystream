@@ -19,6 +19,26 @@ class WorkflowStatus(Enum):
         return state_mapping.get(airflow_state.lower(), cls.IDLE)
 
 
+class BlockStatus(Enum):
+    SUCCESS = "SUCCESS"
+    RUNNING = "RUNNING"
+    FAILED = "FAILED"
+    SCHEDULED = "SCHEDULED"
+    IDLE = "IDLE"
+
+    @classmethod
+    def from_airflow_state(cls, airflow_state: str | None) -> "BlockStatus":
+        if not airflow_state:
+            return cls.IDLE
+        state_mapping = {
+            "success": cls.SUCCESS,
+            "running": cls.RUNNING,
+            "failed": cls.FAILED,
+            "scheduled": cls.SCHEDULED,
+        }
+        return state_mapping.get(airflow_state.lower(), cls.IDLE)
+
+
 class WorfklowValidationError(BaseModel):
     project_id: str
     missing_configs: Dict[str, List[str]]
