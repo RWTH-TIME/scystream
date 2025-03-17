@@ -30,7 +30,7 @@ export default function EditProjectDraggable() {
 
   const tabs = [
     { key: "metadata", label: "Metadata" },
-  ];
+  ]
 
 
   return (

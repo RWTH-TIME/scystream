@@ -302,6 +302,3 @@ def dag_status(project_id: UUID) -> dict:
                 """
             )
             raise e
-
-
-# TODO: STOP workflow_run -> Abort run?

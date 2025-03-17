@@ -1,8 +1,8 @@
-import { useState } from "react";
-import type { RecordValueType } from "../CreateComputeBlockModal";
-import Input from "./Input";
-import Dropdown from "./Dropdown";
-import MultiSelectInput from "./MultiSelectInput";
+import { useState } from "react"
+import type { RecordValueType } from "../CreateComputeBlockModal"
+import Input from "./Input"
+import Dropdown from "./Dropdown"
+import MultiSelectInput from "./MultiSelectInput"
 
 type ConfigEnvsInputsProps = {
   pairs: Record<string, RecordValueType>,
@@ -10,10 +10,10 @@ type ConfigEnvsInputsProps = {
 };
 
 export default function ConfigEnvsInputs({ pairs, onUpdate }: ConfigEnvsInputsProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false)
 
   function handleChange(key: string, newValue: RecordValueType) {
-    onUpdate(key, newValue);
+    onUpdate(key, newValue)
   }
 
   function renderOption(val: boolean) {
@@ -23,14 +23,14 @@ export default function ConfigEnvsInputs({ pairs, onUpdate }: ConfigEnvsInputsPr
           {val ? "True" : "False"}
         </span>
       </div>
-    );
+    )
   }
 
   function getListTypeLabel(value: string[] | number[] | boolean[]): string {
-    if (value.every((item) => typeof item === "string")) return " | string-list";
-    if (value.every((item) => typeof item === "number")) return " | number-list";
-    if (value.every((item) => typeof item === "boolean")) return " | boolean-list";
-    return " | mixed-list";
+    if (value.every((item) => typeof item === "string")) return " | string-list"
+    if (value.every((item) => typeof item === "number")) return " | number-list"
+    if (value.every((item) => typeof item === "boolean")) return " | boolean-list"
+    return " | mixed-list"
   }
 
   return (
@@ -101,6 +101,6 @@ export default function ConfigEnvsInputs({ pairs, onUpdate }: ConfigEnvsInputsPr
         ))}
       </div>
     </div>
-  );
+  )
 }
 

@@ -64,7 +64,7 @@ async def ws_project_status(websocket: WebSocket):
                 all_proj_status[project_id] = status.value
 
             await websocket.send_json(all_proj_status)
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
     except WebSocketDisconnect:
         logging.info(f"Websocket disconnected for project {str(project_id)}")
     except Exception as e:
@@ -89,5 +89,3 @@ async def ws_workflow_status(websocket: WebSocket, project_id: UUID):
     except Exception as e:
         logging.error(f"Error in ws_workflow_status: {e}")
         await websocket.close(code=1011)
-
-# TODO: Websocket for Compute Block Status

@@ -1,10 +1,10 @@
-import { AlertType, type SetAlertType } from "@/hooks/useAlert";
-import displayStandardAxiosErrors from "@/utils/errors";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
-import { api } from "@/utils/axios";
-import type { InputOutputType, RecordValueType } from "@/components/CreateComputeBlockModal";
-import type { ComputeBlockNodeType } from "@/components/nodes/ComputeBlockNode";
+import { AlertType, type SetAlertType } from "@/hooks/useAlert"
+import displayStandardAxiosErrors from "@/utils/errors"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { AxiosError } from "axios"
+import { api } from "@/utils/axios"
+import type { InputOutputType, RecordValueType } from "@/components/CreateComputeBlockModal"
+import type { ComputeBlockNodeType } from "@/components/nodes/ComputeBlockNode"
 
 const GET_COMPUTE_BLOCK_INFO = "compute_block/information"
 const CREATE_COMPUTE_BLOCK = "compute_block/"
@@ -130,7 +130,7 @@ type UpdateComputeBlockCoordsDTO = {
   y_pos: number,
 }
 export function useUpdateComputeBlockCoords(setAlert: SetAlertType, project_id?: string) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation<void, AxiosError, UpdateComputeBlockCoordsDTO>({
     mutationFn: async function updateComputeBlockCoords(coords: UpdateComputeBlockCoordsDTO) {
@@ -160,8 +160,8 @@ export function useUpdateComputeBlockCoords(setAlert: SetAlertType, project_id?:
       })
     },
     onError: (error: AxiosError) => {
-      displayStandardAxiosErrors(error, setAlert);
-      console.error(`Updating Compute Block failed: ${error}`);
+      displayStandardAxiosErrors(error, setAlert)
+      console.error(`Updating Compute Block failed: ${error}`)
     }
   })
 }
@@ -173,7 +173,7 @@ export function useUpdateComputeBlockMutation(setAlert: SetAlertType, project_id
     mutationFn: async function updateComputeBlock(update_dto: Partial<UpdateComputeBlockDTO>) {
       const cleaned = removeEmptyFields(update_dto)
       const response = await api.put(UPDATE_COMPUTE_BLOCK, JSON.stringify(cleaned))
-      return response.data;
+      return response.data
     },
     onSuccess: () => {
       if (project_id) {
@@ -206,7 +206,7 @@ export function useDeleteComputeBlockMutation(setAlert: SetAlertType, project_id
     onSuccess: (_, del_block_id) => {
       queryClient.setQueryData([project_id], (oldData: ComputeBlockByProjectResponse) => {
         // TODO: handle edges here aswell
-        const updatedBlocks = oldData.blocks.filter(block => block.id !== del_block_id);
+        const updatedBlocks = oldData.blocks.filter(block => block.id !== del_block_id)
         return {
           ...oldData,
           blocks: updatedBlocks
@@ -249,22 +249,22 @@ export function useDeleteEdgeMutation(setAlert: SetAlertType, project_id?: strin
 
   return useMutation<void, AxiosError, EdgeDTO>({
     mutationFn: async (data: EdgeDTO): Promise<void> => {
-      await api.post(DELETE_EDGE, JSON.stringify(data));
+      await api.post(DELETE_EDGE, JSON.stringify(data))
     },
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Deleting Edge failed ${error}`)
     },
     onSuccess: (_, del_edge) => {
-      const edgeId = del_edge.id;
+      const edgeId = del_edge.id
       queryClient.setQueryData([project_id], (oldData: ComputeBlockByProjectResponse) => {
-        const updatedEdges = oldData.edges.filter(edge => edge.id !== edgeId);
+        const updatedEdges = oldData.edges.filter(edge => edge.id !== edgeId)
         return {
           ...oldData,
           edges: updatedEdges,
-        };
-      });
+        }
+      })
     }
-  });
+  })
 }
 

@@ -27,7 +27,7 @@ export default function MetadataTab({
 }: MetadataTab) {
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { selectedProject } = useSelectedProject()
-  const { setAlert } = useAlert();
+  const { setAlert } = useAlert()
   const { mutateAsync: deleteMutate, isPending: deleteLoading } = useDeleteComputeBlockMutation(setAlert, selectedProject?.uuid)
 
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)

@@ -1,7 +1,7 @@
 import { Handle, Position } from "@xyflow/react"
 import React from "react"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
-import type { ComputeBlock, InputOutput } from "../CreateComputeBlockModal";
+import type { ComputeBlock, InputOutput } from "../CreateComputeBlockModal"
 import { InputOutputType } from "../CreateComputeBlockModal"
 import type { XYPosition, Node } from "@xyflow/react"
 
@@ -31,7 +31,7 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
       backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22white%22><path d=%22M12 2L2 7l10 5 10-5-10-5zm0 8.75L4 7l8-4 8 4-8 3.75zm-6 4.25v4.5L12 22l6-3.5v-4.5L12 19l-6-4z%22/></svg>')",
       backgroundColor: "#FFB74D",
     },
-  };
+  }
 
 
   const renderHandles = (items: InputOutput[], type: "target" | "source", position: Position) => {
@@ -53,9 +53,9 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
             top: `${(index + 1) * 20}%`,
           }}
         />
-      );
-    });
-  };
+      )
+    })
+  }
 
   return (
     <div className="flex justify-center items-center p-4">
@@ -99,6 +99,6 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
         </div>
       </div>
     </div>
-  );
+  )
 
 }
