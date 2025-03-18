@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
-import { useComputeBlockEnvsQuery, useDeleteComputeBlockMutation } from "@/mutations/computeBlockMutation"
-import { AlertType, useAlert } from "@/hooks/useAlert"
+import { useComputeBlockEnvsQuery, useDeleteComputeBlockMutation, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation"
+import { useAlert } from "@/hooks/useAlert"
 
 import ConfigBox from "@/components/ConfigBox"
 import Input from "@/components/inputs/Input"
@@ -28,6 +28,7 @@ export default function MetadataTab() {
   const { setAlert } = useAlert()
 
   const { mutateAsync: deleteMutate, isPending: deleteLoading } = useDeleteComputeBlockMutation(setAlert, selectedProject?.uuid)
+  const { mutateAsync: updateMutate, isPending: updateLoading } = useUpdateComputeBlockMutation(setAlert, selectedProject?.uuid)
   const { data: envs, isLoading: envsLoading, isError: envsError } = useComputeBlockEnvsQuery(selectedComputeBlock?.selected_entrypoint.id)
 
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
@@ -84,10 +85,12 @@ export default function MetadataTab() {
       changedFields.envs = changedEnvs
     }
 
-    console.log("Saving changes:", {
-      id: selectedComputeBlock?.selected_entrypoint.id,
-      ...changedFields
-    })
+    updateMutate(
+      {
+        id: selectedComputeBlock!.id,
+        ...changedFields
+      }
+    )
   }
 
   return (
@@ -129,7 +132,7 @@ export default function MetadataTab() {
             sentiment={ButtonSentiment.POSITIVE}
             disabled={!isDataChanged}
           >
-            <LoadingAndError loading={false} iconSize={21}>
+            <LoadingAndError loading={updateLoading} iconSize={21}>
               Save
             </LoadingAndError>
           </Button>

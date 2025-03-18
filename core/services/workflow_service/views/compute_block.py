@@ -8,17 +8,18 @@ from services.workflow_service.models.input_output import InputOutputType
 from services.workflow_service.schemas.compute_block import (
     ComputeBlockInformationRequest, ComputeBlockInformationResponse,
     CreateComputeBlockRequest, IDResponse,
-    GetNodesByProjectResponse, UpdateComputeBlockRequest,
-    EdgeDTO, SimpleNodeDTO, InputOutputDTO
+    GetNodesByProjectResponse,
+    EdgeDTO, SimpleNodeDTO, InputOutputDTO, BaseInputOutputDTO,
+    UpdateInputOutuputResponseDTO, UpdateComputeBlockDTO
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
 )
 from services.workflow_service.controllers.compute_block_controller import (
     request_cb_info, create_compute_block, get_compute_blocks_by_project,
-    update_compute_block, delete_block, create_stream_and_update_target_cfg,
+    delete_block, create_stream_and_update_target_cfg,
     get_block_dependencies_for_blocks, delete_edge, get_envs_for_entrypoint,
-    get_io_for_entrypoint
+    get_io_for_entrypoint, update_ios, update_block
 )
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
@@ -115,6 +116,31 @@ async def get_envs(
         raise handle_error(e)
 
 
+@router.put("/",
+            response_model=UpdateComputeBlockDTO)
+async def update_compute_block(
+    data: UpdateComputeBlockDTO
+):
+    try:
+        b = update_block(
+            data.id,
+            data.envs,
+            data.custom_name,
+            data.x_pos,
+            data.y_pos
+        )
+        return UpdateComputeBlockDTO(
+            id=b.uuid,
+            envs=b.selected_entrypoint.envs,
+            custom_name=b.custom_name,
+            x_pos=b.x_pos,
+            y_pos=b.y_pos
+        )
+    except Exception as e:
+        logging.error(f"Error updating compute block {data.id}: {e}")
+        raise handle_error(e)
+
+
 @router.get("/entrypoint/{entry_id}/io/", response_model=List[InputOutputDTO])
 async def get_io(
     entry_id: UUID,
@@ -134,21 +160,19 @@ async def get_io(
         raise handle_error(e)
 
 
-@router.put("/", response_model=IDResponse)
-async def update_cb(data: UpdateComputeBlockRequest):
+@router.put("/entrypoint/io/",
+            response_model=List[UpdateInputOutuputResponseDTO])
+async def update_io(data: List[BaseInputOutputDTO]):
     try:
-        id = update_compute_block(
-            id=data.id,
-            custom_name=data.custom_name,
-            selected_entrypoint=data.selected_entrypoint,
-            x_pos=data.x_pos,
-            y_pos=data.y_pos
-        )
-        return IDResponse(
-            id=id
-        )
+        id_to_config_map: Dict[UUID, Dict[
+            str, Optional[Union[str, int, float, List, bool]]]] = {
+            d.id: d.config for d in data
+        }
+        updated = update_ios(id_to_config_map)
+        return [UpdateInputOutuputResponseDTO.from_input_output(io) for io in updated]
     except Exception as e:
-        logging.error(f"Error getting compute blocks by project: {e}")
+        logging.error(f"Error updating ios with ids {
+                      list(id_to_config_map.keys())}: {e}")
         raise handle_error(e)
 
 

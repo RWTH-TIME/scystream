@@ -3,7 +3,8 @@ import LoadingAndError from "../LoadingAndError"
 import type { InputOutput, IOType, RecordValueType } from "../CreateComputeBlockModal"
 import Button, { ButtonSentiment } from "../Button"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
-import { useComputeBlocksIOsQuery } from "@/mutations/computeBlockMutation"
+import type { UpdateInputOutputDTO } from "@/mutations/computeBlockMutation"
+import { useComputeBlocksIOsQuery, useUpdateComputeBlocksIOsMutation } from "@/mutations/computeBlockMutation"
 import { useEffect, useState } from "react"
 
 type EditInputsOutputsTabProps = {
@@ -12,11 +13,11 @@ type EditInputsOutputsTabProps = {
 
 export default function EditInputsOutputsTab({ type }: EditInputsOutputsTabProps) {
   const { selectedComputeBlock } = useSelectedComputeBlock()
+  const { data: io, isLoading: ioLoading, isError: ioError } = useComputeBlocksIOsQuery(type, selectedComputeBlock?.selected_entrypoint.id)
+  const { mutateAsync } = useUpdateComputeBlocksIOsMutation()
 
-  const { data: io, isLoading: ioLoading, isError: ioError } = useComputeBlocksIOsQuery(selectedComputeBlock?.selected_entrypoint.id, type)
   const [ios, setIOS] = useState<InputOutput[]>([])
   const [initialIos, setInitialIos] = useState<InputOutput[]>([])
-
   const [modifiedFields, setModifiedFields] = useState<Map<string, RecordValueType>>(new Map())
 
   const isDataChanged = JSON.stringify(ios) !== JSON.stringify(initialIos)
@@ -50,15 +51,20 @@ export default function EditInputsOutputsTab({ type }: EditInputsOutputsTabProps
 
 
   function handleSave() {
-    const changedData = ios.map((io) => {
-      const updatedConfig = Object.fromEntries(
-        Object.entries(io.config).filter(([key]) => modifiedFields.has(key))
-      )
-      return { id: io.id, config: updatedConfig }
-    })
+    const changedData = ios
+      .map((io) => {
+        const updatedConfig = Object.fromEntries(
+          Object.entries(io.config).filter(([key]) => modifiedFields.has(key))
+        )
 
-    console.log("Saving changes:", changedData)
+        if (Object.keys(updatedConfig).length > 0) {
+          return { id: io.id, type: type, config: updatedConfig }
+        }
+        return null
+      })
+      .filter((io) => io !== null)
 
+    mutateAsync(changedData as UpdateInputOutputDTO[])
     setModifiedFields(new Map())
   }
 

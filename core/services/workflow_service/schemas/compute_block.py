@@ -11,6 +11,8 @@ from services.workflow_service.models.input_output import (
 )
 from utils.config.environment import ENV
 
+ConfigType = Dict[str, Optional[Union[str, int, float, List, bool]]]
+
 
 def _validate_url(url: str):
     parsed = urlparse(url)
@@ -45,7 +47,7 @@ class BaseIODTO(BaseModel):
 class InputOutputDTO(BaseIODTO):
     name: str
     description: Optional[str] = None
-    config: Dict[str, Optional[Union[str, int, float, List, bool]]]
+    config: ConfigType
 
     @classmethod
     def from_input_output(cls, name: str, input_output):
@@ -98,7 +100,7 @@ class EntrypointDTO(BaseEntrypointDTO):
     description: str
     inputs: List[InputOutputDTO]
     outputs: List[InputOutputDTO]
-    envs: Dict[str, Optional[Union[str, int, float, List, bool]]]
+    envs: ConfigType
 
     @classmethod
     def from_sdk_entrypoint(cls, name: str, entrypoint):
@@ -306,22 +308,28 @@ class GetNodesByProjectResponse(BaseModel):
     edges: List[EdgeDTO]
 
 
-class UpdateInputOutputDTO(BaseModel):
+class BaseInputOutputDTO(BaseModel):
     id: UUID
-    config: Optional[Dict[str,
-                          Optional[Union[str, int, float, List, bool]]]] = None
+    config: Optional[ConfigType] = None
 
 
-class UpdateEntrypointDTO(BaseModel):
+class UpdateInputOutuputResponseDTO(BaseInputOutputDTO):
+    type: InputOutputType
+    entrypoint_id: UUID
+
+    @classmethod
+    def from_input_output(cls, input_output):
+        return cls(
+            id=input_output.uuid,
+            type=input_output.type,
+            entrypoint_id=input_output.entrypoint_uuid,
+            config=input_output.config or {}
+        )
+
+
+class UpdateComputeBlockDTO(BaseModel):
     id: UUID
-    inputs: Optional[List[UpdateInputOutputDTO]] = None
-    outputs: Optional[List[UpdateInputOutputDTO]] = None
-    envs: Dict[str, Optional[Union[str, int, float, List, bool]]] = None
-
-
-class UpdateComputeBlockRequest(BaseModel):
-    id: UUID
+    envs: Optional[ConfigType] = None
     custom_name: Optional[str] = None
-    selected_entrypoint: Optional[UpdateEntrypointDTO] = None
     x_pos: Optional[float] = None
     y_pos: Optional[float] = None

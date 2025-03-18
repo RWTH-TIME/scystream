@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 import requests
 import os
-from typing import List, Dict, Optional, Union, Literal
+from typing import List, Dict, Optional, Literal
 from uuid import UUID, uuid4
 import tempfile
 import urllib.parse
@@ -16,10 +16,7 @@ from services.workflow_service.models.entrypoint import Entrypoint
 from services.workflow_service.models.input_output import (
     InputOutput, InputOutputType, DataType
 )
-from services.workflow_service.schemas.compute_block import (
-    UpdateEntrypointDTO, UpdateInputOutputDTO
-)
-
+from services.workflow_service.schemas.compute_block import ConfigType
 from scystream.sdk.config import SDKConfig, load_config
 from scystream.sdk.env.settings import PostgresSettings, FileSettings
 from scystream.sdk.config.models import ComputeBlock
@@ -208,7 +205,7 @@ def create_compute_block(
         y_pos: float,
         entry_name: str,
         entry_description: str,
-        envs: Dict[str, Optional[Union[str, int, float, List, bool]]],
+        envs: ConfigType,
         inputs: List[InputOutput],
         outputs: List[InputOutput],
         project_id: str
@@ -261,7 +258,7 @@ def create_compute_block(
         raise e
 
 
-def get_envs_for_entrypoint(e_id: UUID) -> Optional[Union[str, int, float, List, bool]]:
+def get_envs_for_entrypoint(e_id: UUID) -> ConfigType | None:
     db: Session = next(get_database())
 
     e = db.query(Entrypoint).filter_by(uuid=e_id).one_or_none()
@@ -330,10 +327,10 @@ def get_block_dependencies_for_blocks(
 
 
 def _check_config_keys_mismatch(
-        config_type: Literal["envs", "io"],
-        original_config: dict,
-        update_config: dict,
-        entity_id: UUID,
+    config_type: Literal["envs", "io"],
+    original_config: ConfigType,
+    update_config: ConfigType,
+    entity_id: UUID,
 ):
     """
     Check if the keys in the original config and update config are the same.
@@ -342,139 +339,130 @@ def _check_config_keys_mismatch(
     original_keys = set(original_config.keys())
     update_keys = set(update_config.keys())
 
-    if original_keys != update_keys:
-        logging.debug(f"Key mismatch found for {
+    # Check if all update keys are in the original config keys
+    invalid_keys = update_keys - original_keys
+    if invalid_keys:
+        logging.debug(f"Invalid keys found for {
                       config_type} in entity {entity_id}:")
         logging.debug(f"Original {config_type} keys: {original_keys}")
         logging.debug(f"Updated {config_type} keys: {update_keys}")
+        logging.debug(f"Invalid keys: {invalid_keys}")
         raise HTTPException(
             status_code=422,
-            detail=f"Updated {config_type} keys do not match with original {
-                config_type} keys of {config_type} with id {entity_id}"
+            detail=f"Updated {config_type} contains invalid keys: {
+                ', '.join(map(str, invalid_keys))} for {config_type} with id {
+                    entity_id}"
         )
 
 
 def _update_io(
-    to_be_io: Optional[List[UpdateInputOutputDTO]],
-    io_type: InputOutputType,
-    entrypoint: Entrypoint,
-    db: Session
-):
+    db: Session,
+    io: InputOutput,
+    new_config: ConfigType
+) -> List[UUID]:
+    """
+    Returns a list of IO uuids that were automatically updated (downstreams).
+    """
+    logging.debug(f"Updating IO with id: {io.uuid}")
+
+    _check_config_keys_mismatch("io", io.config, new_config, io.uuid)
+    io.config = {**io.config, **new_config}
+
+    # Only Update Outputs of type File & PgTable
+    if (
+        io.type != InputOutputType.OUTPUT and
+        (io.data_type != DataType.FILE
+         or io.data_type != DataType.PGTABLE)
+    ):
+        return []
+
+    dep = db.execute(
+        select(block_dependencies.c.downstream_input_uuid)
+        .where(
+            block_dependencies.c.upstream_output_uuid == io.uuid
+        )
+    ).fetchall()
+    downstream_inputs = [row[0] for row in dep]
+    if not downstream_inputs:
+        return []
+
+    downstream_ios = db.query(InputOutput).filter(
+        InputOutput.uuid.in_(downstream_inputs)
+    ).all()
+    logging.debug(f"Updating connected input configs: {downstream_ios}.")
+
+    # Apply the same config update to connected inputs
+    # We are sure here that the downstream has the same type
+    updated_downstream_ids = []
+    for downstream_io in downstream_ios:
+        update_dict = _extract_default_keys_to_update_values(io)
+        downstream_io.config = _updated_configs_with_values(
+            downstream_io, update_dict, downstream_io.data_type
+        )
+        updated_downstream_ids.append(downstream_io.uuid)
+        logging.debug(f"Updated input config with id {
+            downstream_io.uuid}")
+
+    return updated_downstream_ids
+
+
+def update_ios(
+    update_dict: Dict[UUID, ConfigType]
+) -> List[UUID]:
     logging.debug("Updating input/outputs.")
-    if to_be_io is None or entrypoint is None:
-        return
 
-    existing_io = {
-        io.uuid: io for io in entrypoint.input_outputs if io.type == io_type
-    }
-
-    for io_update_data in to_be_io:
-        logging.debug(f"Updating io with id {io_update_data.id}")
-        if not io_update_data.id or io_update_data.id not in existing_io:
-            logging.warning(
-                f"Update Data {io_update_data} is missing id \
-                or Update Input/Output not found in existing Inputs/Outpus")
-            continue
-
-        io = existing_io[io_update_data.id]
-
-        # Update Config Dict
-        if io_update_data.config:
-            _check_config_keys_mismatch(
-                config_type="io",
-                original_config=io.config,
-                update_config=io_update_data.config,
-                entity_id=io.uuid,
-            )
-            io.config = {**io.config, **io_update_data.config}
-
-            # If it's an OUTPUT, check for connected inputs that can
-            # be overwritten
-            if (
-                    io_type == InputOutputType.OUTPUT and
-                    (io.data_type == DataType.FILE
-                     or io.data_type == DataType.PGTABLE)
-            ):
-                result = db.execute(
-                    select(block_dependencies.c.downstream_input_uuid)
-                    .where(
-                        block_dependencies.c.upstream_output_uuid == io.uuid
-                    )
-                ).fetchall()
-
-                downstream_inputs = [row[0] for row in result]
-
-                if downstream_inputs:
-                    logging.debug("Updating connected input configs.")
-                    downstream_ios = db.query(InputOutput).filter(
-                        InputOutput.uuid.in_(downstream_inputs)
-                    ).all()
-
-                    # Apply the same config update to connected inputs
-                    # We are sure here that the downstream has the same type
-                    for downstream_io in downstream_ios:
-                        update_dict = _extract_default_keys_to_update_values(
-                            io)
-                        downstream_io.config = _updated_configs_with_values(
-                            downstream_io, update_dict, downstream_io.data_type
-                        )
-                        logging.debug(f"Updated input config with id {
-                            downstream_io.uuid}")
-
-
-def update_compute_block(
-    id: UUID,
-    custom_name: Optional[str] = None,
-    selected_entrypoint: Optional[UpdateEntrypointDTO] = None,
-    x_pos: Optional[float] = None,
-    y_pos: Optional[float] = None,
-) -> UUID:
-    logging.debug(f"Updating Compute Block with id {id}")
     db: Session = next(get_database())
 
-    try:
-        with db.begin():
-            cb = db.query(Block).filter_by(uuid=id).one_or_none()
+    with db.begin():
+        ids = list(update_dict.keys())
+        ios = db.query(InputOutput).filter(InputOutput.uuid.in_(ids)).all()
 
-            if not cb:
-                raise HTTPException(status_code=400, detail="Block not found.")
+        if len(ios) == 0:
+            raise HTTPException(
+                status_code=400, detail="Provided Inputs do not exist.")
 
-            # Simple Attributes
-            for attr, value in {
-                "custom_name": custom_name,
-                "x_pos": x_pos,
-                "y_pos": y_pos,
-            }.items():
-                if value is not None:
-                    setattr(cb, attr, value)
+        for io in ios:
+            updated_downstreams = _update_io(db, io, update_dict.get(io.uuid))
+            ids.extend(updated_downstreams)
 
-            entrypoint = cb.selected_entrypoint
-            if selected_entrypoint and entrypoint:
-                # Update envs safely
-                if selected_entrypoint.envs:
-                    _check_config_keys_mismatch(
-                        config_type="envs",
-                        original_config=entrypoint.envs,
-                        update_config=selected_entrypoint.envs,
-                        entity_id=entrypoint.uuid
-                    )
-                    logging.debug("Updating Compute Blocks envs.")
-                    entrypoint.envs = {
-                        **entrypoint.envs,
-                        **selected_entrypoint.envs
-                    }
+        logging.info("Input/Output updates committed successfully.")
 
-                _update_io(selected_entrypoint.inputs,
-                           InputOutputType.INPUT, entrypoint, db)
-                _update_io(selected_entrypoint.outputs,
-                           InputOutputType.OUTPUT, entrypoint, db)
+    updated = db.query(InputOutput).filter(
+        InputOutput.uuid.in_(set(ids))).all()
+    return updated
 
-            db.flush()
-            db.refresh(cb)
 
-        return cb.uuid
-    except Exception as e:
-        raise e
+def update_block(
+    id: UUID,
+    envs: Optional[UUID],
+    custom_name: Optional[str],
+    x_pos: Optional[float],
+    y_pos: Optional[float]
+) -> Block:
+    db: Session = next(get_database())
+
+    block = db.query(Block).filter_by(uuid=id).one_or_none()
+    if not block:
+        raise HTTPException(status_code=404, detail="Block not found.")
+
+    if custom_name:
+        block.custom_name = custom_name
+
+    if envs:
+        _check_config_keys_mismatch(
+            "envs", block.selected_entrypoint.envs, envs, block.uuid)
+        block.envs = {**block.envs, **envs}
+
+    if x_pos is not None:
+        block.x_pos = x_pos
+
+    if y_pos is not None:
+        block.y_pos = y_pos
+
+    db.commit()
+    db.refresh(block)
+
+    return block
 
 
 def delete_block(
@@ -506,51 +494,48 @@ def create_stream_and_update_target_cfg(
                   """)
     db: Session = next(get_database())
 
-    try:
-        with db.begin():
-            dependency = {
-                "upstream_block_uuid": from_block_uuid,
-                "upstream_output_uuid": from_output_uuid,
-                "downstream_block_uuid": to_block_uuid,
-                "downstream_input_uuid": to_input_uuid,
-            }
+    with db.begin():
+        dependency = {
+            "upstream_block_uuid": from_block_uuid,
+            "upstream_output_uuid": from_output_uuid,
+            "downstream_block_uuid": to_block_uuid,
+            "downstream_input_uuid": to_input_uuid,
+        }
 
-            db.execute(block_dependencies.insert().values(dependency))
+        db.execute(block_dependencies.insert().values(dependency))
 
-            # Compare the cfgs, overwrite the cfgs
-            target_io = db.query(InputOutput).filter_by(
-                uuid=to_input_uuid).one_or_none()
-            source_io = db.query(InputOutput).filter_by(
-                uuid=from_output_uuid).one_or_none()
+        # Compare the cfgs, overwrite the cfgs
+        target_io = db.query(InputOutput).filter_by(
+            uuid=to_input_uuid).one_or_none()
+        source_io = db.query(InputOutput).filter_by(
+            uuid=from_output_uuid).one_or_none()
 
-            if target_io.data_type != source_io.data_type:
-                # Data types do not match, dont allow connection
-                logging.error(f"Input datatype {
-                    target_io.data_type} does not match with \
+        if target_io.data_type != source_io.data_type:
+            # Data types do not match, dont allow connection
+            logging.error(f"Input datatype {
+                target_io.data_type} does not match with \
                                      output type {target_io.data_type}")
-                raise HTTPException(
-                    status_code=400,
-                    detail="Source & Target types do not match"
-                )
-
-            # Custom inputs are not overwritten
-            if (
-                    (target_io.data_type != source_io.data_type) or
-                    (target_io.data_type is DataType.CUSTOM)
-            ):
-                logging.info("Edge from custom output to input created.")
-                return target_io.uuid
-
-            logging.debug(f"Updating Input {to_input_uuid} configs.")
-            extracted_defaults = _extract_default_keys_to_update_values(
-                source_io
+            raise HTTPException(
+                status_code=400,
+                detail="Source & Target types do not match"
             )
-            target_io.config = _updated_configs_with_values(
-                target_io, extracted_defaults, target_io.data_type)
 
+        # Custom inputs are not overwritten
+        if (
+                (target_io.data_type != source_io.data_type) or
+                (target_io.data_type is DataType.CUSTOM)
+        ):
+            logging.info("Edge from custom output to input created.")
             return target_io.uuid
-    except Exception as e:
-        raise e
+
+        logging.debug(f"Updating Input {to_input_uuid} configs.")
+        extracted_defaults = _extract_default_keys_to_update_values(
+            source_io
+        )
+        target_io.config = _updated_configs_with_values(
+            target_io, extracted_defaults, target_io.data_type)
+
+        return target_io.uuid
 
 
 def delete_edge(
