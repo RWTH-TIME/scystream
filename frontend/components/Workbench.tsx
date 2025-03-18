@@ -16,7 +16,7 @@ import "@xyflow/react/dist/style.css"
 import LoadingAndError from "./LoadingAndError"
 import EditProjectDraggable from "./EditProjectDraggable"
 import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
-import type { ComputeBlock, InputOutput } from "@/components/CreateComputeBlockModal"
+import type { InputOutput } from "@/components/CreateComputeBlockModal"
 import CreateComputeBlockModal from "./CreateComputeBlockModal"
 import { useDeleteProjectMutation } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
@@ -37,17 +37,10 @@ function useGraphData(selectedProjectUUID: string | undefined) {
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { setAlert } = useAlert()
 
-
   useEffect(() => {
     if (projectDetails) {
       setNodes(projectDetails.blocks)
       setEdges(projectDetails.edges)
-      if (selectedComputeBlock?.id) {
-        // If the projectDetails have been updated, and the user currently selected a
-        // compute Block, update the data of the selectedCompute block. It might have changed
-        setSelectedComputeBlock(projectDetails.blocks.find((block: ComputeBlock) => block.id === selectedComputeBlock.id).data)
-      }
-
     }
   }, [projectDetails, selectedComputeBlock, setSelectedComputeBlock])
 

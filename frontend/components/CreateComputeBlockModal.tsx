@@ -20,6 +20,10 @@ export enum InputOutputType {
   DB = "pg_table",
   CUSTOM = "custom"
 }
+export enum IOType {
+  INPUT = "Input",
+  OUTPUT = "Output"
+}
 export type RecordValueType = string | number | boolean | string[] | number[] | boolean[] | null
 
 
@@ -72,25 +76,28 @@ export type PageProps = {
   loading?: boolean,
 }
 
+const emptyComputeBlockDraft: ComputeBlockDraft = {
+  name: "",
+  description: "",
+  custom_name: "",
+  author: "",
+  image: "",
+  entrypoints: [],
+  cbc_url: ""
+}
+
 export default function CreateComputeBlockModal({
   isOpen,
   onClose,
   dropCoordinates
 }: CreateComputeBlockModalProps) {
-  const [computeBlockDraft, setComputeBlockDraft] = useState<ComputeBlockDraft>({
-    name: "",
-    description: "",
-    custom_name: "",
-    author: "",
-    image: "",
-    entrypoints: [],
-    cbc_url: "",
-  })
+  const [computeBlockDraft, setComputeBlockDraft] = useState<ComputeBlockDraft>(emptyComputeBlockDraft)
   const [selectedEntrypoint, setSelectedEntrypoint] = useState<Entrypoint | undefined>(undefined)
   const [activeStep, setActiveStep] = useState<number>(0)
   const { selectedProject } = useSelectedProject()
   const { setAlert } = useAlert()
   const { mutateAsync, isPending: loading } = useCreateComputeBlockMutation(setAlert, selectedProject?.uuid)
+
   const stepsInformation = [
     { label: "CBC" },
     { label: "Entrypoint" },
@@ -98,15 +105,7 @@ export default function CreateComputeBlockModal({
   ]
 
   function reset() {
-    setComputeBlockDraft({
-      name: "",
-      description: "",
-      custom_name: "",
-      author: "",
-      image: "",
-      entrypoints: [],
-      cbc_url: "",
-    })
+    setComputeBlockDraft(emptyComputeBlockDraft)
     setSelectedEntrypoint(undefined)
     setActiveStep(0)
   };
@@ -174,9 +173,6 @@ export default function CreateComputeBlockModal({
         return <CreateComputeBlockConfigurationStep onNext={handleCreate} onPrev={handleBack} computeBlock={computeBlockDraft} setComputeBlock={setComputeBlockDraft} selectedEntrypoint={selectedEntrypoint} setSelectedEntrypoint={setSelectedEntrypoint} loading={loading} />
     }
   };
-
-
-
 
   return (
     <Modal onClose={handleModalClose} isOpen={isOpen}>

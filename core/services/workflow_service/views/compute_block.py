@@ -1,25 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 import logging
+from typing import List, Union, Dict, Optional
 
 from utils.errors.error import handle_error
+from services.workflow_service.models.input_output import InputOutputType
 from services.workflow_service.schemas.compute_block import (
     ComputeBlockInformationRequest, ComputeBlockInformationResponse,
     CreateComputeBlockRequest, IDResponse,
-    GetNodesByProjectResponse, NodeDTO, UpdateComputeBlockRequest,
-    EdgeDTO, SimpleNodeDataDTO, BaseEntrypointDTO, BaseIODTO,
-    SimpleNodeDTO, PositionDTO
+    GetNodesByProjectResponse, UpdateComputeBlockRequest,
+    EdgeDTO, SimpleNodeDTO, InputOutputDTO
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
 )
-from services.workflow_service.models.input_output import (
-    InputOutputType
-)
 from services.workflow_service.controllers.compute_block_controller import (
     request_cb_info, create_compute_block, get_compute_blocks_by_project,
     update_compute_block, delete_block, create_stream_and_update_target_cfg,
-    get_block_dependencies_for_blocks, delete_edge
+    get_block_dependencies_for_blocks, delete_edge, get_envs_for_entrypoint,
+    get_io_for_entrypoint
 )
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
@@ -94,6 +93,44 @@ async def get_by_project(
         )
     except Exception as e:
         logging.error(f"Error getting compute blocks by project: {e}")
+        raise handle_error(e)
+
+
+@router.get("/entrypoint/{entry_id}/envs/",
+            response_model=Dict[
+                str,
+                Optional[Union[str, int, float, List, bool]]]
+            )
+async def get_envs(
+    entry_id: UUID | None = None
+):
+    if not entry_id:
+        raise HTTPException(
+            status_code=422, detail="Entrypoint ID is required.")
+
+    try:
+        return get_envs_for_entrypoint(entry_id)
+    except Exception as e:
+        logging.error(f"Error getting envs of entrypoint {entry_id}: {e}")
+        raise handle_error(e)
+
+
+@router.get("/entrypoint/{entry_id}/io/", response_model=List[InputOutputDTO])
+async def get_io(
+    entry_id: UUID,
+    io_type: InputOutputType
+):
+    if not entry_id:
+        raise HTTPException(
+            status_code=422, detail="Entrypoint ID is required."
+        )
+
+    try:
+        ios = get_io_for_entrypoint(entry_id, io_type)
+        return [InputOutputDTO.from_input_output(io.name, io) for io in ios]
+    except Exception as e:
+        logging.error(f"Error getting {
+                      io_type.value}s of entrypoint {entry_id}: {e}")
         raise handle_error(e)
 
 

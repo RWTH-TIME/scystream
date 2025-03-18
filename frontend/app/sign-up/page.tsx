@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import Button from "@/components/Button"
+import Button, { ButtonSentiment } from "@/components/Button"
 import Input from "@/components/inputs/Input"
 import InputAdornment from "@/components/inputs/InputAdornment"
 import PageWithHeader from "@/components/layout/PageWithHeader"
@@ -27,7 +27,7 @@ export default function Register() {
 
   return (
     <PageWithHeader breadcrumbs={[{ text: "Signup", link: "/sign-up" }]}>
-      <form onSubmit={(e) => signUp(e)} className="w-1/4 bg-slate-50 m-auto p-10 min-h-96 rounded-lg flex flex-col gap-5 drop-shadow-sm justify-center">
+      <form onSubmit={(e) => signUp(e)} className="w-1/2 bg-slate-50 m-auto p-10 min-h-96 rounded-lg flex flex-col gap-5 drop-shadow-sm justify-center">
         <Input
           type="text"
           value={mail}
@@ -50,7 +50,7 @@ export default function Register() {
           onChange={setPasswordRep}
           leftAdornment={<InputAdornment type="password" />}
         />
-        <Button type="submit">Create Account</Button>
+        <Button sentiment={ButtonSentiment.POSITIVE} type="submit">Create Account</Button>
         <Link href="login"><u>Already have an account? - Login here</u></Link>
       </form>
     </PageWithHeader>

@@ -3,7 +3,7 @@ import displayStandardAxiosErrors from "@/utils/errors"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { api } from "@/utils/axios"
-import type { InputOutputType, RecordValueType } from "@/components/CreateComputeBlockModal"
+import { IOType, type InputOutputType, type RecordValueType } from "@/components/CreateComputeBlockModal"
 import type { ComputeBlockNodeType } from "@/components/nodes/ComputeBlockNode"
 import { QueryKeys } from "./queryKeys"
 
@@ -11,6 +11,8 @@ const GET_COMPUTE_BLOCK_INFO = "compute_block/information"
 const CREATE_COMPUTE_BLOCK = "compute_block/"
 const UPDATE_COMPUTE_BLOCK = "compute_block/"
 const GET_COMPUTE_BLOCK_BY_PROJECT = "compute_block/by_project/"
+const GET_ENVS = "compute_block/entrypoint/{entry_id}/envs"
+const GET_IOS = "compute_block/entrypoint/{entry_id}/io/?io_type={io_type}"
 const DELETE_COMPUTE_BLOCK = "compute_block/"
 const CREATE_EDGE = "compute_block/edge/"
 const DELETE_EDGE = "compute_block/edge/delete"
@@ -105,6 +107,30 @@ export function useComputeBlocksByProjectQuery(id: string | undefined) {
       return response.data
     },
     enabled: !!id
+  })
+}
+
+export function useComputeBlockEnvsQuery(entrypointId: string | undefined) {
+  return useQuery({
+    queryKey: [QueryKeys.cbEnvs, entrypointId],
+    queryFn: async function getEvns() {
+      if (!entrypointId) return
+      const response = await api.get(GET_ENVS.replace("{entry_id}", entrypointId))
+      return response.data
+    },
+    enabled: !!entrypointId
+  })
+}
+
+export function useComputeBlocksIOsQuery(entrypointId: string | undefined, io_type: IOType) {
+  return useQuery({
+    queryKey: [io_type === IOType.INPUT ? QueryKeys.cbInputs : QueryKeys.cbOutputs, entrypointId],
+    queryFn: async function getEvns() {
+      if (!entrypointId) return
+      const response = await api.get(GET_IOS.replace("{entry_id}", entrypointId).replace("{io_type}", io_type))
+      return response.data
+    },
+    enabled: !!entrypointId
   })
 }
 

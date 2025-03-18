@@ -108,7 +108,7 @@ export default function CreateComputeBlockConfigurationStep({
           headline="Environment Variables"
           description="Configure the Compute Blocks environment here"
           config={selectedEntrypoint?.envs}
-          updateComputeBlock={(key, value) => updateConfig("envs", key, value)}
+          updateConfig={(key, value) => updateConfig("envs", key, value)}
         />
       )}
 
@@ -117,7 +117,7 @@ export default function CreateComputeBlockConfigurationStep({
           headline="Inputs"
           description="Configure the Compute Blocks inputs here"
           config={selectedEntrypoint?.inputs}
-          updateComputeBlock={(key, value) => updateConfig("inputs", key, value)}
+          updateConfig={(key, value) => updateConfig("inputs", key, value)}
         />
       )}
 
@@ -126,7 +126,7 @@ export default function CreateComputeBlockConfigurationStep({
           headline="Outputs"
           description="Configure the Compute Blocks outputs here"
           config={selectedEntrypoint?.outputs}
-          updateComputeBlock={(key, value) => updateConfig("outputs", key, value)}
+          updateConfig={(key, value) => updateConfig("outputs", key, value)}
         />
       )}
 

@@ -261,6 +261,29 @@ def create_compute_block(
         raise e
 
 
+def get_envs_for_entrypoint(e_id: UUID) -> Optional[Union[str, int, float, List, bool]]:
+    db: Session = next(get_database())
+
+    e = db.query(Entrypoint).filter_by(uuid=e_id).one_or_none()
+
+    if not e:
+        return HTTPException(status_code=404, detail="Entrypoint not found.")
+
+    return e.envs
+
+
+def get_io_for_entrypoint(
+        e_id: UUID,
+        io_type: InputOutputType | None
+) -> List[InputOutput]:
+    db: Session = next(get_database())
+
+    return db.query(InputOutput).filter_by(
+        entrypoint_uuid=e_id,
+        type=io_type
+    ).all()
+
+
 def get_compute_blocks_by_project(project_id: UUID) -> List[Block]:
     db: Session = next(get_database())
 
