@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     AIRFLOW_HOST: str = "http://localhost:3333/api/v1"
     AIRFLOW_USER: str = "airflow"
     AIRFLOW_PASS: str = "airflow"
-    AIRFLOW_DAG_DIR: str = "airflow-dags"
+    AIRFLOW_DAG_DIR: str = "../airflow-dags"
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8", case_sensitive=True

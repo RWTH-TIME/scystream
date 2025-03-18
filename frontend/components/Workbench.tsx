@@ -26,6 +26,7 @@ import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMut
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import DeleteModal from "./DeleteModal"
 import { useTriggerWorkflowMutation } from "@/mutations/workflowMutations"
+import { CircularProgress } from "@mui/material"
 
 
 function useGraphData(selectedProjectUUID: string | undefined) {
@@ -87,16 +88,18 @@ function NodeControls({ onDragStart }: NodeControlProps) {
 type ActionButtonsProps = {
   onPlayClick: () => void,
   onDeleteClick: () => void,
+  isTriggerLoading: boolean,
 }
 
-function ActionButtons({ onPlayClick, onDeleteClick }: ActionButtonsProps) {
+function ActionButtons({ onPlayClick, onDeleteClick, isTriggerLoading }: ActionButtonsProps) {
   return (
     <div className="flex justify-self-end gap-3">
       <button
+        disabled={isTriggerLoading}
         onClick={onPlayClick}
         className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200"
       >
-        <PlayArrow />
+        {isTriggerLoading ? <CircularProgress /> : <PlayArrow />}
       </button>
       <button
         onClick={onDeleteClick}
@@ -121,7 +124,7 @@ export function Workbench() {
   const { mutate: deleteEdgeMutate } = useDeleteEdgeMutation(setAlert, selectedProject?.uuid)
   const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, selectedProject?.uuid)
   const { mutate: updateBlockMutate } = useUpdateComputeBlockCoords(setAlert, selectedProject?.uuid)
-  const { mutateAsync: triggerWorkflow } = useTriggerWorkflowMutation(setAlert)
+  const { mutateAsync: triggerWorkflow, isPending: triggerLoading } = useTriggerWorkflowMutation(setAlert)
 
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
   const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false)
@@ -267,7 +270,11 @@ export function Workbench() {
 
       <div className="flex absolute justify-between flex-row p-5 gap-3 right-0 bg-inherit z-30">
         <NodeControls onDragStart={onDragStart} />
-        <ActionButtons onPlayClick={onPlayClicked} onDeleteClick={() => setDeleteApproveOpen(true)} />
+        <ActionButtons
+          onPlayClick={onPlayClicked}
+          onDeleteClick={() => setDeleteApproveOpen(true)}
+          isTriggerLoading={triggerLoading}
+        />
       </div>
 
       <div className="h-full">

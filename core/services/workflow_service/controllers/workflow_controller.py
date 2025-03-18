@@ -6,6 +6,7 @@ from uuid import UUID
 from typing import List
 import json
 import logging
+import time
 
 from utils.config.environment import ENV
 from services.workflow_service.controllers.project_controller \
@@ -29,8 +30,6 @@ airflow_config = Configuration(
     username=ENV.AIRFLOW_USER,
     password=ENV.AIRFLOW_PASS
 )
-
-# TODO: Logging
 
 
 def parse_configs(configs):
@@ -181,6 +180,9 @@ def translate_project_to_dag(project_uuid: UUID) -> str:
     dag_id = f"dag_{str(project_uuid).replace('-', '_')}"
     dag_code = gen_dag_code(graph, templates, dag_id, project_uuid)
     save_dag_to_file(dag_code, dag_id)
+
+    # Make sure airflow has enough time to create the dag internally
+    time.sleep(1)
 
     return dag_id
 

@@ -8,6 +8,7 @@ import { useEffect, useRef } from "react"
 import { QueryKeys } from "./queryKeys"
 import { ProjectStatus, type Project } from "@/utils/types"
 import type { ComputeBlockByProjectResponse } from "./computeBlockMutation"
+import { webSocketManager } from "@/utils/websocketManager"
 
 const config = getConfig()
 const PROJECT_STATUS_WS = "workflow/ws/project_status"
@@ -42,20 +43,17 @@ export function useTriggerWorkflowMutation(setAlert: SetAlertType) {
   })
 }
 
+type ProjectStatusEvent = Record<string, string>
+
 export function useProjectStatusWS(setAlert: SetAlertType) {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    const websocket = new WebSocket(`${config.wsUrl}${PROJECT_STATUS_WS}`)
+    const websocket = webSocketManager.getConnection<ProjectStatusEvent>(`${config.wsUrl}${PROJECT_STATUS_WS}`)
 
-    websocket.onopen = () => {
-      console.log("WebSocket connection for project status established")
-    }
-
-    websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-      // Update project with id
+    function handleProjectStatusMessage(data: ProjectStatusEvent) {
       queryClient.setQueryData([QueryKeys.projects], (oldData: Project[]) => {
+        if (!oldData) return
         const updatedProjects = oldData.map((project: Project) => {
           if (data[project.uuid]) {
             return {
@@ -70,18 +68,21 @@ export function useProjectStatusWS(setAlert: SetAlertType) {
       })
     }
 
-    websocket.onerror = (error) => {
-      console.error("WebSocket for project status error:", error)
-      setAlert("Error fetching Project Status", AlertType.ERROR)
+    function handleWebsocketError() {
+      setAlert("Failed to get project status updates", AlertType.ERROR)
     }
 
-    websocket.onclose = (event) => {
-      console.log("WebSocket for project status: connection closed", event)
+    websocket.addListener(handleProjectStatusMessage)
+    websocket.addErrorHandler(handleWebsocketError)
+
+    return () => {
+      websocket.removeListener(handleProjectStatusMessage)
     }
   }, [queryClient, setAlert])
 }
 
 export function useComputeBlockStatusWS(setAlert: SetAlertType, project_id: string | undefined) {
+  // TODO: Use the WebsocketManager here aswell
   const queryClient = useQueryClient()
   const wsRef = useRef<WebSocket | null>(null)
 

@@ -26,7 +26,7 @@ x-airflow-common:
     AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: 0
     # AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
-    - airflow-dags:/opt/airflow/dags
+    - ./airflow-dags:/opt/airflow/dags
     - airflow-logs:/opt/airflow/logs
     - airflow-config:/opt/airflow/config
     - airflow-plugins:/opt/airflow/plugins
@@ -309,12 +309,12 @@ services:
       EXTERNAL_URL: "http://localhost:8000"
       AIRFLOW_HOST: "http://airflow-webserver:8080/api/v1"
     depends_on:
-      catapulte:
-        condition: service_started
+      #catapulte:
+      #  condition: service_started
       core-postgres:
         condition: service_healthy
     volumes:
-      - airflow-dags:/app/airflow-dags
+      - airflow-dags:/airflow-dags
     networks:
       - core
 
