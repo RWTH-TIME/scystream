@@ -5,6 +5,8 @@ import logging
 
 import services.workflow_service.controllers.project_controller as \
     project_controller
+import services.workflow_service.controllers.workflow_controller as \
+    workflow_controller
 from services.workflow_service.schemas.project import (
     Project,
     CreateProjectRequest,
@@ -86,6 +88,7 @@ async def delete_project(
 ):
     try:
         project_controller.delete_project(project_id)
+        workflow_controller.delete_dag_from_airflow(project_id)
     except Exception as e:
         logging.error(f"Error deleting project with id {project_id}: {e}")
         raise handle_error(e)

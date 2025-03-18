@@ -32,6 +32,22 @@ airflow_config = Configuration(
 )
 
 
+def _project_id_to_dag_id(pi: UUID | str) -> str:
+    return f"dag_{str(pi).replace("-", "_")}"
+
+
+def _dag_id_to_project_id(di: str) -> str:
+    return di.replace("dag_", "").replace("_", "-")
+
+
+def _task_id_to_cb_id(ti: str) -> str:
+    return ti.replace("task_", "").replace("_", "-")
+
+
+def _cb_id_to_task_id(ci: UUID | str) -> str:
+    return f"task_{str(ci).replace('-', '_')}"
+
+
 def parse_configs(configs):
     return {k: json.dumps(v) if isinstance(v, list) else str(v)
             for k, v in configs.items()}
@@ -91,7 +107,7 @@ def gen_dag_code(graph, templates, dag_id, project_uuid):
 
     # Convert to Airflow-compatible representation
     for node, data in graph.nodes(data=True):
-        task_id = f"task_{str(node).replace('-', '_')}"
+        task_id = _cb_id_to_task_id(node)
         parts.append(templates["algorithm"].render(
             task_id=task_id,
             image=data["image"],
@@ -106,8 +122,8 @@ def gen_dag_code(graph, templates, dag_id, project_uuid):
     # Render dependencies
     parts.extend([
         templates["dependency"].render(
-            from_task=f"task_{str(from_task).replace('-', '_')}",
-            to_task=f"task_{str(to_task).replace('-', '_')}"
+            from_task=_cb_id_to_task_id(from_task),
+            to_task=_cb_id_to_task_id(to_task)
         )
         for from_task, to_task in graph.edges
     ])
@@ -177,7 +193,7 @@ def translate_project_to_dag(project_uuid: UUID) -> str:
     project = read_project(project_uuid)  # Ensures project is set
     graph = create_graph(project)
     templates = init_templates()
-    dag_id = f"dag_{str(project_uuid).replace('-', '_')}"
+    dag_id = _project_id_to_dag_id(project_uuid)
     dag_code = gen_dag_code(graph, templates, dag_id, project_uuid)
     save_dag_to_file(dag_code, dag_id)
 
@@ -253,7 +269,7 @@ def last_dag_run_overview(dag_ids: List[str]) -> dict:
 
 
 def get_latest_dag_run(project_id: UUID) -> str | None:
-    dag_id = f"dag_{str(project_id).replace("-", "_")}"
+    dag_id = _project_id_to_dag_id(project_id)
     with ApiClient(airflow_config) as api_client:
         api = DAGRunApi(api_client)
 
@@ -271,8 +287,26 @@ def get_latest_dag_run(project_id: UUID) -> str | None:
             raise e
 
 
+def delete_dag_from_airflow(project_id: UUID) -> str | None:
+    dag_id = _project_id_to_dag_id(project_id)
+    with ApiClient(airflow_config) as api_client:
+        api = DAGApi(api_client)
+
+        try:
+            os.remove(os.path.join(DAG_DIRECTORY, f"{dag_id}.py"))
+            api.delete_dag(
+                dag_id
+            )
+        except OSError as e:
+            logging.error("Error deleting DAG file from directory")
+            raise e
+        except ApiException as e:
+            logging.error(f"Error deleting DAG {dag_id} from airflow: {e}")
+            raise e
+
+
 def dag_status(project_id: UUID) -> dict:
-    dag_id = f"dag_{str(project_id).replace('-', '_')}"
+    dag_id = _project_id_to_dag_id(project_id)
     latest_run_id = get_latest_dag_run(project_id)
 
     if not latest_run_id:
@@ -290,8 +324,7 @@ def dag_status(project_id: UUID) -> dict:
             ).task_instances
 
             for task in tasks:
-                cb_id = str(task.task_id).replace(
-                    "task_", "").replace("_", "-")
+                cb_id = _task_id_to_cb_id(task.task_id)
                 task_statuses[cb_id] = {
                     "state": BlockStatus.from_airflow_state(
                         task.state.value if task.state else None
