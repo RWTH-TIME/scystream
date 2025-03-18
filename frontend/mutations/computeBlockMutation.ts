@@ -5,6 +5,7 @@ import type { AxiosError } from "axios"
 import { api } from "@/utils/axios"
 import type { InputOutputType, RecordValueType } from "@/components/CreateComputeBlockModal"
 import type { ComputeBlockNodeType } from "@/components/nodes/ComputeBlockNode"
+import { QueryKeys } from "./queryKeys"
 
 const GET_COMPUTE_BLOCK_INFO = "compute_block/information"
 const CREATE_COMPUTE_BLOCK = "compute_block/"
@@ -68,8 +69,19 @@ export function useCreateComputeBlockMutation(setAlert: SetAlertType, project_id
       const response = await api.post(CREATE_COMPUTE_BLOCK, JSON.stringify(compute_block))
       return response.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [project_id] })
+    onSuccess: (data) => {
+      queryClient.setQueryData([QueryKeys.cbByProject, project_id], (oldData: ComputeBlockByProjectResponse) => {
+        if (oldData) {
+          return {
+            ...oldData,
+            blocks: [...oldData.blocks, data]
+          }
+        }
+        return {
+          edges: [],
+          blocks: [data]
+        }
+      })
       setAlert("Successfully created Compute Block.", AlertType.SUCCESS)
     },
     onError: (error: AxiosError) => {
@@ -86,7 +98,7 @@ export type ComputeBlockByProjectResponse = {
 
 export function useComputeBlocksByProjectQuery(id: string | undefined) {
   return useQuery({
-    queryKey: [id],
+    queryKey: [QueryKeys.cbByProject, id],
     queryFn: async function getProjects() {
       if (!id) return
       const response = await api.get(GET_COMPUTE_BLOCK_BY_PROJECT + id)

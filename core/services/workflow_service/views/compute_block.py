@@ -7,10 +7,14 @@ from services.workflow_service.schemas.compute_block import (
     ComputeBlockInformationRequest, ComputeBlockInformationResponse,
     CreateComputeBlockRequest, IDResponse,
     GetNodesByProjectResponse, NodeDTO, UpdateComputeBlockRequest,
-    EdgeDTO
+    EdgeDTO, SimpleNodeDataDTO, BaseEntrypointDTO, BaseIODTO,
+    SimpleNodeDTO, PositionDTO
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
+)
+from services.workflow_service.models.input_output import (
+    InputOutputType
 )
 from services.workflow_service.controllers.compute_block_controller import (
     request_cb_info, create_compute_block, get_compute_blocks_by_project,
@@ -36,13 +40,13 @@ async def cb_information(
         raise handle_error(e)
 
 
-@router.post("/", response_model=IDResponse)
+@router.post("/", response_model=SimpleNodeDTO)
 async def create(
     data: CreateComputeBlockRequest,
     _: dict = Depends(authenticate_token)
 ):
     try:
-        uuid = create_compute_block(
+        cb = create_compute_block(
             data.name,
             data.description,
             data.author,
@@ -60,9 +64,7 @@ async def create(
              for output in data.selected_entrypoint.outputs],
             data.project_id
         )
-        return IDResponse(
-            id=uuid
-        )
+        return SimpleNodeDTO.from_compute_block(cb)
     except Exception as e:
         logging.error(f"Error creating compute block: {e}")
         raise handle_error(e)
@@ -84,8 +86,7 @@ async def get_by_project(
 
         return GetNodesByProjectResponse(
             blocks=[
-                NodeDTO.from_compute_block(cb)
-                for cb in compute_blocks
+                SimpleNodeDTO.from_compute_block(cb) for cb in compute_blocks
             ],
             edges=[EdgeDTO.from_block_dependencies(
                 dp) for dp in dependencies

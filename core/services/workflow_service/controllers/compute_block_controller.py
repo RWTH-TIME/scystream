@@ -212,7 +212,7 @@ def create_compute_block(
         inputs: List[InputOutput],
         outputs: List[InputOutput],
         project_id: str
-) -> UUID:
+) -> Block:
     logging.info(f"Creating compute block: {name}")
     db: Session = next(get_database())
 
@@ -255,7 +255,7 @@ def create_compute_block(
 
             db.refresh(entry)
         logging.info(f"Compute block created succesfully: {cb.uuid}")
-        return cb.uuid
+        return cb
     except Exception as e:
         logging.error(f"Error creating compute block: {e}")
         raise e
