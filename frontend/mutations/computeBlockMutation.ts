@@ -79,7 +79,7 @@ export function useCreateComputeBlockMutation(setAlert: SetAlertType, project_id
   })
 }
 
-type ComputeBlockByProjectResponse = {
+export type ComputeBlockByProjectResponse = {
   blocks: ComputeBlockNodeType[],
   edges: EdgeDTO[],
 }

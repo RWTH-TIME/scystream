@@ -11,15 +11,16 @@ from utils.config.environment import ENV
 from services.workflow_service.controllers.project_controller \
     import read_project
 from services.workflow_service.controllers import compute_block_controller
-from services.workflow_service.schemas.workflow import WorfklowValidationError, BlockStatus
+from services.workflow_service.schemas.workflow import (
+    WorfklowValidationError,
+    BlockStatus
+)
 from airflow_client.client import ApiClient, Configuration, ApiException
 from airflow_client.client.api.dag_run_api import DAGRunApi
 from airflow_client.client.model.list_dag_runs_form import ListDagRunsForm
 from airflow_client.client.model.dag_run import DAGRun
 from airflow_client.client.api.dag_api import DAGApi
 from airflow_client.client.api.task_instance_api import TaskInstanceApi
-from airflow_client.client.model.task_instance_collection import \
-    TaskInstanceCollection
 from airflow_client.client.model.dag import DAG
 
 DAG_DIRECTORY = ENV.AIRFLOW_DAG_DIR
@@ -287,7 +288,9 @@ def dag_status(project_id: UUID) -> dict:
             ).task_instances
 
             for task in tasks:
-                task_statuses[task.task_id] = {
+                cb_id = str(task.task_id).replace(
+                    "task_", "").replace("_", "-")
+                task_statuses[cb_id] = {
                     "state": BlockStatus.from_airflow_state(
                         task.state.value if task.state else None
                     ).value,

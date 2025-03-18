@@ -1,18 +1,14 @@
 import { ProjectStatus } from "@/utils/types"
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline"
 
-// Helper function to get the status class
 const getStatusClass = (status: ProjectStatus) => {
   switch (status) {
     case ProjectStatus.RUNNING:
-      return "flex space-x-1" // Three dots with some spacing for the running animation
+      return "flex space-x-1"
     case ProjectStatus.FINISHED:
-      return "bg-blue-500" // Green dot for finished
-    case ProjectStatus.FAILED:
-      return "" // No background class needed, we will use an icon for failed
-    case ProjectStatus.IDLE:
+      return "bg-blue-500"
     default:
-      return "" // Nothing for idle
+      return ""
   }
 }
 

@@ -4,12 +4,14 @@ import { api } from "@/utils/axios"
 import { getConfig } from "@/utils/config"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { QueryKeys } from "./queryKeys"
 import { ProjectStatus, type Project } from "@/utils/types"
+import type { ComputeBlockByProjectResponse } from "./computeBlockMutation"
 
 const config = getConfig()
 const PROJECT_STATUS_WS = "workflow/ws/project_status"
+const CB_STATUS_WS = "workflow/ws/workflow_status/"
 const TRIGGER_WORKFLOW = "workflow/"
 
 export function useTriggerWorkflowMutation(setAlert: SetAlertType) {
@@ -47,14 +49,13 @@ export function useProjectStatusWS(setAlert: SetAlertType) {
     const websocket = new WebSocket(`${config.wsUrl}${PROJECT_STATUS_WS}`)
 
     websocket.onopen = () => {
-      console.log("WebSocket connection established")
+      console.log("WebSocket connection for project status established")
     }
 
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data)
       // Update project with id
       queryClient.setQueryData([QueryKeys.projects], (oldData: Project[]) => {
-        if (!oldData) return oldData
         const updatedProjects = oldData.map((project: Project) => {
           if (data[project.uuid]) {
             return {
@@ -70,12 +71,69 @@ export function useProjectStatusWS(setAlert: SetAlertType) {
     }
 
     websocket.onerror = (error) => {
-      console.error("WebSocket error:", error)
+      console.error("WebSocket for project status error:", error)
       setAlert("Error fetching Project Status", AlertType.ERROR)
     }
 
     websocket.onclose = (event) => {
-      console.log("WebSocket connection closed", event)
+      console.log("WebSocket for project status: connection closed", event)
     }
   }, [queryClient, setAlert])
+}
+
+export function useComputeBlockStatusWS(setAlert: SetAlertType, project_id: string | undefined) {
+  const queryClient = useQueryClient()
+  const wsRef = useRef<WebSocket | null>(null)
+
+  useEffect(() => {
+    if (!project_id) return
+
+    if (wsRef.current) {
+      wsRef.current.close()
+    }
+
+    const websocket = new WebSocket(`${config.wsUrl}${CB_STATUS_WS}${project_id}`)
+    wsRef.current = websocket
+
+    websocket.onopen = () => {
+      console.log("WebSocket connection for compute block status established")
+    }
+
+    websocket.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      queryClient.setQueryData([project_id], (oldData: ComputeBlockByProjectResponse) => {
+        if (!oldData) return
+        const updated = oldData.blocks.map(block => {
+          return {
+            ...block,
+            data: {
+              ...block.data,
+              status: data[block.id].state
+            }
+          }
+        })
+        return {
+          ...oldData,
+          blocks: updated
+        }
+      })
+    }
+
+    websocket.onerror = (error) => {
+      console.error("Websocket for cb status error:", error)
+      setAlert("Error fetching the Compute Blocks status", AlertType.ERROR)
+    }
+
+    websocket.onclose = (event) => {
+      console.log("Websocket for cb status connection closed", event)
+    }
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close()
+        wsRef.current = null
+      }
+    }
+
+  }, [queryClient, setAlert, project_id])
 }
