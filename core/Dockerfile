@@ -1,4 +1,4 @@
-ARG PY_VERSION="3.12" 
+ARG PY_VERSION="3.13"
 
 FROM python:${PY_VERSION}-alpine AS builder
 
@@ -12,22 +12,20 @@ COPY requirements.txt /build
 
 RUN pip install --prefix=/build/venv --no-cache-dir --upgrade -r requirements.txt
 
-##
 
 FROM python:${PY_VERSION}-alpine
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV PORT=4000 
 
-ENV UVICORN_HOST="0.0.0.0"
-ENV UVICORN_PORT=$PORT
+ENV PORT 80
+ENV HOST "0.0.0.0"
 
-RUN apk update && apk upgrade --no-cache && apk add gcc musl-dev libffi-dev libressl-dev
+RUN apk update && apk upgrade --no-cache
 
 COPY --from=builder /build/venv /usr/local/
 COPY . /app
 
 WORKDIR /app
 
-CMD alembic upgrade head && uvicorn main:app --proxy-headers 
+CMD alembic upgrade head && uvicorn main:app --proxy-headers --host $HOST --port $PORT
