@@ -37,8 +37,9 @@ export function useTriggerWorkflowMutation(setAlert: SetAlertType) {
       setAlert("Successfully triggered project run.", AlertType.SUCCESS)
     },
     onError: (error: AxiosError) => {
-      // TODO: Handle Error
-      console.log(error)
+      console.error(error)
+      // TODO: Handle the error more specifically. The backend returns which computeblocks might miss configs
+      setAlert("Failed while triggering the project run. Check your Compute Blocks In- & Outputs as well as their connections.", AlertType.ERROR)
     }
   })
 }

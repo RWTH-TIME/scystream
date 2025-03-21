@@ -28,8 +28,6 @@ def create_project(name: str, current_user_uuid: UUID) -> UUID:
         logging.error(f"User {current_user_uuid} not found.")
         raise HTTPException(404, detail="User not found")
 
-    # TODO: add relation with blocks
-
     db.add(project)
     db.commit()
     db.refresh(project)
