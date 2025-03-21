@@ -169,7 +169,8 @@ async def update_io(data: List[BaseInputOutputDTO]):
             d.id: d.config for d in data
         }
         updated = update_ios(id_to_config_map)
-        return [UpdateInputOutuputResponseDTO.from_input_output(io) for io in updated]
+        return [UpdateInputOutuputResponseDTO.from_input_output(io)
+                for io in updated]
     except Exception as e:
         logging.error(f"Error updating ios with ids {
                       list(id_to_config_map.keys())}: {e}")

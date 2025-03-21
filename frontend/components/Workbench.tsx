@@ -22,7 +22,7 @@ import { useDeleteProjectMutation } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import type { EdgeDTO } from "@/mutations/computeBlockMutation"
-import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMutation, useUpdateComputeBlockCoords } from "@/mutations/computeBlockMutation"
+import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMutation, useUpdateComputeBlockCoords, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import DeleteModal from "./DeleteModal"
 import { useTriggerWorkflowMutation } from "@/mutations/workflowMutations"
@@ -116,7 +116,7 @@ export function Workbench() {
   const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
   const { mutate: deleteEdgeMutate } = useDeleteEdgeMutation(setAlert, selectedProject?.uuid)
   const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, selectedProject?.uuid)
-  const { mutate: updateBlockMutate } = useUpdateComputeBlockCoords(setAlert, selectedProject?.uuid)
+  const { mutate: updateBlockMutate } = useUpdateComputeBlockMutation(setAlert, selectedProject?.uuid)
   const { mutateAsync: triggerWorkflow, isPending: triggerLoading } = useTriggerWorkflowMutation(setAlert)
 
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)

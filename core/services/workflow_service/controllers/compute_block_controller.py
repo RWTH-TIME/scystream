@@ -486,7 +486,7 @@ def create_stream_and_update_target_cfg(
     from_output_uuid: UUID,
     to_block_uuid: UUID,
     to_input_uuid: UUID,
-):
+) -> UUID:
     logging.debug(f"""
                   Create Edge from block {from_block_uuid} output
                   {from_output_uuid} to block {to_block_uuid} input
@@ -535,7 +535,7 @@ def create_stream_and_update_target_cfg(
         target_io.config = _updated_configs_with_values(
             target_io, extracted_defaults, target_io.data_type)
 
-        return target_io.uuid
+        return target_io.entrypoint_uuid
 
 
 def delete_edge(

@@ -188,48 +188,6 @@ export type UpdateComputeBlockDTO = {
   y?: number,
 }
 
-type UpdateComputeBlockCoordsDTO = {
-  id: string,
-  x_pos: number,
-  y_pos: number,
-}
-export function useUpdateComputeBlockCoords(setAlert: SetAlertType, project_id?: string) {
-  const queryClient = useQueryClient()
-
-  return useMutation<void, AxiosError, UpdateComputeBlockCoordsDTO>({
-    mutationFn: async function updateComputeBlockCoords(coords: UpdateComputeBlockCoordsDTO) {
-      await api.put(UPDATE_COMPUTE_BLOCK, JSON.stringify(coords))
-    },
-    onSuccess: (_, new_coords) => {
-      queryClient.setQueryData([QueryKeys.cbByProject, project_id], (oldData: ComputeBlockByProjectResponse) => {
-        const cbID = new_coords.id
-
-        const updated = oldData.blocks.map(block => {
-          if (block.id === cbID) {
-            return {
-              ...block,
-              position: {
-                x: new_coords.x_pos,
-                y: new_coords.y_pos
-              }
-            }
-          }
-          return block
-        })
-
-        return {
-          ...oldData,
-          blocks: updated
-        }
-      })
-    },
-    onError: (error: AxiosError) => {
-      displayStandardAxiosErrors(error, setAlert)
-      console.error(`Updating Compute Block failed: ${error}`)
-    }
-  })
-}
-
 export function useUpdateComputeBlockMutation(setAlert: SetAlertType, project_id?: string) {
   const queryClient = useQueryClient()
 
@@ -239,6 +197,7 @@ export function useUpdateComputeBlockMutation(setAlert: SetAlertType, project_id
       return response.data
     },
     onSuccess: (data) => {
+      console.log(data)
       queryClient.setQueryData([QueryKeys.cbByProject, project_id], (oldData: ComputeBlockByProjectResponse) => {
         const cbID = data.id
 
@@ -250,6 +209,10 @@ export function useUpdateComputeBlockMutation(setAlert: SetAlertType, project_id
                 ...block.data,
                 custom_name: data.custom_name,
                 envs: data.envs,
+              },
+              position: {
+                x: data.x_pos,
+                y: data.y_pos
               }
             }
           }
@@ -304,22 +267,33 @@ export type EdgeDTO = {
   targetHandle: string,
 }
 
-// TODO: make us of setQueryData here
 export function useCreateEdgeMutation(setAlert: SetAlertType, project_id?: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async function createEdge(data: EdgeDTO) {
-      await api.post(CREATE_EDGE, JSON.stringify(data))
+      const response = await api.post(CREATE_EDGE, JSON.stringify(data))
+      return {
+        response_data: response.data,
+        dto: data
+      }
     },
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Creating Edge failed ${error}`)
     },
-    onSuccess: () => {
-      // Invalidate Queries, as inputs might be overwritten
-      // We could also implement overwriting logic here, and then we
-      // could save this extra query
-      queryClient.invalidateQueries({ queryKey: [project_id] })
+    onSuccess: (data) => {
+      // Invalidate Inputs  we connected to
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.cbInputs, data.response_data.id] })
+      // Add the edge to the project data
+      queryClient.setQueryData([QueryKeys.cbByProject, project_id], (oldData: ComputeBlockByProjectResponse) => {
+        return {
+          ...oldData,
+          edges: [...oldData.edges, {
+            id: `${data.dto.sourceHandle}-${data.dto.targetHandle}`,
+            ...data.dto
+          }]
+        }
+      })
     }
   })
 }
