@@ -11,6 +11,8 @@ from services.workflow_service.models.input_output import (
 )
 from utils.config.environment import ENV
 
+ConfigType = Dict[str, Optional[Union[str, int, float, List, bool]]]
+
 
 def _validate_url(url: str):
     parsed = urlparse(url)
@@ -28,12 +30,24 @@ def _get_io_data_type(type: str) -> str:
     return data_type_map.get(type, DataType.CUSTOM.value)
 
 
-class InputOutputDTO(BaseModel):
+# Inputs & Outputs
+
+class BaseIODTO(BaseModel):
     id: Optional[UUID] = None
-    name: str
     data_type: DataType
+
+    @classmethod
+    def from_input_output(cls, io):
+        return cls(
+            id=io.uuid,
+            data_type=io.data_type
+        )
+
+
+class InputOutputDTO(BaseIODTO):
+    name: str
     description: Optional[str] = None
-    config: Dict[str, Optional[Union[str, int, float, List, bool]]]
+    config: ConfigType
 
     @classmethod
     def from_input_output(cls, name: str, input_output):
@@ -71,13 +85,22 @@ class InputOutputDTO(BaseModel):
         )
 
 
-class EntrypointDTO(BaseModel):
+# Entrypoint
+
+class BaseEntrypointDTO(BaseModel):
+    id: Optional[UUID] = None
+    name: str
+    inputs: List[BaseIODTO]
+    outputs: List[BaseIODTO]
+
+
+class EntrypointDTO(BaseEntrypointDTO):
     id: Optional[UUID] = None
     name: str
     description: str
     inputs: List[InputOutputDTO]
     outputs: List[InputOutputDTO]
-    envs: Dict[str, Optional[Union[str, int, float, List, bool]]]
+    envs: ConfigType
 
     @classmethod
     def from_sdk_entrypoint(cls, name: str, entrypoint):
@@ -95,6 +118,138 @@ class EntrypointDTO(BaseModel):
             ],
         )
 
+
+# Node:
+
+class PositionDTO(BaseModel):
+    x: float
+    y: float
+
+
+class BaseNodeDataDTO(BaseModel):
+    id: UUID
+    name: str
+    custom_name: str
+    description: str
+    author: str
+    image: str
+
+
+class SimpleNodeDataDTO(BaseNodeDataDTO):
+    selected_entrypoint: BaseEntrypointDTO
+
+
+class NodeDataDTO(BaseNodeDataDTO):
+    selected_entrypoint: EntrypointDTO
+
+
+class BaseNodeDTO(BaseModel):
+    id: UUID
+    position: PositionDTO
+    type: Literal["computeBlock"] = "computeBlock"
+
+
+class SimpleNodeDTO(BaseNodeDTO):
+    data: SimpleNodeDataDTO
+
+    @classmethod
+    def from_compute_block(cls, cb):
+        return cls(
+            id=cb.uuid,
+            position=PositionDTO(
+                x=cb.x_pos,
+                y=cb.y_pos,
+            ),
+            type="computeBlock",
+            data=SimpleNodeDataDTO(
+                id=cb.uuid,
+                name=cb.name,
+                custom_name=cb.custom_name,
+                description=cb.description,
+                author=cb.author,
+                image=cb.docker_image,
+                selected_entrypoint=BaseEntrypointDTO(
+                    id=cb.selected_entrypoint.uuid,
+                    name=cb.selected_entrypoint.name,
+                    inputs=[
+                        BaseIODTO.from_input_output(io)
+                        for io in cb.selected_entrypoint.input_outputs
+                        if io.type == InputOutputType.INPUT
+                    ],
+                    outputs=[
+                        BaseIODTO.from_input_output(io)
+                        for io in cb.selected_entrypoint.input_outputs
+                        if io.type == InputOutputType.OUTPUT
+                    ]
+                )
+            ),
+        )
+
+
+class NodeDTO(BaseNodeDTO):
+    data: NodeDataDTO
+
+    @classmethod
+    def from_compute_block(cls, cb):
+        inputs = [
+            InputOutputDTO.from_input_output(io.name, io)
+            for io in cb.selected_entrypoint.input_outputs
+            if io.type == InputOutputType.INPUT
+        ]
+
+        outputs = [
+            InputOutputDTO.from_input_output(io.name, io)
+            for io in cb.selected_entrypoint.input_outputs
+            if io.type == InputOutputType.OUTPUT
+        ]
+
+        return cls(
+            id=cb.uuid,
+            position=PositionDTO(
+                x=cb.x_pos,
+                y=cb.y_pos,
+            ),
+            type="computeBlock",
+            data=NodeDataDTO(
+                id=cb.uuid,
+                name=cb.name,
+                custom_name=cb.custom_name,
+                description=cb.description,
+                author=cb.author,
+                image=cb.docker_image,
+                selected_entrypoint=EntrypointDTO(
+                    id=cb.selected_entrypoint.uuid,
+                    name=cb.selected_entrypoint.name,
+                    description=cb.selected_entrypoint.description,
+                    envs=cb.selected_entrypoint.envs,
+                    inputs=inputs,
+                    outputs=outputs
+                ),
+            )
+        )
+
+
+# Edge:
+
+class EdgeDTO(BaseModel):
+    id: Optional[str] = None
+    source: UUID
+    target: UUID
+    sourceHandle: UUID
+    targetHandle: UUID
+
+    @classmethod
+    def from_block_dependencies(cls, bd):
+        return cls(
+            id=f"{bd.upstream_output_uuid}-{bd.downstream_input_uuid}",
+            source=bd.upstream_block_uuid,
+            targetHandle=bd.downstream_input_uuid,
+            target=bd.downstream_block_uuid,
+            sourceHandle=bd.upstream_output_uuid,
+        )
+
+
+# Requests & Responses:
 
 class ComputeBlockInformationRequest(BaseModel):
     cbc_url: str
@@ -148,106 +303,33 @@ class IDResponse(BaseModel):
     id: UUID
 
 
-class PositionDTO(BaseModel):
-    x: float
-    y: float
-
-
-class NodeDataDTO(BaseModel):
-    id: UUID
-    name: str
-    custom_name: str
-    description: str
-    author: str
-    image: str
-    selected_entrypoint: EntrypointDTO
-
-
-class NodeDTO(BaseModel):
-    id: UUID
-    position: PositionDTO
-    type: Literal["computeBlock"]
-    data: NodeDataDTO
-
-    @classmethod
-    def from_compute_block(cls, cb):
-        inputs = [
-            InputOutputDTO.from_input_output(io.name, io)
-            for io in cb.selected_entrypoint.input_outputs
-            if io.type == InputOutputType.INPUT
-        ]
-
-        outputs = [
-            InputOutputDTO.from_input_output(io.name, io)
-            for io in cb.selected_entrypoint.input_outputs
-            if io.type == InputOutputType.OUTPUT
-        ]
-
-        return cls(
-            id=cb.uuid,
-            position=PositionDTO(
-                x=cb.x_pos,
-                y=cb.y_pos,
-            ),
-            type="computeBlock",
-            data=NodeDataDTO(
-                id=cb.uuid,
-                name=cb.name,
-                custom_name=cb.custom_name,
-                description=cb.description,
-                author=cb.author,
-                image=cb.docker_image,
-                selected_entrypoint=EntrypointDTO(
-                    id=cb.selected_entrypoint.uuid,
-                    name=cb.selected_entrypoint.name,
-                    description=cb.selected_entrypoint.description,
-                    envs=cb.selected_entrypoint.envs,
-                    inputs=inputs,
-                    outputs=outputs
-                ),
-            )
-        )
-
-
-class EdgeDTO(BaseModel):
-    id: Optional[str] = None
-    source: UUID
-    target: UUID
-    sourceHandle: UUID
-    targetHandle: UUID
-
-    @classmethod
-    def from_block_dependencies(cls, bd):
-        return cls(
-            id=f"{bd.upstream_output_uuid}-{bd.downstream_input_uuid}",
-            source=bd.upstream_block_uuid,
-            targetHandle=bd.downstream_input_uuid,
-            target=bd.downstream_block_uuid,
-            sourceHandle=bd.upstream_output_uuid,
-        )
-
-
 class GetNodesByProjectResponse(BaseModel):
-    blocks: List[NodeDTO]
+    blocks: List[SimpleNodeDTO]
     edges: List[EdgeDTO]
 
 
-class UpdateInputOutputDTO(BaseModel):
+class BaseInputOutputDTO(BaseModel):
     id: UUID
-    config: Optional[Dict[str,
-                          Optional[Union[str, int, float, List, bool]]]] = None
+    config: Optional[ConfigType] = None
 
 
-class UpdateEntrypointDTO(BaseModel):
+class UpdateInputOutuputResponseDTO(BaseInputOutputDTO):
+    type: InputOutputType
+    entrypoint_id: UUID
+
+    @classmethod
+    def from_input_output(cls, input_output):
+        return cls(
+            id=input_output.uuid,
+            type=input_output.type,
+            entrypoint_id=input_output.entrypoint_uuid,
+            config=input_output.config or {}
+        )
+
+
+class UpdateComputeBlockDTO(BaseModel):
     id: UUID
-    inputs: Optional[List[UpdateInputOutputDTO]] = None
-    outputs: Optional[List[UpdateInputOutputDTO]] = None
-    envs: Dict[str, Optional[Union[str, int, float, List, bool]]] = None
-
-
-class UpdateComputeBlockRequest(BaseModel):
-    id: UUID
+    envs: Optional[ConfigType] = None
     custom_name: Optional[str] = None
-    selected_entrypoint: Optional[UpdateEntrypointDTO] = None
     x_pos: Optional[float] = None
     y_pos: Optional[float] = None

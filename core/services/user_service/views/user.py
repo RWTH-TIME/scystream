@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from utils.errors.error import handle_error
+import logging
 
 from services.user_service.schemas.user import (
     CreateUserResponse,
@@ -9,15 +10,8 @@ from services.user_service.schemas.user import (
     RefreshAccessResponse,
     RefreshAccessRequest,
 )
-
 import services.user_service.controllers.auth_controller as auth_controller
-
 import services.user_service.controllers.create_user as create_user_controller
-
-from services.user_service.middleware.authenticate_token import (
-    authenticate_token,
-)
-
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -28,6 +22,7 @@ async def create_user(data: CreateUserRequest):
         userID = create_user_controller.create_user(data.email, data.password)
         return CreateUserResponse(uuid=userID)
     except Exception as e:
+        logging.error(f"Error creating user: {e}")
         raise handle_error(e)
 
 
@@ -41,6 +36,7 @@ async def login(data: LoginRequest):
             access_token=access_token, refresh_token=refresh_token
         )
     except Exception as e:
+        logging.error(f"Error while logging in {e}")
         raise handle_error(e)
 
 
@@ -55,14 +51,5 @@ async def refresh_access(data: RefreshAccessRequest):
             new_access_token=new_access_token, refresh_token=refresh_token
         )
     except Exception as e:
+        logging.error(f"Error refreshing token {e}")
         raise handle_error(e)
-
-
-@router.post("/test", response_model=RefreshAccessResponse)
-async def test_auth_endpoint(
-    data: RefreshAccessRequest, _: dict = Depends(authenticate_token)
-):
-    return RefreshAccessResponse(
-        new_access_token=data.old_access_token,
-        refresh_token=data.refresh_token,
-    )
