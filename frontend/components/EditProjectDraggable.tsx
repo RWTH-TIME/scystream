@@ -5,6 +5,11 @@ import ProjectCBSettingsDraggable from "./ProjectCBSettingsDraggable"
 import { useUpdateProjectMutation } from "@/mutations/projectMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
+import { MIN_LEN_PROJECT_NAME } from "./CreateProjectModal"
+
+const TABS = [
+  { key: "metadata", label: "Metadata" },
+]
 
 export default function EditProjectDraggable() {
   const { setAlert } = useAlert()
@@ -17,24 +22,20 @@ export default function EditProjectDraggable() {
   function updateProject(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
 
-    if (selectedProject && projectName && projectName.length > 0) {
-      mutate({ project_uuid: selectedProject.uuid, new_name: projectName })
-      setSelectedProject({
-        ...selectedProject,
-        name: projectName,
-      })
-    } else {
-      setAlert("Project Name must be set.", AlertType.ERROR)
+    if (!selectedProject || !projectName || projectName.length < MIN_LEN_PROJECT_NAME) {
+      setAlert(`Project Name must be at least ${MIN_LEN_PROJECT_NAME} characters long!`, AlertType.ERROR)
+      return
     }
+
+    mutate({ project_uuid: selectedProject.uuid, new_name: projectName })
+    setSelectedProject({
+      ...selectedProject,
+      name: projectName,
+    })
   }
 
-  const tabs = [
-    { key: "metadata", label: "Metadata" },
-  ]
-
-
   return (
-    <ProjectCBSettingsDraggable tabs={tabs} activeTab="metadata" setActiveTab={setActiveTab}>
+    <ProjectCBSettingsDraggable tabs={TABS} activeTab="metadata" setActiveTab={setActiveTab}>
       <div className="p-4">
         {activeTab === "metadata" && (
           <>

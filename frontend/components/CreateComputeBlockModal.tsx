@@ -86,6 +86,12 @@ const emptyComputeBlockDraft: ComputeBlockDraft = {
   cbc_url: ""
 }
 
+const STEPS_INFORMATION = [
+  { label: "CBC" },
+  { label: "Entrypoint" },
+  { label: "Configuration" },
+]
+
 export default function CreateComputeBlockModal({
   isOpen,
   onClose,
@@ -98,12 +104,6 @@ export default function CreateComputeBlockModal({
   const { setAlert } = useAlert()
   const { mutateAsync, isPending: loading } = useCreateComputeBlockMutation(setAlert, selectedProject?.uuid)
 
-  const stepsInformation = [
-    { label: "CBC" },
-    { label: "Entrypoint" },
-    { label: "Configuration" },
-  ]
-
   function reset() {
     setComputeBlockDraft(emptyComputeBlockDraft)
     setSelectedEntrypoint(undefined)
@@ -111,7 +111,7 @@ export default function CreateComputeBlockModal({
   };
 
   function handleNext() {
-    if (activeStep < stepsInformation.length - 1) {
+    if (activeStep < STEPS_INFORMATION.length - 1) {
       setActiveStep((prevStep) => prevStep + 1)
     }
   };
@@ -178,7 +178,7 @@ export default function CreateComputeBlockModal({
     <Modal onClose={handleModalClose} isOpen={isOpen}>
       <div className="w-[97%]">
         <Stepper activeStep={activeStep} >
-          {stepsInformation.map((step, index) => (
+          {STEPS_INFORMATION.map((step, index) => (
             <Step key={index}>
               <StepLabel>{step.label}</StepLabel>
             </Step>

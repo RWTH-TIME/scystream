@@ -51,53 +51,22 @@ export type CreateComputeBlockDTO = {
   y_pos: number,
 }
 
+export type ComputeBlockByProjectResponse = {
+  blocks: ComputeBlockNodeType[],
+  edges: EdgeDTO[],
+}
+
 export function useGetComputeBlockInfoMutation(setAlert: SetAlertType) {
   return useMutation({
     mutationFn: async function getComputeBlockFromURL(compute_block: ComputeBlockInfoDTO) {
       const response = await api.post(GET_COMPUTE_BLOCK_INFO, JSON.stringify(compute_block))
       return response.data
     },
-    onSuccess: () => { },
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Getting Compute Block Info failed: ${error}`)
     }
   })
-}
-
-export function useCreateComputeBlockMutation(setAlert: SetAlertType, project_id?: string) {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async function createComputeBlock(compute_block: CreateComputeBlockDTO) {
-      const response = await api.post(CREATE_COMPUTE_BLOCK, JSON.stringify(compute_block))
-      return response.data
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData([QueryKeys.cbByProject, project_id], (oldData: ComputeBlockByProjectResponse) => {
-        if (oldData) {
-          return {
-            ...oldData,
-            blocks: [...oldData.blocks, data]
-          }
-        }
-        return {
-          edges: [],
-          blocks: [data]
-        }
-      })
-      setAlert("Successfully created Compute Block.", AlertType.SUCCESS)
-    },
-    onError: (error: AxiosError) => {
-      displayStandardAxiosErrors(error, setAlert)
-      console.error(`Creating Compute Block failed: ${error}`)
-    }
-  })
-}
-
-export type ComputeBlockByProjectResponse = {
-  blocks: ComputeBlockNodeType[],
-  edges: EdgeDTO[],
 }
 
 export function useComputeBlocksByProjectQuery(id: string | undefined) {
@@ -138,101 +107,35 @@ export function useComputeBlocksIOsQuery(io_type: IOType, entrypointId?: string)
   })
 }
 
-export function useUpdateComputeBlocksIOsMutation() {
+export function useCreateComputeBlockMutation(setAlert: SetAlertType, project_id?: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async function updateIO(data: UpdateInputOutputDTO[]) {
-      const response = await api.put(UPDATE_IOS, data)
+    mutationFn: async function createComputeBlock(compute_block: CreateComputeBlockDTO) {
+      const response = await api.post(CREATE_COMPUTE_BLOCK, JSON.stringify(compute_block))
       return response.data
     },
     onSuccess: (data) => {
-      data.forEach((updatedIo: UpdateInputOutputDTO) => {
-        queryClient.setQueryData(
-          [updatedIo.type === IOType.INPUT ? QueryKeys.cbInputs : QueryKeys.cbOutputs, updatedIo.entrypoint_id],
-          (oldData: UpdateInputOutputDTO[] | undefined) => {
-            if (!oldData) return []
-
-            return oldData.map((io) => {
-              if (io.id === updatedIo.id) {
-                return { ...io, ...updatedIo }
-              }
-              return io
-            })
-          }
-        )
-      })
-    }
-  })
-}
-
-export type UpdateInputOutputDTO = {
-  id: string,
-  type: IOType,
-  entrypoint_id?: string,
-  config?: Record<string, RecordValueType>,
-}
-
-export type UpdateEntrypointDTO = {
-  id: string,
-  inputs?: UpdateInputOutputDTO[],
-  outputs?: UpdateInputOutputDTO[],
-  envs?: Record<string, RecordValueType>,
-}
-
-export type UpdateComputeBlockDTO = {
-  id: string,
-  custom_name?: string,
-  selected_entrypoint?: UpdateEntrypointDTO,
-  x?: number,
-  y?: number,
-}
-
-export function useUpdateComputeBlockMutation(setAlert: SetAlertType, project_id?: string) {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async function updateComputeBlock(update_dto: Partial<UpdateComputeBlockDTO>) {
-      const response = await api.put(UPDATE_COMPUTE_BLOCK, update_dto)
-      return response.data
-    },
-    onSuccess: (data) => {
-      console.log(data)
       queryClient.setQueryData([QueryKeys.cbByProject, project_id], (oldData: ComputeBlockByProjectResponse) => {
-        const cbID = data.id
-
-        const updated = oldData.blocks.map(block => {
-          if (block.id === cbID) {
-            return {
-              ...block,
-              data: {
-                ...block.data,
-                custom_name: data.custom_name,
-                envs: data.envs,
-              },
-              position: {
-                x: data.x_pos,
-                y: data.y_pos
-              }
-            }
+        if (oldData) {
+          return {
+            ...oldData,
+            blocks: [...oldData.blocks, data]
           }
-          return block
-        })
-
+        }
         return {
-          ...oldData,
-          blocks: updated
+          edges: [],
+          blocks: [data]
         }
       })
-
+      setAlert("Successfully created Compute Block.", AlertType.SUCCESS)
     },
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
-      console.error(`Updating Compute Block failed: ${error}`)
+      console.error(`Creating Compute Block failed: ${error}`)
     }
   })
 }
-
 
 export function useDeleteComputeBlockMutation(setAlert: SetAlertType, project_id?: string) {
   const queryClient = useQueryClient()
@@ -322,3 +225,94 @@ export function useDeleteEdgeMutation(setAlert: SetAlertType, project_id?: strin
   })
 }
 
+export type UpdateInputOutputDTO = {
+  id: string,
+  type: IOType,
+  entrypoint_id?: string, // Set in response
+  config?: Record<string, RecordValueType>,
+}
+
+export type UpdateEntrypointDTO = {
+  id: string,
+  envs?: Record<string, RecordValueType>,
+}
+
+export type UpdateComputeBlockDTO = {
+  id: string,
+  custom_name?: string,
+  x_pos?: number,
+  y_pos?: number,
+}
+
+export function useUpdateComputeBlocksIOsMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function updateIO(data: UpdateInputOutputDTO[]) {
+      const response = await api.put(UPDATE_IOS, data)
+      return response.data
+    },
+    onSuccess: (data) => {
+      data.forEach((updatedIo: UpdateInputOutputDTO) => {
+        queryClient.setQueryData(
+          [updatedIo.type === IOType.INPUT ? QueryKeys.cbInputs : QueryKeys.cbOutputs, updatedIo.entrypoint_id],
+          (oldData: UpdateInputOutputDTO[] | undefined) => {
+            if (!oldData) return []
+
+            return oldData.map((io) => {
+              if (io.id === updatedIo.id) {
+                return { ...io, ...updatedIo }
+              }
+              return io
+            })
+          }
+        )
+      })
+    }
+  })
+}
+
+export function useUpdateComputeBlockMutation(setAlert: SetAlertType, project_id?: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function updateComputeBlock(update_dto: Partial<UpdateComputeBlockDTO>) {
+      const response = await api.put(UPDATE_COMPUTE_BLOCK, update_dto)
+      return response.data
+    },
+    onSuccess: (data) => {
+      console.log(data)
+      queryClient.setQueryData([QueryKeys.cbByProject, project_id], (oldData: ComputeBlockByProjectResponse) => {
+        const cbID = data.id
+
+        const updated = oldData.blocks.map(block => {
+          if (block.id === cbID) {
+            return {
+              ...block,
+              data: {
+                ...block.data,
+                custom_name: data.custom_name,
+                envs: data.envs,
+              },
+              position: {
+                x: data.x_pos,
+                y: data.y_pos
+              }
+            }
+          }
+          return block
+        })
+
+        return {
+          ...oldData,
+          blocks: updated
+        }
+      })
+
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+      console.error(`Updating Compute Block failed: ${error}`)
+    }
+  })
+}

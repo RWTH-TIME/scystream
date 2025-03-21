@@ -7,10 +7,30 @@ import Input from "@/components/inputs/Input"
 import InputAdornment from "@/components/inputs/InputAdornment"
 import PageWithHeader from "@/components/layout/PageWithHeader"
 import { useRegisterMutation } from "@/mutations/userMutation"
-import { useAlert } from "@/hooks/useAlert"
+import { AlertType, useAlert } from "@/hooks/useAlert"
+
+const PASSWORD_MIN_LEN = 8
+const PASSWORD_VALIDATION = (password: string) => {
+  if (password.length < PASSWORD_MIN_LEN) {
+    throw new Error("Password must be at least 8 characters long")
+  }
+  if (!/[0-9]/.test(password)) {
+    throw new Error("Password must contain a number")
+  }
+  if (!/[A-Z]/.test(password)) {
+    throw new Error("Password must contain a capital letter")
+  }
+  if (!/[a-z]/.test(password)) {
+    throw new Error("Password must contain a lowercase letter")
+  }
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    throw new Error("Password must contain at least one special character")
+  }
+  return password
+}
+
 
 export default function Register() {
-  // TODO: form-validation
   const { setAlert } = useAlert()
   const [mail, setMail] = useState<string>("")
   const [password, setPassword] = useState<string>("")
@@ -22,8 +42,26 @@ export default function Register() {
 
   function signUp(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (mail.length === 0) {
+      setAlert("Enter your E-Mail address", AlertType.ERROR)
+      return
+    }
+    if (password !== passwordRep) {
+      setAlert("Passwords must match", AlertType.ERROR)
+      return
+    }
+
+    try {
+      PASSWORD_VALIDATION(password)
+    } catch (error: unknown) {
+      if (error instanceof Error)
+        setAlert(error.message, AlertType.ERROR)
+      return
+    }
+
     mutate({ email: mail, password })
   }
+
 
   return (
     <PageWithHeader breadcrumbs={[{ text: "Signup", link: "/sign-up" }]}>
