@@ -56,9 +56,10 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
       border: "border-red-500 border-dashed",
       icon: <Warning className="w-5 h-5 text-red-500" />,
     },
+    [ComputeBlockStatus.IDLE]: {}
   }
 
-  const statusStyle = statusStyles[data.status ?? ComputeBlockStatus.IDLE] || {}
+  const statusStyle = statusStyles[data.status ?? ComputeBlockStatus.IDLE]
 
   const renderHandles = (items: InputOutput[], type: "target" | "source", position: Position) => {
     return items.map((item, index) => {

@@ -61,7 +61,7 @@ export function useProjectStatusWS(setAlert: SetAlertType) {
           if (data[project.uuid]) {
             return {
               ...project,
-              status: data[project.uuid],
+              status: data[project.uuid] ?? project.status,
             }
           }
           return project
