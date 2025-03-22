@@ -51,8 +51,10 @@ class WebSocketConnection<T> {
     if (this.websocket) {
       this.websocket.close()
       this.websocket = null
+      console.log(`Websocket disconnected: ${this.url}`)
     }
     if (this.reconnectTimeout) {
+      console.log(`Reconnect Websocket: ${this.url}`)
       clearTimeout(this.reconnectTimeout)
       this.reconnectTimeout = null
     }

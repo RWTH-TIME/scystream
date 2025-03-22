@@ -25,7 +25,7 @@ import type { EdgeDTO } from "@/mutations/computeBlockMutation"
 import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMutation, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import DeleteModal from "./DeleteModal"
-import { useTriggerWorkflowMutation } from "@/mutations/workflowMutations"
+import { useComputeBlockStatusWS, useTriggerWorkflowMutation } from "@/mutations/workflowMutations"
 import { CircularProgress } from "@mui/material"
 
 
@@ -36,13 +36,17 @@ function useGraphData(selectedProjectUUID: string | undefined) {
   const [selectedEdge, setSelectedEdge] = useState<Edge | undefined>(undefined)
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { setAlert } = useAlert()
+  const [isReadyForWS, setIsReadyForWS] = useState(false)
 
   useEffect(() => {
     if (projectDetails) {
       setNodes(projectDetails.blocks)
       setEdges(projectDetails.edges)
+      setIsReadyForWS(true)
     }
-  }, [projectDetails, selectedComputeBlock, setSelectedComputeBlock])
+  }, [projectDetails])
+
+  useComputeBlockStatusWS(setAlert, isReadyForWS ? selectedProjectUUID : undefined)
 
   return {
     nodes,
@@ -55,7 +59,7 @@ function useGraphData(selectedProjectUUID: string | undefined) {
     setNodes,
     setEdges,
     setSelectedEdge,
-    setAlert
+    setAlert,
   }
 }
 
@@ -163,6 +167,7 @@ export function Workbench() {
 
   const onNodeDragStop = useCallback(
     (_: React.SyntheticEvent, node: ComputeBlockNodeType) => {
+      if (!node.position) return
       updateBlockMutate({
         id: node.id,
         x_pos: node.position.x,

@@ -59,11 +59,21 @@ export type ComputeBlockDraft = BaseComputeBlock & {
   entrypoints: Entrypoint[],
 };
 
+export enum ComputeBlockStatus {
+  SUCCESS = "SUCCESS",
+  RUNNING = "RUNNING",
+  FAILED = "FAILED",
+  SCHEDULED = "SCHEDULED",
+  IDLE = "IDLE",
+  VALIDATION_FAILED = "VALIDATION_FAILED"
+}
+
 export type ComputeBlock = BaseComputeBlock & {
   id: string,
   selected_entrypoint: Entrypoint,
   x_pos: number,
   y_pos: number,
+  status?: ComputeBlockStatus,
 };
 
 export type PageProps = {

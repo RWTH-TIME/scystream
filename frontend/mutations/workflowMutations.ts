@@ -4,7 +4,7 @@ import { api } from "@/utils/axios"
 import { getConfig } from "@/utils/config"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { QueryKeys } from "./queryKeys"
 import { ProjectStatus, type Project } from "@/utils/types"
 import type { ComputeBlockByProjectResponse } from "./computeBlockMutation"
@@ -15,6 +15,8 @@ const PROJECT_STATUS_WS = "workflow/ws/project_status"
 const CB_STATUS_WS = "workflow/ws/workflow_status/"
 const TRIGGER_WORKFLOW = "workflow/"
 
+type ProjectStatusEvent = Record<string, string>
+
 export function useTriggerWorkflowMutation(setAlert: SetAlertType) {
   const queryClient = useQueryClient()
 
@@ -24,7 +26,7 @@ export function useTriggerWorkflowMutation(setAlert: SetAlertType) {
       return project_id
     },
     onSuccess: (project_id) => {
-      queryClient.setQueryData([QueryKeys.projects], (oldData: Project[] | undefined) => {
+      queryClient.setQueryData([QueryKeys.projects], (oldData: ProjectStatusEvent[] | undefined) => {
         if (!oldData) return []
 
         return oldData.map(project => {
@@ -44,7 +46,7 @@ export function useTriggerWorkflowMutation(setAlert: SetAlertType) {
   })
 }
 
-type ProjectStatusEvent = Record<string, string>
+
 
 export function useProjectStatusWS(setAlert: SetAlertType) {
   const queryClient = useQueryClient()
@@ -82,35 +84,29 @@ export function useProjectStatusWS(setAlert: SetAlertType) {
   }, [queryClient, setAlert])
 }
 
+type WfStatusData = {
+  state: string,
+}
+type WorflowStatusEvent = Record<string, WfStatusData>
+
 export function useComputeBlockStatusWS(setAlert: SetAlertType, project_id: string | undefined) {
-  // TODO: Use the WebsocketManager here aswell
   const queryClient = useQueryClient()
-  const wsRef = useRef<WebSocket | null>(null)
+  const connectionString = `${config.wsUrl}${CB_STATUS_WS}${project_id}`
 
   useEffect(() => {
     if (!project_id) return
 
-    if (wsRef.current) {
-      wsRef.current.close()
-    }
+    const websocket = webSocketManager.getConnection<WorflowStatusEvent>(connectionString)
 
-    const websocket = new WebSocket(`${config.wsUrl}${CB_STATUS_WS}${project_id}`)
-    wsRef.current = websocket
-
-    websocket.onopen = () => {
-      console.log("WebSocket connection for compute block status established")
-    }
-
-    websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-      queryClient.setQueryData([project_id], (oldData: ComputeBlockByProjectResponse) => {
+    function handleCBStatusMessage(data: WorflowStatusEvent) {
+      queryClient.setQueryData([QueryKeys.cbByProject, project_id], (oldData: ComputeBlockByProjectResponse) => {
         if (!oldData) return
         const updated = oldData.blocks.map(block => {
           return {
             ...block,
             data: {
               ...block.data,
-              status: data[block.id].state
+              status: data[block.id]?.state ?? block.data.status
             }
           }
         })
@@ -121,21 +117,17 @@ export function useComputeBlockStatusWS(setAlert: SetAlertType, project_id: stri
       })
     }
 
-    websocket.onerror = (error) => {
-      console.error("Websocket for cb status error:", error)
-      setAlert("Error fetching the Compute Blocks status", AlertType.ERROR)
+    function handleWebsocketError() {
+      setAlert("Failed to get compute block status updates", AlertType.ERROR)
     }
 
-    websocket.onclose = (event) => {
-      console.log("Websocket for cb status connection closed", event)
-    }
+    websocket.addListener(handleCBStatusMessage)
+    websocket.addErrorHandler(handleWebsocketError)
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close()
-        wsRef.current = null
-      }
+      websocket.removeListener(handleCBStatusMessage)
+      webSocketManager.removeConnection(connectionString)
     }
+  }, [queryClient, setAlert, project_id, connectionString])
 
-  }, [queryClient, setAlert, project_id])
 }

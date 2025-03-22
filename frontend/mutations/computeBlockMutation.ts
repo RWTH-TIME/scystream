@@ -70,16 +70,45 @@ export function useGetComputeBlockInfoMutation(setAlert: SetAlertType) {
 }
 
 export function useComputeBlocksByProjectQuery(id: string | undefined) {
+  const queryClient = useQueryClient()
+
   return useQuery({
     queryKey: [QueryKeys.cbByProject, id],
     queryFn: async function getProjects() {
       if (!id) return
+
+      // Here we check if we already have information about the compute block status
+      // We then add this cached status to the newly queried compute block information
+      // TODO: There is probably a more elegant way of handling this
+      const cachedProjectData = queryClient.getQueryData<{ blocks: ComputeBlockNodeType[] }>([
+        QueryKeys.cbByProject,
+        id,
+      ])
+      const previousStatuses = cachedProjectData?.blocks.reduce<Record<string, string>>(
+        (acc, block) => {
+          if (block?.data?.id && block?.data?.status) {
+            acc[block.data.id] = block.data.status
+          }
+          return acc
+        },
+        {}
+      )
       const response = await api.get(GET_COMPUTE_BLOCK_BY_PROJECT + id)
-      return response.data
+
+      const updatedBlocks = response.data.blocks.map((block: ComputeBlockNodeType) => ({
+        ...block,
+        data: {
+          ...block.data,
+          status: previousStatuses?.[block.id] || block.data.status,
+        },
+      }))
+
+      return { ...response.data, blocks: updatedBlocks }
     },
-    enabled: !!id
+    enabled: !!id,
   })
 }
+
 
 export function useComputeBlockEnvsQuery(entrypointId: string | undefined) {
   return useQuery({
@@ -150,7 +179,8 @@ export function useDeleteComputeBlockMutation(setAlert: SetAlertType, project_id
     },
     onSuccess: (_, del_block_id) => {
       queryClient.setQueryData([project_id], (oldData: ComputeBlockByProjectResponse) => {
-        // TODO: handle edges here aswell
+        // TODO: Handle edges aswell
+        if (!oldData) return
         const updatedBlocks = oldData.blocks.filter(block => block.id !== del_block_id)
         return {
           ...oldData,
@@ -281,7 +311,6 @@ export function useUpdateComputeBlockMutation(setAlert: SetAlertType, project_id
       return response.data
     },
     onSuccess: (data) => {
-      console.log(data)
       queryClient.setQueryData([QueryKeys.cbByProject, project_id], (oldData: ComputeBlockByProjectResponse) => {
         const cbID = data.id
 

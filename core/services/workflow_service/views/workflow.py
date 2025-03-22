@@ -83,7 +83,7 @@ async def ws_workflow_status(websocket: WebSocket, project_id: UUID):
         while True:
             status = workflow_controller.dag_status(project_id)
             await websocket.send_json(status)
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
     except WebSocketDisconnect:
         logging.info(f"Websocket disconnected for project {str(project_id)}")
     except Exception as e:
