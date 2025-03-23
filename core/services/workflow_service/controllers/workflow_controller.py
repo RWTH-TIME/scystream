@@ -325,18 +325,16 @@ def dag_status(project_id: UUID) -> dict:
 
             for task in tasks:
                 cb_id = _task_id_to_cb_id(task.task_id)
-                task_statuses[cb_id] = {
-                    "state": BlockStatus.from_airflow_state(
-                        task.state.value if task.state else None
-                    ).value,
-                }
+                task_statuses[cb_id] = BlockStatus.from_airflow_state(
+                    task.state.value if task.state else None
+                ).value
 
             return task_statuses
         except ApiException as e:
             logging.error(
                 f"""
-                Exception while trying to get Compute Block statuses
-                per project from airflow: {e}
-                """
+            Exception while trying to get Compute Block statuses
+            per project from airflow: {e}
+            """
             )
             raise e

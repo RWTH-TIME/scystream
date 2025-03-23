@@ -21,6 +21,8 @@ from services.workflow_service.controllers.compute_block_controller import (
     get_block_dependencies_for_blocks, delete_edge, get_envs_for_entrypoint,
     get_io_for_entrypoint, update_ios, update_block
 )
+import services.workflow_service.controllers.workflow_controller as \
+    workflow_controller
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
 
@@ -80,13 +82,16 @@ async def get_by_project(
 
     try:
         compute_blocks = get_compute_blocks_by_project(project_id)
+        status = workflow_controller.dag_status(project_id)
 
         block_uuids = [block.uuid for block in compute_blocks]
         dependencies = get_block_dependencies_for_blocks(block_uuids)
 
         return GetNodesByProjectResponse(
             blocks=[
-                SimpleNodeDTO.from_compute_block(cb) for cb in compute_blocks
+                SimpleNodeDTO.from_compute_block(
+                    cb, status.get(str(cb.uuid)))
+                for cb in compute_blocks
             ],
             edges=[EdgeDTO.from_block_dependencies(
                 dp) for dp in dependencies

@@ -36,17 +36,16 @@ function useGraphData(selectedProjectUUID: string | undefined) {
   const [selectedEdge, setSelectedEdge] = useState<Edge | undefined>(undefined)
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { setAlert } = useAlert()
-  const [isReadyForWS, setIsReadyForWS] = useState(false)
+
+  useComputeBlockStatusWS(setAlert, selectedProjectUUID)
 
   useEffect(() => {
     if (projectDetails) {
       setNodes(projectDetails.blocks)
       setEdges(projectDetails.edges)
-      setIsReadyForWS(true)
     }
   }, [projectDetails])
 
-  useComputeBlockStatusWS(setAlert, isReadyForWS ? selectedProjectUUID : undefined)
 
   return {
     nodes,

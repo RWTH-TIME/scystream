@@ -9,6 +9,7 @@ from services.workflow_service.models.input_output import (
     InputOutput,
     InputOutputType
 )
+from services.workflow_service.schemas.workflow import BlockStatus
 from utils.config.environment import ENV
 
 ConfigType = Dict[str, Optional[Union[str, int, float, List, bool]]]
@@ -133,6 +134,11 @@ class BaseNodeDataDTO(BaseModel):
     description: str
     author: str
     image: str
+    status: Optional[BlockStatus] = BlockStatus.IDLE
+
+    @validator("status")
+    def set_status(cls, status):
+        return status or BlockStatus.IDLE
 
 
 class SimpleNodeDataDTO(BaseNodeDataDTO):
@@ -153,7 +159,7 @@ class SimpleNodeDTO(BaseNodeDTO):
     data: SimpleNodeDataDTO
 
     @classmethod
-    def from_compute_block(cls, cb):
+    def from_compute_block(cls, cb, status: BlockStatus):
         return cls(
             id=cb.uuid,
             position=PositionDTO(
@@ -181,7 +187,8 @@ class SimpleNodeDTO(BaseNodeDTO):
                         for io in cb.selected_entrypoint.input_outputs
                         if io.type == InputOutputType.OUTPUT
                     ]
-                )
+                ),
+                status=status
             ),
         )
 

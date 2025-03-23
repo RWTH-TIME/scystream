@@ -56,7 +56,10 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
       border: "border-red-500 border-dashed",
       icon: <Warning className="w-5 h-5 text-red-500" />,
     },
-    [ComputeBlockStatus.IDLE]: {}
+    [ComputeBlockStatus.IDLE]: {
+      border: "",
+      icon: null
+    }
   }
 
   const statusStyle = statusStyles[data.status ?? ComputeBlockStatus.IDLE]
@@ -89,9 +92,15 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
       <div
         className={`relative w-full max-w-sm bg-white border rounded-lg shadow-lg p-6
         transition duration-150 ease-in-out hover:bg-gray-50 hover:shadow-xl
-        ${selectedComputeBlock?.id === data.id ? "border-blue-400" : "border-gray-300"}
-        ${statusStyle.border || ""}`}
+        ${selectedComputeBlock?.id === data.id
+            ? data.status === "IDLE"
+              ? "border-blue-400"  // If selected and IDLE
+              : "border-blue-800"  // If selected and not IDLE
+            : statusStyle.border || "border-gray-300" // Default border
+          }
+      `}
       >
+
         {/* Status Icon */}
         {statusStyle.icon && (
           <div className="absolute top-2 right-2">{statusStyle.icon}</div>

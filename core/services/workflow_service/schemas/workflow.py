@@ -28,7 +28,7 @@ class BlockStatus(Enum):
 
     @classmethod
     def from_airflow_state(cls, airflow_state: str | None) -> "BlockStatus":
-        if not airflow_state:
+        if airflow_state is None:
             return cls.IDLE
         state_mapping = {
             "success": cls.SUCCESS,
@@ -36,6 +36,7 @@ class BlockStatus(Enum):
             "failed": cls.FAILED,
             "scheduled": cls.SCHEDULED,
         }
+
         return state_mapping.get(airflow_state.lower(), cls.IDLE)
 
 

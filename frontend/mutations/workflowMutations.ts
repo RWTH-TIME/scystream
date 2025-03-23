@@ -91,10 +91,11 @@ type WorflowStatusEvent = Record<string, WfStatusData>
 
 export function useComputeBlockStatusWS(setAlert: SetAlertType, project_id: string | undefined) {
   const queryClient = useQueryClient()
-  const connectionString = `${config.wsUrl}${CB_STATUS_WS}${project_id}`
 
   useEffect(() => {
     if (!project_id) return
+
+    const connectionString = `${config.wsUrl}${CB_STATUS_WS}${project_id}`
 
     const websocket = webSocketManager.getConnection<WorflowStatusEvent>(connectionString)
 
@@ -106,7 +107,7 @@ export function useComputeBlockStatusWS(setAlert: SetAlertType, project_id: stri
             ...block,
             data: {
               ...block.data,
-              status: data[block.id]?.state ?? block.data.status
+              status: data[block.id] ?? block.data.status
             }
           }
         })
@@ -128,6 +129,6 @@ export function useComputeBlockStatusWS(setAlert: SetAlertType, project_id: stri
       websocket.removeListener(handleCBStatusMessage)
       webSocketManager.removeConnection(connectionString)
     }
-  }, [queryClient, setAlert, project_id, connectionString])
+  }, [queryClient, setAlert, project_id])
 
 }
