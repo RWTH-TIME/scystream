@@ -314,7 +314,7 @@ services:
       core-postgres:
         condition: service_healthy
     volumes:
-      - airflow-dags:/airflow-dags
+      - ./airflow-dags:/airflow-dags
     networks:
       - core
 
