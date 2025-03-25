@@ -280,7 +280,7 @@ def get_latest_dag_run(project_id: UUID) -> str | None:
             if dag_runs:
                 return dag_runs[0].dag_run_id
             else:
-                logging.warning(f"No DAG runs found for DAG {dag_id}")
+                logging.debug(f"No DAG runs found for DAG {dag_id}")
                 return None
         except ApiException as e:
             logging.error(f"Error fetching DAG runs for {dag_id}: {e}")
@@ -310,7 +310,7 @@ def dag_status(project_id: UUID) -> dict:
     latest_run_id = get_latest_dag_run(project_id)
 
     if not latest_run_id:
-        raise HTTPException(status_code=400, detail="DAG was not yet run.")
+        return {}
 
     with ApiClient(airflow_config) as api_client:
         api = TaskInstanceApi(api_client)
