@@ -56,7 +56,7 @@ export default function ConfigEnvsInputs({ pairs, onUpdate }: ConfigEnvsInputsPr
       </div>
 
       <div
-        className={`overflow-hidden transition-max-height duration-500 ease-in-out ${expanded ? "max-h-screen" : "max-h-0"}`}
+        className={`overflow-auto transition-max-height duration-500 ease-in-out ${expanded ? "max-h-screen" : "max-h-0"}`}
       >
         {Object.entries(pairs).map(([key, value]) => (
           <div key={key} className="mb-4">
