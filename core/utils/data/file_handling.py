@@ -52,7 +52,7 @@ def generate_presigned_url(
     client,
     bucket_name: str,
     file_path: str,
-    expiration: int = 3600
+    expiration: int = 86400  # 1 day
 ):
     try:
         url = client.generate_presigned_url(

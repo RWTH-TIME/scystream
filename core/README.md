@@ -57,6 +57,9 @@ alembic upgrade head
 
 The following Environment Variables define the defaults that the Compute Blocks Outputs of type `File` & `DB` will be populated with.
 
+It is very important that the given configs are reachable from the airflow containers. They dont need to be
+externally reachable.
+
 | NAME                              | DEFAULT VALUE             | DESCRIPTION                               |
 | ----------------------------------| --------------------------| ------------------------------------------|
 | DEFAULT_CB_CONFIG_S3_HOST         | http://data-minio         | Default Host of the data Minio.         |
