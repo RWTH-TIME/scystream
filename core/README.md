@@ -39,6 +39,7 @@ alembic upgrade head
 
 | NAME                              | DEFAULT VALUE             | DESCRIPTION                               |
 | ----------------------------------| --------------------------| ------------------------------------------|
+| DEVELOPMENT                       | False                     | Sets Development Mode. Set it to True when running core locally, NEVER use when running core in a docker container |
 | DATABASE_HOST                     | core-postgres             | PostgresDB host                           |
 | DATABASE_NAME                     | core                      | PostgresDB name                           |
 | DATABASE_USER                     | core                      | PostgresDB user                           |
@@ -50,3 +51,21 @@ alembic upgrade head
 | JWT_SECRET                        | secret                    | secret for jwt token generation           |
 | JWT_ACCES_TOKEN_EXPIRE_MIN        | 15                        | access token expire time in minutes       |
 | JWT_REFRESH_TOKEN_EXPIRE_DAYS     | 30                        | refresh token expire time in days         |
+| EXTERNAL_URL_DATA_S3              | http://localhost:9000     | Externally reachable URL with Port of Minio provided for compute block storage. Make sure that this reaches the same Minio provided by the following config defaults. |
+
+#### File Output Defaults
+
+The following Environment Variables define the defaults that the Compute Blocks Outputs of type `File` & `DB` will be populated with.
+
+| NAME                              | DEFAULT VALUE             | DESCRIPTION                               |
+| ----------------------------------| --------------------------| ------------------------------------------|
+| DEFAULT_CB_CONFIG_S3_HOST         | http://data-minio         | Default Host of the data Minio.         |
+| DEFAULT_CB_CONFIG_S3_PORT         | 9000                      | Default Port of the data Minio.         |
+| DEFAULT_CB_CONFIG_S3_ACCESS_KEY   | minioadmin                | Access Key of the data Minio.         |
+| DEFAULT_CB_CONFIG_S3_SECRET_KEY   | minioadmin                | Secret Key of the data Minio.         |
+| DEFAULT_CB_CONFIG_S3_BUCKET_NAME  | data                      | Default Bucket value of the data Minio.         |
+| DEFAULT_CB_CONFIG_S3_FILE_PATH    | /                         | Default File Path of the data Minio.         |
+| DEFAULT_CB_CONFIG_PG_USER         | postgres         | User of the data postgres.         |
+| DEFAULT_CB_CONFIG_PG_PASS         | postgres                      | Password for the data postgres.         |
+| DEFAULT_CB_CONFIG_PG_HOST         | data-postgres | Host of the data postgres.         |
+| DEFAULT_CB_CONFIG_PG_PORT         | 5432 | Port of the data postgres.         |

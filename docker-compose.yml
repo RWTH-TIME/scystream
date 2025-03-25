@@ -317,6 +317,7 @@ services:
       - ./airflow-dags:/airflow-dags
     networks:
       - core
+      - data_processing
 
   core-postgres:
     image: postgres:17

@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     TRUSTED_CBC_DOMAINS: List[str] = ["github.com"]
     MAX_CBC_FILE_SIZE: int = 10 * 1024 * 1024  # 10 MB
 
+    # This has to reach the internal minio, provided by the defaults
+    EXTERNAL_URL_DATA_S3: str = "http://localhost:9000"
+
     DEFAULT_CB_CONFIG_S3_HOST: str = "http://data-minio"
     DEFAULT_CB_CONFIG_S3_PORT: str = "9000"
     DEFAULT_CB_CONFIG_S3_ACCESS_KEY: str = "minioadmin"

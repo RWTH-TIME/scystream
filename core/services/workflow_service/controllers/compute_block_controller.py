@@ -2,16 +2,18 @@ from fastapi import HTTPException
 import requests
 import os
 from typing import List, Dict, Optional, Literal
-from uuid import UUID, uuid4
 import tempfile
 import urllib.parse
 import logging
 
+from uuid import UUID
 from sqlalchemy import select, case, asc, delete
 from sqlalchemy.orm import Session, contains_eager
-from utils.database.session_injector import get_database
-from services.workflow_service.models.block import Block, block_dependencies
 from utils.config.environment import ENV
+from utils.database.session_injector import get_database
+from utils.config.defaults import get_file_cfg_defaults_dict, \
+    get_pg_cfg_defaults_dict
+from services.workflow_service.models.block import Block, block_dependencies
 from services.workflow_service.models.entrypoint import Entrypoint
 from services.workflow_service.models.input_output import (
     InputOutput, InputOutputType, DataType
@@ -20,28 +22,6 @@ from services.workflow_service.schemas.compute_block import ConfigType
 from scystream.sdk.config import SDKConfig, load_config
 from scystream.sdk.env.settings import PostgresSettings, FileSettings
 from scystream.sdk.config.models import ComputeBlock
-
-
-def _get_file_cfg_defaults_dict(io_name: str) -> dict:
-    return {
-        "S3_HOST": ENV.DEFAULT_CB_CONFIG_S3_HOST,
-        "S3_PORT": ENV.DEFAULT_CB_CONFIG_S3_PORT,
-        "S3_ACCESS_KEY": ENV.DEFAULT_CB_CONFIG_S3_ACCESS_KEY,
-        "S3_SECRET_KEY": ENV.DEFAULT_CB_CONFIG_S3_SECRET_KEY,
-        "BUCKET_NAME": ENV.DEFAULT_CB_CONFIG_S3_BUCKET_NAME,
-        "FILE_PATH": ENV.DEFAULT_CB_CONFIG_S3_FILE_PATH,
-        "FILE_NAME": f"file_{io_name}_{uuid4()}",
-    }
-
-
-def _get_pg_cfg_defaults_dict(io_name: str) -> dict:
-    return {
-        "PG_USER": ENV.DEFAULT_CB_CONFIG_PG_USER,
-        "PG_PASS": ENV.DEFAULT_CB_CONFIG_PG_PASS,
-        "PG_HOST": ENV.DEFAULT_CB_CONFIG_S3_HOST,
-        "PG_PORT": ENV.DEFAULT_CB_CONFIG_PG_PORT,
-        "DB_TABLE": f"table_{io_name}_{uuid4()}",
-    }
 
 
 SETTINGS_CLASS = {
@@ -116,9 +96,9 @@ def request_cb_info(repo_url: str) -> ComputeBlock:
                 else DataType.PGTABLE
             )
             default_values = (
-                _get_file_cfg_defaults_dict(on)
+                get_file_cfg_defaults_dict(on)
                 if o_type is DataType.FILE
-                else _get_pg_cfg_defaults_dict(on)
+                else get_pg_cfg_defaults_dict(on)
             )
 
             # Update the config with default values
@@ -166,7 +146,7 @@ def _updated_configs_with_values(
     return new_config
 
 
-def _extract_default_keys_to_update_values(
+def extract_default_keys_from_io(
     io: InputOutput
 ):
     """
@@ -395,7 +375,7 @@ def _update_io(
     # We are sure here that the downstream has the same type
     updated_downstream_ids = []
     for downstream_io in downstream_ios:
-        update_dict = _extract_default_keys_to_update_values(io)
+        update_dict = extract_default_keys_from_io(io)
         downstream_io.config = _updated_configs_with_values(
             downstream_io, update_dict, downstream_io.data_type
         )
@@ -529,7 +509,7 @@ def create_stream_and_update_target_cfg(
             return target_io.uuid
 
         logging.debug(f"Updating Input {to_input_uuid} configs.")
-        extracted_defaults = _extract_default_keys_to_update_values(
+        extracted_defaults = extract_default_keys_from_io(
             source_io
         )
         target_io.config = _updated_configs_with_values(

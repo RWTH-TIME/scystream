@@ -4,6 +4,7 @@ import logging
 from typing import List, Union, Dict, Optional
 
 from utils.errors.error import handle_error
+from utils.data.file_handling import bulk_presigned_urls_from_ios
 from services.workflow_service.models.input_output import InputOutputType
 from services.workflow_service.schemas.compute_block import (
     ComputeBlockInformationRequest, ComputeBlockInformationResponse,
@@ -155,10 +156,14 @@ async def get_io(
         raise HTTPException(
             status_code=422, detail="Entrypoint ID is required."
         )
-
     try:
         ios = get_io_for_entrypoint(entry_id, io_type)
-        return [InputOutputDTO.from_input_output(io.name, io) for io in ios]
+        presigned_urls = bulk_presigned_urls_from_ios(ios)
+        return [InputOutputDTO.from_input_output(
+            io.name,
+            io,
+            presigned_urls.get(str(io.uuid))) for io in ios
+        ]
     except Exception as e:
         logging.error(f"Error getting {
                       io_type.value}s of entrypoint {entry_id}: {e}")

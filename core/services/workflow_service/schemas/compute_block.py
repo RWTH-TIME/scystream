@@ -11,6 +11,7 @@ from services.workflow_service.models.input_output import (
 )
 from services.workflow_service.schemas.workflow import BlockStatus
 from utils.config.environment import ENV
+from utils.config.defaults import get_file_cfg_defaults_dict
 
 ConfigType = Dict[str, Optional[Union[str, int, float, List, bool]]]
 
@@ -49,15 +50,37 @@ class InputOutputDTO(BaseIODTO):
     name: str
     description: Optional[str] = None
     config: ConfigType
+    presigned_url: Optional[str] = None
 
     @classmethod
-    def from_input_output(cls, name: str, input_output):
+    def replace_minio_host(cls, url: Optional[str]) -> Optional[str]:
+        if url:
+            defaults = get_file_cfg_defaults_dict("placeholder")
+            default_minio_url = f"{defaults.get("S3_HOST")}:{
+                defaults.get("S3_PORT")}"
+            """
+            The client can never use the presigned url with the default minio
+            host. Therefore we replace the default minio host, if it exists in
+            the presigned url,with the externally reachable url of the data
+            minio.
+            """
+            return url.replace(default_minio_url, ENV.EXTERNAL_URL_DATA_S3)
+        return url
+
+    @classmethod
+    def from_input_output(
+            cls,
+            name: str,
+            input_output,
+            presigned_url: str | None = None,
+    ):
         return cls(
             id=getattr(input_output, "uuid", None),
             name=name,
             data_type=(input_output.data_type),
             description=input_output.description or "",
-            config=input_output.config or {}
+            config=input_output.config or {},
+            presigned_url=cls.replace_minio_host(url=presigned_url)
         )
 
     @classmethod
