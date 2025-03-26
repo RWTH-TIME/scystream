@@ -77,7 +77,6 @@ export default function EditInputsOutputsTab({ type }: EditInputsOutputsTabProps
           config={ios}
           updateConfig={handleConfigChange}
         />
-
         <div className="flex justify-end py-5">
           <Button
             disabled={!isDataChanged}

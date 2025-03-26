@@ -64,7 +64,6 @@ class InputOutputDTO(BaseIODTO):
             the presigned url,with the externally reachable url of the data
             minio.
             """
-            print(defaults, default_minio_url)
             return url.replace(default_minio_url, ENV.EXTERNAL_URL_DATA_S3)
         return url
 
@@ -86,7 +85,6 @@ class InputOutputDTO(BaseIODTO):
 
     @classmethod
     def from_sdk_input_output(cls, name: str, input_output):
-        print("FROM SDK CONFIG")
         return cls(
             id=getattr(input_output, "uuid", None),
             name=name,

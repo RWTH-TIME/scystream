@@ -25,11 +25,12 @@ def get_s3_client(
 def find_file_with_prefix(
     client,
     bucket_name: str,
+    file_path: str,
     file_prefix: str
 ) -> str | None:
     try:
         response = client.list_objects_v2(
-            Bucket=bucket_name)
+            Bucket=bucket_name, Prefix=file_path.strip("/"))
 
         if "Contents" not in response:
             return None
@@ -106,6 +107,7 @@ def bulk_presigned_urls_from_ios(ios: List[InputOutput]) -> dict:
             full_file_path = find_file_with_prefix(
                 client,
                 bucket_name=file_location_info.get("BUCKET_NAME"),
+                file_path=file_location_info.get("FILE_PATH"),
                 file_prefix=file_location_info.get("FILE_NAME")
             )
             if full_file_path:

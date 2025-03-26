@@ -34,6 +34,7 @@ export type InputOutput = {
   data_type: InputOutputType,
   description: string,
   config: Record<string, RecordValueType>,
+  presigned_url: string,
 }
 
 
