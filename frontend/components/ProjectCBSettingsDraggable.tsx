@@ -1,5 +1,5 @@
-import type { PropsWithChildren } from "react";
-import { useState } from "react";
+import type { PropsWithChildren } from "react"
+import { useState } from "react"
 
 type ProjectCBSettingsDraggableProps = PropsWithChildren<{
   tabs: { key: string, label: string }[],
@@ -8,26 +8,26 @@ type ProjectCBSettingsDraggableProps = PropsWithChildren<{
 }>
 
 export default function ProjectCBSettingsDraggable({ children, tabs, activeTab, setActiveTab }: ProjectCBSettingsDraggableProps) {
-  const [height, setHeight] = useState(300);
+  const [height, setHeight] = useState(300)
 
   const handleResize = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    e.preventDefault();
-    const startY = e.clientY;
-    const startHeight = height;
+    e.preventDefault()
+    const startY = e.clientY
+    const startHeight = height
 
     const onMouseMove = (moveEvent: MouseEvent) => {
-      const newHeight = Math.max(200, startHeight + (startY - moveEvent.clientY));
-      setHeight(newHeight);
-    };
+      const newHeight = Math.max(200, startHeight + (startY - moveEvent.clientY))
+      setHeight(newHeight)
+    }
 
     const onMouseUp = () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    };
+      document.removeEventListener("mousemove", onMouseMove)
+      document.removeEventListener("mouseup", onMouseUp)
+    }
 
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-  };
+    document.addEventListener("mousemove", onMouseMove)
+    document.addEventListener("mouseup", onMouseUp)
+  }
 
   return (
     <div
@@ -59,6 +59,6 @@ export default function ProjectCBSettingsDraggable({ children, tabs, activeTab, 
       {/* Content Passed from Parent */}
       <div className="p-4">{children}</div>
     </div>
-  );
+  )
 }
 
