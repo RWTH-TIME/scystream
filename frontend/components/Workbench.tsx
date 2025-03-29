@@ -10,21 +10,23 @@ import {
   ConnectionMode
 } from "@xyflow/react"
 import { PlayArrow, Widgets, Delete } from "@mui/icons-material"
-import type { ComputeBlockNodeType } from "./nodes/ComputeBlockNode";
+import type { ComputeBlockNodeType } from "./nodes/ComputeBlockNode"
 import ComputeBlockNode from "./nodes/ComputeBlockNode"
 import "@xyflow/react/dist/style.css"
 import LoadingAndError from "./LoadingAndError"
 import EditProjectDraggable from "./EditProjectDraggable"
 import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
-import type { ComputeBlock, InputOutput } from "@/components/CreateComputeBlockModal";
+import type { InputOutput } from "@/components/CreateComputeBlockModal"
 import CreateComputeBlockModal from "./CreateComputeBlockModal"
 import { useDeleteProjectMutation } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
-import type { EdgeDTO } from "@/mutations/computeBlockMutation";
-import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMutation, useUpdateComputeBlockCoords } from "@/mutations/computeBlockMutation"
+import type { EdgeDTO } from "@/mutations/computeBlockMutation"
+import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMutation, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import DeleteModal from "./DeleteModal"
+import { useComputeBlockStatusWS, useTriggerWorkflowMutation } from "@/mutations/workflowMutations"
+import { CircularProgress } from "@mui/material"
 
 
 function useGraphData(selectedProjectUUID: string | undefined) {
@@ -33,20 +35,17 @@ function useGraphData(selectedProjectUUID: string | undefined) {
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedEdge, setSelectedEdge] = useState<Edge | undefined>(undefined)
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
-  const { setAlert } = useAlert();
+  const { setAlert } = useAlert()
+
+  useComputeBlockStatusWS(setAlert, selectedProjectUUID)
 
   useEffect(() => {
     if (projectDetails) {
       setNodes(projectDetails.blocks)
       setEdges(projectDetails.edges)
-      if (selectedComputeBlock?.id) {
-        // If the projectDetails have been updated, and the user currently selected a
-        // compute Block, update the data of the selectedCompute block. It might have changed
-        setSelectedComputeBlock(projectDetails.blocks.find((block: ComputeBlock) => block.id === selectedComputeBlock.id).data)
-      }
-
     }
-  }, [projectDetails, selectedComputeBlock, setSelectedComputeBlock])
+  }, [projectDetails])
+
 
   return {
     nodes,
@@ -59,7 +58,7 @@ function useGraphData(selectedProjectUUID: string | undefined) {
     setNodes,
     setEdges,
     setSelectedEdge,
-    setAlert
+    setAlert,
   }
 }
 
@@ -85,16 +84,18 @@ function NodeControls({ onDragStart }: NodeControlProps) {
 type ActionButtonsProps = {
   onPlayClick: () => void,
   onDeleteClick: () => void,
+  isTriggerLoading: boolean,
 }
 
-function ActionButtons({ onPlayClick, onDeleteClick }: ActionButtonsProps) {
+function ActionButtons({ onPlayClick, onDeleteClick, isTriggerLoading }: ActionButtonsProps) {
   return (
     <div className="flex justify-self-end gap-3">
       <button
+        disabled={isTriggerLoading}
         onClick={onPlayClick}
         className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200"
       >
-        <PlayArrow />
+        {isTriggerLoading ? <CircularProgress /> : <PlayArrow />}
       </button>
       <button
         onClick={onDeleteClick}
@@ -118,34 +119,35 @@ export function Workbench() {
   const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
   const { mutate: deleteEdgeMutate } = useDeleteEdgeMutation(setAlert, selectedProject?.uuid)
   const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, selectedProject?.uuid)
-  const { mutate: updateBlockMutate } = useUpdateComputeBlockCoords(setAlert, selectedProject?.uuid)
+  const { mutate: updateBlockMutate } = useUpdateComputeBlockMutation(setAlert, selectedProject?.uuid)
+  const { mutateAsync: triggerWorkflow, isPending: triggerLoading } = useTriggerWorkflowMutation(setAlert)
 
-  const [deleteApproveOpen, setDeleteApproveOpen] = useState(false);
-  const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false);
-  const [dropCoordinates, setDropCoordinates] = useState({ x: 0, y: 0 });
+  const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
+  const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false)
+  const [dropCoordinates, setDropCoordinates] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
     setTimeout(() => {
-      fitView();
-    }, 50);
+      fitView()
+    }, 50)
   }, [fitView, selectedProject])
 
   useEffect(() => {
     const onDeleteEdge = () => {
       if (selectedEdge) {
-        setSelectedEdge(undefined);
+        setSelectedEdge(undefined)
         deleteEdgeMutate(selectedEdge as EdgeDTO)
       }
     }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Delete" || event.key === "Backspace") {
         if (selectedEdge) {
-          onDeleteEdge();
+          onDeleteEdge()
         }
       }
-    };
+    }
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [selectedEdge, deleteEdgeMutate, setSelectedEdge])
 
@@ -159,19 +161,20 @@ export function Workbench() {
   }
 
   const onDragStart = (event: React.DragEvent<HTMLButtonElement>) => {
-    event.dataTransfer.effectAllowed = "move";
-  };
+    event.dataTransfer.effectAllowed = "move"
+  }
 
   const onNodeDragStop = useCallback(
     (_: React.SyntheticEvent, node: ComputeBlockNodeType) => {
+      if (!node.position) return
       updateBlockMutate({
         id: node.id,
         x_pos: node.position.x,
         y_pos: node.position.y
-      });
+      })
     },
     [updateBlockMutate]
-  );
+  )
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault()
@@ -196,31 +199,31 @@ export function Workbench() {
       const existingEdge = edges.find(
         (edge) =>
           edge.targetHandle === connection.targetHandle
-      );
+      )
 
       // If a connection already exists, do not add it
       if (existingEdge) {
         setAlert("This output is already connected to an input.", AlertType.ERROR)
-        return;
+        return
       }
 
 
       // Proceed with adding the connection if it's not already present
-      const sourceNode = nodes.find((node) => node.id === connection.source);
-      const targetNode = nodes.find((node) => node.id === connection.target);
+      const sourceNode = nodes.find((node) => node.id === connection.source)
+      const targetNode = nodes.find((node) => node.id === connection.target)
 
       if (sourceNode && targetNode) {
         const sourceHandle = sourceNode.data.selected_entrypoint?.outputs?.find(
           (output: InputOutput) => output.id === connection.sourceHandle
-        );
+        )
         const targetHandle = targetNode.data.selected_entrypoint?.inputs?.find(
           (input: InputOutput) => input.id === connection.targetHandle
-        );
+        )
 
         // Check if types are compatible
         if (sourceHandle && targetHandle) {
-          const sourceType = sourceHandle.data_type;
-          const targetType = targetHandle.data_type;
+          const sourceType = sourceHandle.data_type
+          const targetType = targetHandle.data_type
 
           if (sourceType === targetType) {
             edgeMutate(connection as EdgeDTO)
@@ -232,7 +235,12 @@ export function Workbench() {
       }
     },
     [edges, nodes, setAlert, edgeMutate]
-  );
+  )
+
+  function onPlayClicked() {
+    if (!selectedProject) return
+    triggerWorkflow(selectedProject.uuid)
+  }
 
   if (!selectedProject) {
     return <div>Select a Project!</div>
@@ -259,7 +267,11 @@ export function Workbench() {
 
       <div className="flex absolute justify-between flex-row p-5 gap-3 right-0 bg-inherit z-30">
         <NodeControls onDragStart={onDragStart} />
-        <ActionButtons onPlayClick={() => console.log("Play clicked")} onDeleteClick={() => setDeleteApproveOpen(true)} />
+        <ActionButtons
+          onPlayClick={onPlayClicked}
+          onDeleteClick={() => setDeleteApproveOpen(true)}
+          isTriggerLoading={triggerLoading}
+        />
       </div>
 
       <div className="h-full">
