@@ -85,7 +85,7 @@ export default function CreateComputeBlockModal({
     image: "",
     entrypoints: [],
     cbc_url: "",
-  });
+  })
   const [selectedEntrypoint, setSelectedEntrypoint] = useState<Entrypoint | undefined>(undefined)
   const [activeStep, setActiveStep] = useState<number>(0)
   const { selectedProject } = useSelectedProject()
@@ -95,7 +95,7 @@ export default function CreateComputeBlockModal({
     { label: "CBC" },
     { label: "Entrypoint" },
     { label: "Configuration" },
-  ];
+  ]
 
   function reset() {
     setComputeBlockDraft({
@@ -106,20 +106,20 @@ export default function CreateComputeBlockModal({
       image: "",
       entrypoints: [],
       cbc_url: "",
-    });
-    setSelectedEntrypoint(undefined);
-    setActiveStep(0);
+    })
+    setSelectedEntrypoint(undefined)
+    setActiveStep(0)
   };
 
   function handleNext() {
     if (activeStep < stepsInformation.length - 1) {
-      setActiveStep((prevStep) => prevStep + 1);
+      setActiveStep((prevStep) => prevStep + 1)
     }
   };
 
   function handleBack() {
     if (activeStep > 0) {
-      setActiveStep((prevStep) => prevStep - 1);
+      setActiveStep((prevStep) => prevStep - 1)
     }
   };
 
@@ -133,8 +133,8 @@ export default function CreateComputeBlockModal({
   }
 
   function handleModalClose() {
-    reset();
-    onClose();
+    reset()
+    onClose()
   }
 
   async function handleCreate() {
@@ -167,11 +167,11 @@ export default function CreateComputeBlockModal({
   function getStepContent() {
     switch (activeStep) {
       case 0:
-        return <CreateComputeBlockInformationStep onNext={handleNext} setComputeBlock={setComputeBlockDraft} />;
+        return <CreateComputeBlockInformationStep onNext={handleNext} setComputeBlock={setComputeBlockDraft} />
       case 1:
-        return <CreateComputeBlockEntrypointStep onNext={handleNext} onPrev={handleBack} computeBlock={computeBlockDraft} setSelectedEntrypoint={setSelectedEntrypoint} selectedEntrypoint={selectedEntrypoint} />;
+        return <CreateComputeBlockEntrypointStep onNext={handleNext} onPrev={handleBack} computeBlock={computeBlockDraft} setSelectedEntrypoint={setSelectedEntrypoint} selectedEntrypoint={selectedEntrypoint} />
       case 2:
-        return <CreateComputeBlockConfigurationStep onNext={handleCreate} onPrev={handleBack} computeBlock={computeBlockDraft} setComputeBlock={setComputeBlockDraft} selectedEntrypoint={selectedEntrypoint} setSelectedEntrypoint={setSelectedEntrypoint} loading={loading} />;
+        return <CreateComputeBlockConfigurationStep onNext={handleCreate} onPrev={handleBack} computeBlock={computeBlockDraft} setComputeBlock={setComputeBlockDraft} selectedEntrypoint={selectedEntrypoint} setSelectedEntrypoint={setSelectedEntrypoint} loading={loading} />
     }
   };
 
@@ -191,6 +191,6 @@ export default function CreateComputeBlockModal({
       </div>
       {getStepContent()}
     </Modal>
-  );
+  )
 }
 

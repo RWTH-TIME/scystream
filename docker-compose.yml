@@ -1,3 +1,8 @@
+networks:
+  core:
+  airflow:
+  data_processing:
+
 x-airflow-common:
   &airflow-common
   image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.9.1}
@@ -8,6 +13,7 @@ x-airflow-common:
     AIRFLOW_GID: 0
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow/airflow
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres-airflow/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis-airflow:6379/0
     AIRFLOW__CORE__FERNET_KEY: ''
@@ -16,22 +22,22 @@ x-airflow-common:
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
-    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 5
+    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 0
     AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: 0
     # AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
-    - ./core/airflow-dags:/opt/airflow/dags
+    - ./airflow-dags:/opt/airflow/dags
     - airflow-logs:/opt/airflow/logs
     - airflow-config:/opt/airflow/config
     - airflow-plugins:/opt/airflow/plugins
-  user: "${AIRFLOW_UID:-50000}:0"
+    - /var/run/docker.sock:/var/run/docker.sock
+  user: "0:0"
   depends_on:
     &airflow-common-depends-on
     redis-airflow:
       condition: service_healthy
     postgres-airflow:
-      condition: service_healthy 
-    
+      condition: service_healthy
 
 services:
   ### airflow:
@@ -47,7 +53,9 @@ services:
       retries: 50
       start_period: 30s
     restart: always
-  
+    networks:
+      - airflow
+
   postgres-airflow:
     image: postgres:14
     environment:
@@ -62,6 +70,8 @@ services:
       retries: 5
       start_period: 5s
     restart: always
+    networks:
+      - airflow
 
   airflow-scheduler:
     <<: *airflow-common
@@ -77,10 +87,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-    # TODO: Check if only the airflow scheduler needs to be in data-processing network
-    # Info: The Airflow-Scheduler needs to schedule the dockerContainers in the data-processing network
     networks:
-      - data-processing
+      - airflow
 
   airflow-worker:
     <<: *airflow-common
@@ -103,6 +111,9 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - data_processing
+      - airflow
 
   airflow-triggerer:
     <<: *airflow-common
@@ -118,7 +129,9 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-    
+    networks:
+      - airflow
+
   airflow-init:
     <<: *airflow-common
     entrypoint: /bin/bash
@@ -182,6 +195,8 @@ services:
     user: "0:0"
     volumes:
       - airflow-sources:/sources
+    networks:
+      - airflow
 
   airflow-cli:
     <<: *airflow-common
@@ -194,6 +209,8 @@ services:
     command:
       - bash
       - -c
+      - airflow
+    networks:
       - airflow
   
   airflow-webserver:
@@ -212,6 +229,9 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - airflow
+      - core
   
   ### spark:
   spark-master:
@@ -228,7 +248,7 @@ services:
       - "8080:8080" # web ui
       - "7077:7077" # master port
     networks:
-      - data-processing
+      - data_processing
   
   # In production, there should be more workers
   spark-worker:
@@ -241,7 +261,7 @@ services:
     depends_on:
       - spark-master
     networks:
-      - data-processing
+      - data_processing
   
   # The postgres we offer the compute blocks to save data at
   data-postgres:
@@ -253,7 +273,7 @@ services:
     ports:
       - "5433:5432"
     networks:
-      - data-processing
+      - data_processing
 
   # The minio we offer the comput block to save files at
   data-minio:
@@ -267,9 +287,9 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
-    networks:
-      - data-processing
     command: server /data --console-address ":9001"
+    networks:
+      - data_processing
 
   ### application:
   frontend:
@@ -277,6 +297,8 @@ services:
     restart: always
     ports:
       - "8000:80"
+    networks:
+      - core
   
   core:
     build: core
@@ -285,11 +307,16 @@ services:
       - "4000:4000"
     environment:
       EXTERNAL_URL: "http://localhost:8000"
+      AIRFLOW_HOST: "http://airflow-webserver:8080/api/v1"
     depends_on:
-      catapulte:
-        condition: service_started
+      #catapulte:
+      #  condition: service_started
       core-postgres:
         condition: service_healthy
+    volumes:
+      - ./airflow-dags:/airflow-dags
+    networks:
+      - core
 
   core-postgres:
     image: postgres:17
@@ -307,11 +334,15 @@ services:
       interval: 10s
       timeout: 2s
       retries: 5
+    networks:
+      - core
 
   smtp:
     image: reachfive/fake-smtp-server
     ports:
       - "1080:1080"
+    networks:
+      - core
 
   catapulte:
     build: github.com/jdrouet/catapulte
@@ -331,14 +362,13 @@ services:
       - smtp
     ports:
       - "3010:3000"
-
-networks:
-  data-processing:
-    driver: bridge
+    networks:
+      - core
 
 volumes:
   postgres-airflow-volume:
   airflow-plugins:
+  airflow-dags:
   airflow-logs:
   airflow-config:
   airflow-sources:
