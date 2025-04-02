@@ -1,12 +1,12 @@
-import type { InputOutput, PageProps, RecordValueType } from "@/components/CreateComputeBlockModal";
-import LoadingAndError from "@/components/LoadingAndError";
-import ConfigBox from "../ConfigBox";
-import { useEffect, useState } from "react";
-import Button, { ButtonSentiment } from "../Button";
+import type { InputOutput, PageProps, RecordValueType } from "@/components/CreateComputeBlockModal"
+import LoadingAndError from "@/components/LoadingAndError"
+import ConfigBox from "../ConfigBox"
+import { useEffect, useState } from "react"
+import Button, { ButtonSentiment } from "../Button"
 
 function isValid(value: RecordValueType) {
-  if (Array.isArray(value) && value.length === 0) return false;
-  return true;
+  if (Array.isArray(value) && value.length === 0) return false
+  return true
 }
 
 function validateSection(
@@ -14,11 +14,11 @@ function validateSection(
   sectionType: "envs" | "inputs" | "outputs"
 ) {
   if (sectionType === "envs") {
-    return Object.values(section as Record<string, RecordValueType>).every(isValid);
+    return Object.values(section as Record<string, RecordValueType>).every(isValid)
   } else {
     return (section as InputOutput[]).every((item) =>
       Object.values(item.config).every(isValid)
-    );
+    )
   }
 }
 
@@ -35,18 +35,18 @@ export default function CreateComputeBlockConfigurationStep({
   const [formValid, setFormValid] = useState<boolean>(false)
 
   function updateConfig(section: "envs" | "inputs" | "outputs", key: string, value: RecordValueType) {
-    if (!selectedEntrypoint || !setSelectedEntrypoint) return;
+    if (!selectedEntrypoint || !setSelectedEntrypoint) return
 
     setSelectedEntrypoint((prevEntrypoint) => {
-      if (!prevEntrypoint) return prevEntrypoint;
+      if (!prevEntrypoint) return prevEntrypoint
 
-      const updatedEntrypoint = { ...prevEntrypoint };
+      const updatedEntrypoint = { ...prevEntrypoint }
 
       if (section === "envs") {
         updatedEntrypoint.envs = {
           ...updatedEntrypoint.envs,
           [key]: value
-        };
+        }
       } else {
         // This assumes, that keys are unique across inputs/outputs, which makes sense as
         // env variable names must be unique. (See SDK docs)
@@ -58,13 +58,13 @@ export default function CreateComputeBlockConfigurationStep({
                 ...io.config,
                 [key]: value,
               },
-            };
+            }
           }
-          return io;
-        });
+          return io
+        })
       }
-      return updatedEntrypoint;
-    });
+      return updatedEntrypoint
+    })
   }
 
   function handleCustomNameChange(value: string) {
@@ -76,17 +76,17 @@ export default function CreateComputeBlockConfigurationStep({
   useEffect(() => {
     function validateForm() {
       if (!computeBlock?.custom_name.trim()) {
-        setFormValid(false);
-        return;
+        setFormValid(false)
+        return
       }
 
-      const isEnvsValid = selectedEntrypoint?.envs ? validateSection(selectedEntrypoint.envs, "envs") : true;
-      const isInputsValid = selectedEntrypoint?.inputs ? validateSection(selectedEntrypoint.inputs, "inputs") : true;
-      const isOutputsValid = selectedEntrypoint?.outputs ? validateSection(selectedEntrypoint.outputs, "outputs") : true;
+      const isEnvsValid = selectedEntrypoint?.envs ? validateSection(selectedEntrypoint.envs, "envs") : true
+      const isInputsValid = selectedEntrypoint?.inputs ? validateSection(selectedEntrypoint.inputs, "inputs") : true
+      const isOutputsValid = selectedEntrypoint?.outputs ? validateSection(selectedEntrypoint.outputs, "outputs") : true
 
-      setFormValid(isEnvsValid && isInputsValid && isOutputsValid);
+      setFormValid(isEnvsValid && isInputsValid && isOutputsValid)
     }
-    validateForm();
+    validateForm()
   }, [computeBlock?.custom_name, selectedEntrypoint])
 
 
@@ -108,7 +108,7 @@ export default function CreateComputeBlockConfigurationStep({
           headline="Environment Variables"
           description="Configure the Compute Blocks environment here"
           config={selectedEntrypoint?.envs}
-          updateComputeBlock={(key, value) => updateConfig("envs", key, value)}
+          updateConfig={(key, value) => updateConfig("envs", key, value)}
         />
       )}
 
@@ -117,7 +117,7 @@ export default function CreateComputeBlockConfigurationStep({
           headline="Inputs"
           description="Configure the Compute Blocks inputs here"
           config={selectedEntrypoint?.inputs}
-          updateComputeBlock={(key, value) => updateConfig("inputs", key, value)}
+          updateConfig={(key, value) => updateConfig("inputs", key, value)}
         />
       )}
 
@@ -126,7 +126,7 @@ export default function CreateComputeBlockConfigurationStep({
           headline="Outputs"
           description="Configure the Compute Blocks outputs here"
           config={selectedEntrypoint?.outputs}
-          updateComputeBlock={(key, value) => updateConfig("outputs", key, value)}
+          updateConfig={(key, value) => updateConfig("outputs", key, value)}
         />
       )}
 
