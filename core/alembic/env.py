@@ -1,7 +1,8 @@
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+from alembic import context
 from utils.database.connection import SQLALCHEMY_DATABASE_URL, Base
 
 """
@@ -9,17 +10,34 @@ Import all your models here.
 We need to load all models or alembic will not recognize table changes,
 Keep in mind to ignore the linting in this case, we do not use these models
 """
-import importlib
-import pkgutil
+import sys
+from pathlib import Path
 
-for finder, name, ispkg in pkgutil.walk_packages(
-    ["services"], prefix="services."
-):
-    if ".models." in name:
-        try:
-            importlib.import_module(name)
-        except Exception as e:
-            print(f"Failed to import {name}: {e}")
+START_DIRECTORY = "services"
+MODELS_DIRECTORY = "models"
+
+services_path = Path(START_DIRECTORY).resolve()
+sys.path.insert(0, str(services_path.parent))
+
+
+for models_dir in services_path.rglob(MODELS_DIRECTORY):
+    if models_dir.is_dir():
+        package_parts = models_dir.relative_to(services_path.parent).parts
+        base_package = ".".join(package_parts)
+
+        for py_file in models_dir.glob("*.py"):
+            if py_file.name == "__init__.py":
+                continue
+
+            module_name = py_file.stem
+            full_module = f"{base_package}.{module_name}"
+
+            __import__(full_module)
+
+"""
+END OF DYNAMIC IMPORT LOGIC
+"""
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
