@@ -1,23 +1,20 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
 from alembic import context
-
-from utils.database.connection import SQLALCHEMY_DATABASE_URL
-
-from utils.database.connection import Base
+from sqlalchemy import engine_from_config, pool
+from utils.database.connection import SQLALCHEMY_DATABASE_URL, Base
 
 """
 Import all your models here.
 We need to load all models or alembic will not recognize table changes,
 Keep in mind to ignore the linting in this case, we do not use these models
 """
-import pkgutil
 import importlib
+import pkgutil
 
-for finder, name, ispkg in pkgutil.walk_packages(["services"], prefix="services."):
+for finder, name, ispkg in pkgutil.walk_packages(
+    ["services"], prefix="services."
+):
     if ".models." in name:
         try:
             importlib.import_module(name)
