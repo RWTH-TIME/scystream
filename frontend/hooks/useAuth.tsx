@@ -61,7 +61,6 @@ export default function useAuth() {
   }
 
   useEffect(() => {
-    // TODO: refreshToken
     async function checkToken() {
       try {
         const token = localStorage.getItem(config.accessTokenKey)

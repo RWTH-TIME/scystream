@@ -28,6 +28,9 @@ function useRegisterMutation(setAlert: SetAlertType) {
       const response = await api.post(REGISTER_ENDPOINT, JSON.stringify(user))
       return response.data
     },
+    onSuccess: () => {
+      setAlert("Sucessfully registered", AlertType.SUCCESS)
+    },
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Registration failed: ${error}`)
