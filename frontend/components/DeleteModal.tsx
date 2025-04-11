@@ -1,4 +1,4 @@
-import Button, { ButtonSentiment } from "./Button";
+import Button, { ButtonSentiment } from "./Button"
 import LoadingAndError from "./LoadingAndError"
 import Modal, { type ModalProps } from "./Modal"
 

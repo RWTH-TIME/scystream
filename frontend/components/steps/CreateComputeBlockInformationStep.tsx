@@ -1,10 +1,10 @@
-import { AlertType, useAlert } from "@/hooks/useAlert";
-import { useGetComputeBlockInfoMutation } from "@/mutations/computeBlockMutation";
-import { type PageProps, type Entrypoint, type InputOutput, type ComputeBlockDraft, InputOutputType } from "@/components/CreateComputeBlockModal";
-import { useState } from "react";
-import LoadingAndError from "@/components/LoadingAndError";
-import Input from "@/components/inputs/Input";
-import Button, { ButtonSentiment } from "../Button";
+import { AlertType, useAlert } from "@/hooks/useAlert"
+import { useGetComputeBlockInfoMutation } from "@/mutations/computeBlockMutation"
+import { type PageProps, type Entrypoint, type InputOutput, type ComputeBlockDraft, InputOutputType } from "@/components/CreateComputeBlockModal"
+import { useState } from "react"
+import LoadingAndError from "@/components/LoadingAndError"
+import Input from "@/components/inputs/Input"
+import Button, { ButtonSentiment } from "../Button"
 
 const mapInputOutput = (data: InputOutput) => ({
   type: data.data_type === InputOutputType.FILE ? "file" : "db_table",
@@ -12,24 +12,24 @@ const mapInputOutput = (data: InputOutput) => ({
   data_type: data.data_type,
   description: data.description || "",
   config: data.config || {},
-});
+})
 
 export default function CreateComputeBlockInformationStep({
   onNext,
   setComputeBlock
 }: PageProps) {
-  const [repoURL, setRepoURL] = useState<string>("");
+  const [repoURL, setRepoURL] = useState<string>("")
 
-  const { setAlert } = useAlert();
-  const { mutateAsync, isPending: loading } = useGetComputeBlockInfoMutation(setAlert);
+  const { setAlert } = useAlert()
+  const { mutateAsync, isPending: loading } = useGetComputeBlockInfoMutation(setAlert)
 
   async function createComputeBlock(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+    e.preventDefault()
 
     if (repoURL.length > 0) {
       const cb = await mutateAsync({
         cbc_url: repoURL,
-      });
+      })
 
       if (setComputeBlock) {
         const mappedComputeBlock: ComputeBlockDraft = {
@@ -46,14 +46,14 @@ export default function CreateComputeBlockInformationStep({
             envs: entrypoint.envs || {},
           })),
           cbc_url: repoURL
-        };
+        }
 
-        setComputeBlock(mappedComputeBlock);
+        setComputeBlock(mappedComputeBlock)
       }
 
-      onNext();
+      onNext()
     } else {
-      setAlert("Compute Block Name and Repo URL must be set.", AlertType.ERROR);
+      setAlert("Compute Block Name and Repo URL must be set.", AlertType.ERROR)
     }
   }
 

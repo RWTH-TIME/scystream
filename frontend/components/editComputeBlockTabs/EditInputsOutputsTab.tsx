@@ -17,7 +17,7 @@ export default function EditInputsOutputsTab({ inputoutputs, updateConfig, handl
     <div>
       <ConfigBox
         headline={type.toString()}
-        description={`Configure the Compute Blocks ${type.toLowerCase()}s here`}
+        description={`Configure the Compute Blocks ${type.toString().toLowerCase()}s here`}
         config={inputoutputs}
         updateComputeBlock={updateConfig}
       />
