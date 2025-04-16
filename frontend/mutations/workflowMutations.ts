@@ -4,10 +4,11 @@ import { api } from "@/utils/axios"
 import { getConfig } from "@/utils/config"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { QueryKeys } from "./queryKeys"
 import { ProjectStatus, type Project } from "@/utils/types"
 import type { ComputeBlockByProjectResponse } from "./computeBlockMutation"
+import type { WebSocketConnection } from "@/utils/websocketManager"
 import { webSocketManager } from "@/utils/websocketManager"
 
 const config = getConfig()
@@ -89,46 +90,64 @@ type WfStatusData = {
 }
 type WorflowStatusEvent = Record<string, WfStatusData>
 
+const DEBOUNCE_MS = 300
+
 export function useComputeBlockStatusWS(setAlert: SetAlertType, project_id: string | undefined) {
   const queryClient = useQueryClient()
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const websocketRef = useRef<WebSocketConnection<WorflowStatusEvent> | null>(null)
 
   useEffect(() => {
     if (!project_id) return
 
     const connectionString = `${config.wsUrl}${CB_STATUS_WS}${project_id}`
 
-    const websocket = webSocketManager.getConnection<WorflowStatusEvent>(connectionString)
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
 
-    function handleCBStatusMessage(data: WorflowStatusEvent) {
-      queryClient.setQueryData([QueryKeys.cbByProject, project_id], (oldData: ComputeBlockByProjectResponse) => {
-        if (!oldData) return
-        const updated = oldData.blocks.map(block => {
-          return {
+    timeoutRef.current = setTimeout(() => {
+      const websocket = webSocketManager.getConnection<WorflowStatusEvent>(connectionString)
+      websocketRef.current = websocket
+
+      function handleCBStatusMessage(data: WorflowStatusEvent) {
+        queryClient.setQueryData([QueryKeys.cbByProject, project_id], (oldData: ComputeBlockByProjectResponse) => {
+          if (!oldData) return
+          const updated = oldData.blocks.map(block => ({
             ...block,
             data: {
               ...block.data,
-              status: data[block.id] ?? block.data.status
+              status: data[block.id] ?? block.data.status,
             }
+          }))
+          return {
+            ...oldData,
+            blocks: updated
           }
         })
-        return {
-          ...oldData,
-          blocks: updated
-        }
-      })
-    }
+      }
 
-    function handleWebsocketError() {
-      setAlert("Failed to get compute block status updates", AlertType.ERROR)
-    }
+      function handleWebsocketError() {
+        setAlert("Failed to get compute block status updates", AlertType.ERROR)
+      }
 
-    websocket.addListener(handleCBStatusMessage)
-    websocket.addErrorHandler(handleWebsocketError)
+      websocket.addListener(handleCBStatusMessage)
+      websocket.addErrorHandler(handleWebsocketError)
+    }, DEBOUNCE_MS)
 
     return () => {
-      websocket.removeListener(handleCBStatusMessage)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+
+      if (websocketRef.current) {
+        websocketRef.current.close()
+        websocketRef.current = null
+      }
+
       webSocketManager.removeConnection(connectionString)
     }
-  }, [queryClient, setAlert, project_id])
-
+  }, [project_id, queryClient, setAlert])
 }
+

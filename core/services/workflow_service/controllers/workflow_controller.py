@@ -263,7 +263,8 @@ def last_dag_run_overview(dag_ids: list[str]) -> dict:
         try:
             all_runs = api.get_dag_runs_batch(ListDagRunsForm(
                 dag_ids=dag_ids,
-                order_by="execution_date"
+                order_by="execution_date",
+                page_limit=10000,
             ))
             # We only select the newest runs per DAG
             # Unfortunately airflow_client does not offer this out of the box
