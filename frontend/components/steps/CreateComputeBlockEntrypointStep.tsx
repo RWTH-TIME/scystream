@@ -1,7 +1,7 @@
-import type { PageProps, Entrypoint } from "@/components/CreateComputeBlockModal";
-import LoadingAndError from "@/components/LoadingAndError";
-import Dropdown from "../inputs/Dropdown";
-import Button, { ButtonSentiment } from "../Button";
+import type { PageProps, Entrypoint } from "@/components/CreateComputeBlockModal"
+import LoadingAndError from "@/components/LoadingAndError"
+import Dropdown from "../inputs/Dropdown"
+import Button, { ButtonSentiment } from "../Button"
 
 export default function CreateComputeBlockEntrypointStep({
   onNext,
@@ -57,5 +57,5 @@ export default function CreateComputeBlockEntrypointStep({
         </Button>
       </div>
     </div>
-  );
+  )
 }
