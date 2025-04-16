@@ -102,7 +102,7 @@ def init_templates():
     }
 
 
-def gen_dag_code(graph, templates, dag_id, project_uuid):
+def generate_dag_code(graph, templates, dag_id, project_uuid):
     parts = [templates["dag"].render(dag_id=dag_id)]
 
     # Convert to Airflow-compatible representation
@@ -186,6 +186,28 @@ def validate_workflow(project_uuid: UUID):
         )
 
 
+def wait_for_dag_registration(
+        dag_id: str,
+        timeout: int = 10,
+        wait: float = 0.5
+) -> bool:
+    with ApiClient(airflow_config) as api_client:
+        api = DAGApi(api_client)
+        start_time = time.time()
+
+        while time.time() - start_time < timeout:
+            try:
+                api.get_dag(dag_id)
+                return True
+            except ApiException as e:
+                if e.status == 404:
+                    time.sleep(wait)
+                else:
+                    raise e
+
+    return False
+
+
 def translate_project_to_dag(project_uuid: UUID) -> str:
     """
     Parses a project and its blocks into a DAG, validates it, and saves it.
@@ -194,12 +216,8 @@ def translate_project_to_dag(project_uuid: UUID) -> str:
     graph = create_graph(project)
     templates = init_templates()
     dag_id = _project_id_to_dag_id(project_uuid)
-    dag_code = gen_dag_code(graph, templates, dag_id, project_uuid)
+    dag_code = generate_dag_code(graph, templates, dag_id, project_uuid)
     save_dag_to_file(dag_code, dag_id)
-
-    # Make sure airflow has enough time to create the dag internally
-    time.sleep(1)
-
     return dag_id
 
 
