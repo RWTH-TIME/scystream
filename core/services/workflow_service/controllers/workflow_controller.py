@@ -35,12 +35,12 @@ def _project_id_to_dag_id(pi: UUID | str) -> str:
     return f"dag_{str(pi).replace("-", "_")}"
 
 
-def _dag_id_to_project_id(di: str) -> str:
-    return di.replace("dag_", "").replace("_", "-")
+def dag_id_to_project_id(di: str) -> str:
+    return di[4:].replace("_", "-")
 
 
 def _task_id_to_cb_id(ti: str) -> str:
-    return ti.replace("task_", "").replace("_", "-")
+    return ti[5:].replace("_", "-")
 
 
 def _cb_id_to_task_id(ci: UUID | str) -> str:

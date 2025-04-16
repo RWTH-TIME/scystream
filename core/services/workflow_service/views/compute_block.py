@@ -82,7 +82,8 @@ async def get_by_project(
     try:
         compute_blocks = get_compute_blocks_by_project(project_id)
         status = workflow_controller.dag_status(project_id)
-
+        print(compute_blocks[0].uuid)
+        print(status)
         block_uuids = [block.uuid for block in compute_blocks]
         dependencies = get_block_dependencies_for_blocks(block_uuids)
 
