@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from typing import List, Dict
 from enum import Enum
 
 
@@ -42,4 +41,4 @@ class BlockStatus(Enum):
 
 class WorfklowValidationError(BaseModel):
     project_id: str
-    missing_configs: Dict[str, List[str]]
+    missing_configs: dict[str, list[str]]

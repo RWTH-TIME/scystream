@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 import requests
 import os
-from typing import List, Dict, Optional, Literal
+from typing import Literal
 from uuid import UUID, uuid4
 import tempfile
 import urllib.parse
@@ -206,8 +206,8 @@ def create_compute_block(
         entry_name: str,
         entry_description: str,
         envs: ConfigType,
-        inputs: List[InputOutput],
-        outputs: List[InputOutput],
+        inputs: list[InputOutput],
+        outputs: list[InputOutput],
         project_id: str
 ) -> Block:
     logging.info(f"Creating compute block: {name}")
@@ -272,7 +272,7 @@ def get_envs_for_entrypoint(e_id: UUID) -> ConfigType | None:
 def get_io_for_entrypoint(
         e_id: UUID,
         io_type: InputOutputType | None
-) -> List[InputOutput]:
+) -> list[InputOutput]:
     db: Session = next(get_database())
 
     return db.query(InputOutput).filter_by(
@@ -281,7 +281,7 @@ def get_io_for_entrypoint(
     ).all()
 
 
-def get_compute_blocks_by_project(project_id: UUID) -> List[Block]:
+def get_compute_blocks_by_project(project_id: UUID) -> list[Block]:
     db: Session = next(get_database())
 
     order_case = case(
@@ -308,7 +308,7 @@ def get_compute_blocks_by_project(project_id: UUID) -> List[Block]:
 
 
 def get_block_dependencies_for_blocks(
-    block_ids: List[UUID]
+    block_ids: list[UUID]
 ) -> list:
     db: Session = next(get_database())
 
@@ -359,7 +359,7 @@ def _update_io(
     db: Session,
     io: InputOutput,
     new_config: ConfigType
-) -> List[UUID]:
+) -> list[UUID]:
     """
     Returns a list of IO uuids that were automatically updated (downstreams).
     """
@@ -407,8 +407,8 @@ def _update_io(
 
 
 def update_ios(
-    update_dict: Dict[UUID, ConfigType]
-) -> List[UUID]:
+    update_dict: dict[UUID, ConfigType]
+) -> list[UUID]:
     logging.debug("Updating input/outputs.")
 
     db: Session = next(get_database())
@@ -434,10 +434,10 @@ def update_ios(
 
 def update_block(
     id: UUID,
-    envs: Optional[UUID],
-    custom_name: Optional[str],
-    x_pos: Optional[float],
-    y_pos: Optional[float]
+    envs: ConfigType | None,
+    custom_name: str | None,
+    x_pos: float | None,
+    y_pos: float | None
 ) -> Block:
     db: Session = next(get_database())
 
@@ -451,7 +451,8 @@ def update_block(
     if envs:
         _check_config_keys_mismatch(
             "envs", block.selected_entrypoint.envs, envs, block.uuid)
-        block.envs = {**block.envs, **envs}
+        block.selected_entrypoint.envs = {
+            **block.selected_entrypoint.envs, **envs}
 
     if x_pos is not None:
         block.x_pos = x_pos

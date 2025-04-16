@@ -2,7 +2,6 @@ from uuid import UUID, uuid4
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
-from typing import List
 import logging
 
 from utils.database.session_injector import get_database
@@ -140,7 +139,7 @@ def delete_project(project_uuid: UUID) -> None:
     logging.info(f"Project {project_uuid} deleted successfully")
 
 
-def read_all_projects() -> List[Project]:
+def read_all_projects() -> list[Project]:
     db: Session = next(get_database())
 
     projects = db.query(Project).all()
@@ -148,7 +147,7 @@ def read_all_projects() -> List[Project]:
     return projects
 
 
-def read_projects_by_user_uuid(user_uuid: UUID) -> List[Project]:
+def read_projects_by_user_uuid(user_uuid: UUID) -> list[Project]:
     logging.debug(f"Fetching projects for user UUID: {user_uuid}")
     db: Session = next(get_database())
 

@@ -3,7 +3,6 @@ from jinja2 import Environment, FileSystemLoader
 from fastapi import HTTPException
 import networkx as nx
 from uuid import UUID
-from typing import List
 import json
 import logging
 import time
@@ -141,7 +140,7 @@ def save_dag_to_file(dag_code, dag_id):
     return filename
 
 
-def validate_value(value: str) -> bool:
+def validate_value(value: str | list | None) -> bool:
     return value is None or value == "" or value == []
 
 
@@ -256,7 +255,7 @@ def get_all_dags():
             raise e
 
 
-def last_dag_run_overview(dag_ids: List[str]) -> dict:
+def last_dag_run_overview(dag_ids: list[str]) -> dict:
     with ApiClient(airflow_config) as api_client:
         api = DAGRunApi(api_client)
         most_recent_runs = {}
