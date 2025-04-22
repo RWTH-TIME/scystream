@@ -80,24 +80,25 @@ class Block(Base):
 
     upstream_blocks = relationship(
         "Block",
-        secondary="block_dependencies",
+        secondary=block_dependencies,
         primaryjoin=foreign(
-            block_dependencies.c.downstream_input_uuid) == uuid,
+            block_dependencies.c.downstream_block_uuid) == uuid,
         secondaryjoin=foreign(
-            block_dependencies.c.upstream_output_uuid) == uuid,
+            block_dependencies.c.upstream_block_uuid) == uuid,
         back_populates="downstream_blocks",
-        cascade="all, delete"  # Ensure proper cascade delete
+        cascade="all, delete"
     )
 
     downstream_blocks = relationship(
         "Block",
-        secondary="block_dependencies",
-        primaryjoin=foreign(block_dependencies.c.upstream_output_uuid) == uuid,
+        secondary=block_dependencies,
+        primaryjoin=foreign(block_dependencies.c.upstream_block_uuid) == uuid,
         secondaryjoin=foreign(
-            block_dependencies.c.downstream_input_uuid) == uuid,
+            block_dependencies.c.downstream_block_uuid) == uuid,
         back_populates="upstream_blocks",
         cascade="all, delete"
     )
+
     __table_args__ = (
         UniqueConstraint('custom_name', 'project_uuid', name='proj_name_1'),
     )

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from typing import List, Dict, Optional, Union, Literal
+from typing import Literal
 from pydantic import BaseModel, validator
 from urllib.parse import urlparse
 
@@ -9,7 +9,10 @@ from services.workflow_service.models.input_output import (
     InputOutput,
     InputOutputType
 )
+from services.workflow_service.schemas.workflow import BlockStatus
 from utils.config.environment import ENV
+
+ConfigType = dict[str, str | int | float | list | bool | None]
 
 
 def _validate_url(url: str):
@@ -28,12 +31,24 @@ def _get_io_data_type(type: str) -> str:
     return data_type_map.get(type, DataType.CUSTOM.value)
 
 
-class InputOutputDTO(BaseModel):
-    id: Optional[UUID] = None
-    name: str
+# Inputs & Outputs
+
+class BaseIODTO(BaseModel):
+    id: UUID | None = None
     data_type: DataType
-    description: Optional[str] = None
-    config: Dict[str, Optional[Union[str, int, float, List, bool]]]
+
+    @classmethod
+    def from_input_output(cls, io):
+        return cls(
+            id=io.uuid,
+            data_type=io.data_type
+        )
+
+
+class InputOutputDTO(BaseIODTO):
+    name: str
+    description: str | None = None
+    config: ConfigType
 
     @classmethod
     def from_input_output(cls, name: str, input_output):
@@ -71,13 +86,22 @@ class InputOutputDTO(BaseModel):
         )
 
 
-class EntrypointDTO(BaseModel):
-    id: Optional[UUID] = None
+# Entrypoint
+
+class BaseEntrypointDTO(BaseModel):
+    id: UUID | None = None
+    name: str
+    inputs: list[BaseIODTO]
+    outputs: list[BaseIODTO]
+
+
+class EntrypointDTO(BaseEntrypointDTO):
+    id: UUID | None = None
     name: str
     description: str
-    inputs: List[InputOutputDTO]
-    outputs: List[InputOutputDTO]
-    envs: Dict[str, Optional[Union[str, int, float, List, bool]]]
+    inputs: list[InputOutputDTO]
+    outputs: list[InputOutputDTO]
+    envs: ConfigType
 
     @classmethod
     def from_sdk_entrypoint(cls, name: str, entrypoint):
@@ -96,77 +120,84 @@ class EntrypointDTO(BaseModel):
         )
 
 
-class ComputeBlockInformationRequest(BaseModel):
-    cbc_url: str
-
-    @validator("cbc_url")
-    def validate_cbc_url(cls, v):
-        _validate_url(v)
-        return v
-
-
-class ComputeBlockInformationResponse(BaseModel):
-    name: str
-    description: str
-    author: str
-    image: str
-    entrypoints: List[EntrypointDTO]
-
-    @classmethod
-    def from_sdk_compute_block(cls, cb):
-        return cls(
-            name=cb.name,
-            author=cb.author,
-            description=cb.description,
-            image=cb.docker_image,
-            entrypoints=[
-                EntrypointDTO.from_sdk_entrypoint(name, entrypoint)
-                for name, entrypoint in cb.entrypoints.items()
-            ]
-        )
-
-
-class CreateComputeBlockRequest(BaseModel):
-    project_id: UUID
-    cbc_url: str
-    name: str
-    custom_name: str
-    description: str
-    author: str
-    image: str
-    selected_entrypoint: EntrypointDTO
-    x_pos: float
-    y_pos: float
-
-    @validator("cbc_url")
-    def validate_cbc_url(cls, v):
-        _validate_url(v)
-        return v
-
-
-class IDResponse(BaseModel):
-    id: UUID
-
+# Node:
 
 class PositionDTO(BaseModel):
     x: float
     y: float
 
 
-class NodeDataDTO(BaseModel):
+class BaseNodeDataDTO(BaseModel):
     id: UUID
     name: str
     custom_name: str
     description: str
     author: str
     image: str
+    status: BlockStatus = BlockStatus.IDLE
+
+    @validator("status")
+    def set_status(cls, status):
+        return status or BlockStatus.IDLE
+
+
+class SimpleNodeDataDTO(BaseNodeDataDTO):
+    selected_entrypoint: BaseEntrypointDTO
+
+
+class NodeDataDTO(BaseNodeDataDTO):
     selected_entrypoint: EntrypointDTO
 
 
-class NodeDTO(BaseModel):
+class BaseNodeDTO(BaseModel):
     id: UUID
     position: PositionDTO
-    type: Literal["computeBlock"]
+    type: Literal["computeBlock"] = "computeBlock"
+
+
+class SimpleNodeDTO(BaseNodeDTO):
+    data: SimpleNodeDataDTO
+
+    @classmethod
+    def from_compute_block(
+            cls,
+            cb,
+            status: BlockStatus = BlockStatus.IDLE
+    ):
+        return cls(
+            id=cb.uuid,
+            position=PositionDTO(
+                x=cb.x_pos,
+                y=cb.y_pos,
+            ),
+            type="computeBlock",
+            data=SimpleNodeDataDTO(
+                id=cb.uuid,
+                name=cb.name,
+                custom_name=cb.custom_name,
+                description=cb.description,
+                author=cb.author,
+                image=cb.docker_image,
+                selected_entrypoint=BaseEntrypointDTO(
+                    id=cb.selected_entrypoint.uuid,
+                    name=cb.selected_entrypoint.name,
+                    inputs=[
+                        BaseIODTO.from_input_output(io)
+                        for io in cb.selected_entrypoint.input_outputs
+                        if io.type == InputOutputType.INPUT
+                    ],
+                    outputs=[
+                        BaseIODTO.from_input_output(io)
+                        for io in cb.selected_entrypoint.input_outputs
+                        if io.type == InputOutputType.OUTPUT
+                    ]
+                ),
+                status=status
+            ),
+        )
+
+
+class NodeDTO(BaseNodeDTO):
     data: NodeDataDTO
 
     @classmethod
@@ -209,8 +240,10 @@ class NodeDTO(BaseModel):
         )
 
 
+# Edge:
+
 class EdgeDTO(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     source: UUID
     target: UUID
     sourceHandle: UUID
@@ -227,27 +260,87 @@ class EdgeDTO(BaseModel):
         )
 
 
+# Requests & Responses:
+
+class ComputeBlockInformationRequest(BaseModel):
+    cbc_url: str
+
+    @validator("cbc_url")
+    def validate_cbc_url(cls, v):
+        _validate_url(v)
+        return v
+
+
+class ComputeBlockInformationResponse(BaseModel):
+    name: str
+    description: str
+    author: str
+    image: str
+    entrypoints: list[EntrypointDTO]
+
+    @classmethod
+    def from_sdk_compute_block(cls, cb):
+        return cls(
+            name=cb.name,
+            author=cb.author,
+            description=cb.description,
+            image=cb.docker_image,
+            entrypoints=[
+                EntrypointDTO.from_sdk_entrypoint(name, entrypoint)
+                for name, entrypoint in cb.entrypoints.items()
+            ]
+        )
+
+
+class CreateComputeBlockRequest(BaseModel):
+    project_id: UUID
+    cbc_url: str
+    name: str
+    custom_name: str
+    description: str
+    author: str
+    image: str
+    selected_entrypoint: EntrypointDTO
+    x_pos: float
+    y_pos: float
+
+    @validator("cbc_url")
+    def validate_cbc_url(cls, v):
+        _validate_url(v)
+        return v
+
+
+class IDResponse(BaseModel):
+    id: UUID
+
+
 class GetNodesByProjectResponse(BaseModel):
-    blocks: List[NodeDTO]
-    edges: List[EdgeDTO]
+    blocks: list[SimpleNodeDTO]
+    edges: list[EdgeDTO]
 
 
-class UpdateInputOutputDTO(BaseModel):
+class BaseInputOutputDTO(BaseModel):
     id: UUID
-    config: Optional[Dict[str,
-                          Optional[Union[str, int, float, List, bool]]]] = None
+    config: ConfigType | None = None
 
 
-class UpdateEntrypointDTO(BaseModel):
+class UpdateInputOutuputResponseDTO(BaseInputOutputDTO):
+    type: InputOutputType
+    entrypoint_id: UUID
+
+    @classmethod
+    def from_input_output(cls, input_output):
+        return cls(
+            id=input_output.uuid,
+            type=input_output.type,
+            entrypoint_id=input_output.entrypoint_uuid,
+            config=input_output.config or {}
+        )
+
+
+class UpdateComputeBlockDTO(BaseModel):
     id: UUID
-    inputs: Optional[List[UpdateInputOutputDTO]] = None
-    outputs: Optional[List[UpdateInputOutputDTO]] = None
-    envs: Dict[str, Optional[Union[str, int, float, List, bool]]] = None
-
-
-class UpdateComputeBlockRequest(BaseModel):
-    id: UUID
-    custom_name: Optional[str] = None
-    selected_entrypoint: Optional[UpdateEntrypointDTO] = None
-    x_pos: Optional[float] = None
-    y_pos: Optional[float] = None
+    envs: ConfigType | None = None
+    custom_name: str | None = None
+    x_pos: float | None = None
+    y_pos: float | None = None

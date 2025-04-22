@@ -1,8 +1,6 @@
 from uuid import UUID
-
 from pydantic import BaseModel
 from datetime import datetime
-from typing import List
 
 
 # TODO:Still missing some field validation (empty name...)
@@ -33,11 +31,11 @@ class ReadByUserRequest(BaseModel):
 
 
 class ReadByUserResponse(BaseModel):
-    projects: List[Project]
+    projects: list[Project]
 
 
 class ReadAllResponse(BaseModel):
-    projects: List[Project]
+    projects: list[Project]
 
 
 class RenameProjectRequest(BaseModel):
@@ -47,24 +45,3 @@ class RenameProjectRequest(BaseModel):
 
 class DeleteProjectRequest(BaseModel):
     project_uuid: UUID
-
-
-class AddNewBlockRequest(BaseModel):
-    name: str
-    project_uuid: UUID
-
-    priority_weight: int
-    retries: int
-    retry_delay: int
-
-    custom_name: str
-    description: str
-    author: str
-    docker_image: str
-    repo_url: str
-    selected_entrypoint_uuid: UUID
-    x_pos: float
-    y_pos: float
-
-    upstream_blocks: List[UUID]
-    downstream_blocks: List[UUID]

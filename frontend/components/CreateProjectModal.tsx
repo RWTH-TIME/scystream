@@ -7,6 +7,7 @@ import { AlertType, useAlert } from "@/hooks/useAlert"
 import Button, { ButtonSentiment } from "./Button"
 
 type CreateProjectModalProps = Omit<ModalProps, "children">;
+export const MIN_LEN_PROJECT_NAME = 2
 
 export default function CreateProjectModal({
   isOpen,
@@ -23,7 +24,7 @@ export default function CreateProjectModal({
 
     // TODO: Currently this validation is fine, as we are only using one field.
     // However, think about a better way to validate the fields
-    if (projectName.length > 0) {
+    if (projectName.length >= MIN_LEN_PROJECT_NAME) {
       mutate({ name: projectName })
       onClose()
     } else {

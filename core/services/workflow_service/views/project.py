@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends
 from uuid import UUID
 from utils.errors.error import handle_error
+import logging
 
 import services.workflow_service.controllers.project_controller as \
     project_controller
+import services.workflow_service.controllers.workflow_controller as \
+    workflow_controller
 from services.workflow_service.schemas.project import (
     Project,
     CreateProjectRequest,
@@ -11,8 +14,7 @@ from services.workflow_service.schemas.project import (
     ReadProjectRequest,
     ReadByUserResponse,
     ReadAllResponse,
-    RenameProjectRequest,
-    AddNewBlockRequest
+    RenameProjectRequest
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
@@ -33,6 +35,7 @@ async def create_project(
         )
         return CreateProjectResponse(project_uuid=project_uuid)
     except Exception as e:
+        logging.error(f"Error creating project: {e}")
         raise handle_error(e)
 
 
@@ -44,6 +47,7 @@ async def read_project(
         project = project_controller.read_project(data.project_uuid)
         return project
     except Exception as e:
+        logging.error(f"Error reading project: {e}")
         raise handle_error(e)
 
 
@@ -52,6 +56,7 @@ async def read_projects_by_user(user_uuid: UUID):
     try:
         return project_controller.read_projects_by_user_uuid(user_uuid)
     except Exception as e:
+        logging.error(f"Error reading project by user: {e}")
         raise handle_error(e)
 
 
@@ -61,6 +66,7 @@ async def read_all_projects():
         projects = project_controller.read_all_projects()
         return ReadAllResponse(projects=projects)
     except Exception as e:
+        logging.error(f"Error reading all projects: {e}")
         raise handle_error(e)
 
 
@@ -82,29 +88,7 @@ async def delete_project(
 ):
     try:
         project_controller.delete_project(project_id)
+        workflow_controller.delete_dag_from_airflow(project_id)
     except Exception as e:
-        raise handle_error(e)
-
-
-@router.put("/add_new_block", status_code=200)
-async def add_new_block(data: AddNewBlockRequest):
-    try:
-        project_controller.add_new_block(
-            data.project_uuid,
-            data.name,
-            data.priority_weight,
-            data.retries,
-            data.retry_delay,
-            data.custom_name,
-            data.description,
-            data.author,
-            data.docker_image,
-            data.repo_url,
-            data.selected_entrypoint_uuid,
-            data.x_pos,
-            data.y_pos,
-            data.upstream_blocks,
-            data.downstream_blocks
-        )
-    except Exception as e:
+        logging.error(f"Error deleting project with id {project_id}: {e}")
         raise handle_error(e)

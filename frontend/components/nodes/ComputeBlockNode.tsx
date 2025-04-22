@@ -1,9 +1,10 @@
+import type { XYPosition } from "@xyflow/react"
 import { Handle, Position } from "@xyflow/react"
 import React from "react"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
-import type { ComputeBlock, InputOutput } from "../CreateComputeBlockModal";
-import { InputOutputType } from "../CreateComputeBlockModal"
-import type { XYPosition, Node } from "@xyflow/react"
+import type { ComputeBlock, InputOutput } from "../CreateComputeBlockModal"
+import { ComputeBlockStatus, InputOutputType } from "../CreateComputeBlockModal"
+import { CheckCircle, Error, Warning, Schedule, Autorenew } from "@mui/icons-material"
 
 export interface ComputeBlockNodeType extends Node {
   id: string,
@@ -18,6 +19,7 @@ export interface ComputeBlockNodeType extends Node {
 export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
   const { selectedComputeBlock } = useSelectedComputeBlock()
 
+
   const handleStyles = {
     [InputOutputType.FILE]: {
       backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22white%22><path d=%22M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM13 3.5L18.5 9H14a1 1 0 0 1-1-1V3.5zM7 15h10v2H7v-2zm0-4h10v2H7v-2z%22/></svg>')",
@@ -31,8 +33,36 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
       backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22white%22><path d=%22M12 2L2 7l10 5 10-5-10-5zm0 8.75L4 7l8-4 8 4-8 3.75zm-6 4.25v4.5L12 22l6-3.5v-4.5L12 19l-6-4z%22/></svg>')",
       backgroundColor: "#FFB74D",
     },
-  };
+  }
 
+  const statusStyles = {
+    [ComputeBlockStatus.SUCCESS]: {
+      border: "border-green-500",
+      icon: <CheckCircle className="w-5 h-5 text-green-500" />,
+    },
+    [ComputeBlockStatus.RUNNING]: {
+      border: "border-blue-500",
+      icon: <Autorenew className="w-5 h-5 text-blue-500 animate-spin" />, // Spinning animation for "running"
+    },
+    [ComputeBlockStatus.FAILED]: {
+      border: "border-red-500",
+      icon: <Error className="w-5 h-5 text-red-500" />,
+    },
+    [ComputeBlockStatus.SCHEDULED]: {
+      border: "border-yellow-500",
+      icon: <Schedule className="w-5 h-5 text-yellow-500" />,
+    },
+    [ComputeBlockStatus.VALIDATION_FAILED]: {
+      border: "border-red-500 border-dashed",
+      icon: <Warning className="w-5 h-5 text-red-500" />,
+    },
+    [ComputeBlockStatus.IDLE]: {
+      border: "",
+      icon: null
+    }
+  }
+
+  const statusStyle = statusStyles[data.status ?? ComputeBlockStatus.IDLE]
 
   const renderHandles = (items: InputOutput[], type: "target" | "source", position: Position) => {
     return items.map((item, index) => {
@@ -53,16 +83,29 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
             top: `${(index + 1) * 20}%`,
           }}
         />
-      );
-    });
-  };
+      )
+    })
+  }
 
   return (
     <div className="flex justify-center items-center p-4">
       <div
-        className={`w-full max-w-sm bg-white border rounded-lg shadow-lg p-6 ${selectedComputeBlock?.id === data.id ? "border-blue-400" : "border-gray-300"
-          } transition duration-150 ease-in-out hover:bg-gray-50 hover:shadow-xl`}
+        className={`relative w-full max-w-sm bg-white border rounded-lg shadow-lg p-6
+        transition duration-150 ease-in-out hover:bg-gray-50 hover:shadow-xl
+        ${selectedComputeBlock?.id === data.id
+            ? data.status === "IDLE"
+              ? "border-blue-400"  // If selected and IDLE
+              : "border-blue-800"  // If selected and not IDLE
+            : statusStyle.border || "border-gray-300" // Default border
+          }
+      `}
       >
+
+        {/* Status Icon */}
+        {statusStyle.icon && (
+          <div className="absolute top-2 right-2">{statusStyle.icon}</div>
+        )}
+
         <div className="flex justify-between items-center">
           <h3 className="text-xl font-semibold text-gray-800">{data.custom_name}</h3>
         </div>
@@ -78,7 +121,9 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
             <p className="text-sm text-gray-800">{data.description}</p>
           </div>
           <div>
-            <span className="block text-sm font-medium text-gray-600">Entrypoint: {data.selected_entrypoint.name}</span>
+            <span className="block text-sm font-medium text-gray-600">
+              Entrypoint: {data.selected_entrypoint.name}
+            </span>
             <p className="text-sm text-gray-800">{data.selected_entrypoint.description}</p>
           </div>
 
@@ -99,6 +144,5 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
         </div>
       </div>
     </div>
-  );
-
+  )
 }

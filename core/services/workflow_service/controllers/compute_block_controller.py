@@ -1,10 +1,11 @@
 from fastapi import HTTPException
 import requests
 import os
-from typing import List, Dict, Optional, Union
+from typing import Literal
 from uuid import UUID, uuid4
 import tempfile
 import urllib.parse
+import logging
 
 from sqlalchemy import select, case, asc, delete
 from sqlalchemy.orm import Session, contains_eager
@@ -15,32 +16,33 @@ from services.workflow_service.models.entrypoint import Entrypoint
 from services.workflow_service.models.input_output import (
     InputOutput, InputOutputType, DataType
 )
-from services.workflow_service.schemas.compute_block import (
-    UpdateEntrypointDTO, UpdateInputOutputDTO
-)
-
+from services.workflow_service.schemas.compute_block import ConfigType
 from scystream.sdk.config import SDKConfig, load_config
 from scystream.sdk.env.settings import PostgresSettings, FileSettings
 from scystream.sdk.config.models import ComputeBlock
 
-# TODO: Hash the secrets
-FILE_CFG_DEFAULTS = {
-    "S3_HOST": ENV.DEFAULT_CB_CONFIG_S3_HOST,
-    "S3_PORT": ENV.DEFAULT_CB_CONFIG_S3_PORT,
-    "S3_ACCESS_KEY": ENV.DEFAULT_CB_CONFIG_S3_ACCESS_KEY,
-    "S3_SECRET_KEY": ENV.DEFAULT_CB_CONFIG_S3_SECRET_KEY,
-    "BUCKET_NAME": ENV.DEFAULT_CB_CONFIG_S3_BUCKET_NAME,
-    "FILE_PATH": ENV.DEFAULT_CB_CONFIG_S3_FILE_PATH,
-    "FILE_NAME": f"file_{uuid4()}",
-}
 
-PG_CFG_DEFAULTS = {
-    "PG_USER": ENV.DEFAULT_CB_CONFIG_PG_USER,
-    "PG_PASS": ENV.DEFAULT_CB_CONFIG_PG_PASS,
-    "PG_HOST": ENV.DEFAULT_CB_CONFIG_S3_HOST,
-    "PG_PORT": ENV.DEFAULT_CB_CONFIG_PG_PORT,
-    "DB_TABLE": f"table_{uuid4()}",
-}
+def _get_file_cfg_defaults_dict(io_name: str) -> dict:
+    return {
+        "S3_HOST": ENV.DEFAULT_CB_CONFIG_S3_HOST,
+        "S3_PORT": ENV.DEFAULT_CB_CONFIG_S3_PORT,
+        "S3_ACCESS_KEY": ENV.DEFAULT_CB_CONFIG_S3_ACCESS_KEY,
+        "S3_SECRET_KEY": ENV.DEFAULT_CB_CONFIG_S3_SECRET_KEY,
+        "BUCKET_NAME": ENV.DEFAULT_CB_CONFIG_S3_BUCKET_NAME,
+        "FILE_PATH": ENV.DEFAULT_CB_CONFIG_S3_FILE_PATH,
+        "FILE_NAME": f"file_{io_name}_{uuid4()}",
+    }
+
+
+def _get_pg_cfg_defaults_dict(io_name: str) -> dict:
+    return {
+        "PG_USER": ENV.DEFAULT_CB_CONFIG_PG_USER,
+        "PG_PASS": ENV.DEFAULT_CB_CONFIG_PG_PASS,
+        "PG_HOST": ENV.DEFAULT_CB_CONFIG_S3_HOST,
+        "PG_PORT": ENV.DEFAULT_CB_CONFIG_PG_PORT,
+        "DB_TABLE": f"table_{io_name}_{uuid4()}",
+    }
+
 
 SETTINGS_CLASS = {
     DataType.FILE: FileSettings,
@@ -49,6 +51,7 @@ SETTINGS_CLASS = {
 
 
 def _convert_github_to_raw(github_url: str) -> str:
+    logging.debug(f"Converting GitHub URL to raw format: {github_url}")
     parsed_url = urllib.parse.urlparse(github_url)
 
     raw_url = parsed_url._replace(
@@ -60,6 +63,7 @@ def _convert_github_to_raw(github_url: str) -> str:
 
 
 def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
+    logging.debug(f"Fetching ComputeBlock info from repository: {repo_url}")
     if "github.com" in repo_url:
         repo_url = _convert_github_to_raw(repo_url)
 
@@ -68,6 +72,7 @@ def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
         response.raise_for_status()
 
         if len(response.content) > ENV.MAX_CBC_FILE_SIZE:
+            logging.error("File too large to process.")
             raise HTTPException(status_code=401, detail="File too large.")
 
         with tempfile.NamedTemporaryFile(
@@ -89,7 +94,8 @@ def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
         loaded_cb = load_config()
 
         return loaded_cb
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching file from repository: {e}")
         raise HTTPException(status_code=500, detail="Could not query file.")
     except HTTPException as e:
         raise e
@@ -99,6 +105,7 @@ def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
 
 
 def request_cb_info(repo_url: str) -> ComputeBlock:
+    logging.debug(f"Requesting ComputeBlock info for: {repo_url}")
     cb = _get_cb_info_from_repo(repo_url)
 
     for entry_name, entry in cb.entrypoints.items():
@@ -109,8 +116,9 @@ def request_cb_info(repo_url: str) -> ComputeBlock:
                 else DataType.PGTABLE
             )
             default_values = (
-                FILE_CFG_DEFAULTS if o_type is DataType.FILE
-                else PG_CFG_DEFAULTS
+                _get_file_cfg_defaults_dict(on)
+                if o_type is DataType.FILE
+                else _get_pg_cfg_defaults_dict(on)
             )
 
             # Update the config with default values
@@ -137,6 +145,8 @@ def _updated_configs_with_values(
     Returns:
     - A new config dictionary with updated values.
     """
+    logging.debug(f"Get update configs for source config {
+        io.config} and values {default_values}.")
     new_config = io.config.copy() if io.config else {}
 
     settings_class = SETTINGS_CLASS.get(type)
@@ -152,6 +162,7 @@ def _updated_configs_with_values(
             # Only replace if default_values[dk] is set
             new_config[key] = default_values[dk]
 
+    logging.debug(f"Update config: {new_config}.")
     return new_config
 
 
@@ -194,11 +205,12 @@ def create_compute_block(
         y_pos: float,
         entry_name: str,
         entry_description: str,
-        envs: Dict[str, Optional[Union[str, int, float, List, bool]]],
-        inputs: List[InputOutput],
-        outputs: List[InputOutput],
+        envs: ConfigType,
+        inputs: list[InputOutput],
+        outputs: list[InputOutput],
         project_id: str
-) -> UUID:
+) -> Block:
+    logging.info(f"Creating compute block: {name}")
     db: Session = next(get_database())
 
     try:
@@ -239,12 +251,37 @@ def create_compute_block(
             db.flush()
 
             db.refresh(entry)
-        return cb.uuid
+        logging.info(f"Compute block created succesfully: {cb.uuid}")
+        return cb
     except Exception as e:
+        logging.error(f"Error creating compute block: {e}")
         raise e
 
 
-def get_compute_blocks_by_project(project_id: UUID) -> List[Block]:
+def get_envs_for_entrypoint(e_id: UUID) -> ConfigType | None:
+    db: Session = next(get_database())
+
+    e = db.query(Entrypoint).filter_by(uuid=e_id).one_or_none()
+
+    if not e:
+        return HTTPException(status_code=404, detail="Entrypoint not found.")
+
+    return e.envs
+
+
+def get_io_for_entrypoint(
+        e_id: UUID,
+        io_type: InputOutputType | None
+) -> list[InputOutput]:
+    db: Session = next(get_database())
+
+    return db.query(InputOutput).filter_by(
+        entrypoint_uuid=e_id,
+        type=io_type
+    ).all()
+
+
+def get_compute_blocks_by_project(project_id: UUID) -> list[Block]:
     db: Session = next(get_database())
 
     order_case = case(
@@ -271,7 +308,7 @@ def get_compute_blocks_by_project(project_id: UUID) -> List[Block]:
 
 
 def get_block_dependencies_for_blocks(
-    block_ids: List[UUID]
+    block_ids: list[UUID]
 ) -> list:
     db: Session = next(get_database())
 
@@ -289,106 +326,150 @@ def get_block_dependencies_for_blocks(
     return db.execute(query).fetchall()
 
 
-def _update_io(
-    to_be_io: Optional[List[UpdateInputOutputDTO]],
-    io_type: InputOutputType,
-    entrypoint: Entrypoint,
-    db: Session
+def _check_config_keys_mismatch(
+    config_type: Literal["envs", "io"],
+    original_config: ConfigType,
+    update_config: ConfigType,
+    entity_id: UUID,
 ):
-    if to_be_io is None or entrypoint is None:
-        return
+    """
+    Check if the keys in the original config and update config are the same.
+    If not, raise an Exception.
+    """
+    original_keys = set(original_config.keys())
+    update_keys = set(update_config.keys())
 
-    existing_io = {
-        io.uuid: io for io in entrypoint.input_outputs if io.type == io_type
-    }
-
-    for io_update_data in to_be_io:
-        if not io_update_data.id or io_update_data.id not in existing_io:
-            continue
-
-        io = existing_io[io_update_data.id]
-
-        # Update Config Dict
-        if io_update_data.config:
-            io.config = {**io.config, **io_update_data.config}
-
-            # If it's an OUTPUT, check for connected inputs that can
-            # be overwritten
-            if (
-                    io_type == InputOutputType.OUTPUT and
-                    (io.data_type == DataType.FILE
-                     or io.data_type == DataType.PGTABLE)
-            ):
-                result = db.execute(
-                    select(block_dependencies.c.downstream_input_uuid)
-                    .where(
-                        block_dependencies.c.upstream_output_uuid == io.uuid
-                    )
-                ).fetchall()
-
-                downstream_inputs = [row[0] for row in result]
-
-            if downstream_inputs:
-                downstream_ios = db.query(InputOutput).filter(
-                    InputOutput.uuid.in_(downstream_inputs)
-                ).all()
-
-                # Apply the same config update to connected inputs
-                # We are sure here that the downstream has the same type
-                for downstream_io in downstream_ios:
-                    update_dict = _extract_default_keys_to_update_values(io)
-                    downstream_io.config = _updated_configs_with_values(
-                        downstream_io, update_dict, downstream_io.data_type)
+    # Check if all update keys are in the original config keys
+    invalid_keys = update_keys - original_keys
+    if invalid_keys:
+        logging.debug(f"Invalid keys found for {
+                      config_type} in entity {entity_id}:")
+        logging.debug(f"Original {config_type} keys: {original_keys}")
+        logging.debug(f"Updated {config_type} keys: {update_keys}")
+        logging.debug(f"Invalid keys: {invalid_keys}")
+        raise HTTPException(
+            status_code=422,
+            detail=f"Updated {config_type} contains invalid keys: {
+                ', '.join(map(str, invalid_keys))} for {config_type} with id {
+                    entity_id}"
+        )
 
 
-def update_compute_block(
-    id: UUID,
-    custom_name: Optional[str] = None,
-    selected_entrypoint: Optional[UpdateEntrypointDTO] = None,
-    x_pos: Optional[float] = None,
-    y_pos: Optional[float] = None,
-) -> UUID:
+def _update_io(
+    db: Session,
+    io: InputOutput,
+    new_config: ConfigType
+) -> list[UUID]:
+    """
+    Returns a list of IO uuids that were automatically updated (downstreams).
+    """
+    logging.debug(f"Updating IO with id: {io.uuid}")
+
+    _check_config_keys_mismatch("io", io.config, new_config, io.uuid)
+    io.config = {**io.config, **new_config}
+
+    # Only Update Outputs of type File & PgTable
+    if (
+        io.type != InputOutputType.OUTPUT and
+        (io.data_type != DataType.FILE
+         or io.data_type != DataType.PGTABLE)
+    ):
+        return []
+
+    dep = db.execute(
+        select(block_dependencies.c.downstream_input_uuid)
+        .where(
+            block_dependencies.c.upstream_output_uuid == io.uuid
+        )
+    ).fetchall()
+    downstream_inputs = [row[0] for row in dep]
+    if not downstream_inputs:
+        return []
+
+    downstream_ios = db.query(InputOutput).filter(
+        InputOutput.uuid.in_(downstream_inputs)
+    ).all()
+    logging.debug(f"Updating connected input configs: {downstream_ios}.")
+
+    # Apply the same config update to connected inputs
+    # We are sure here that the downstream has the same type
+    updated_downstream_ids = []
+    for downstream_io in downstream_ios:
+        update_dict = _extract_default_keys_to_update_values(io)
+        downstream_io.config = _updated_configs_with_values(
+            downstream_io, update_dict, downstream_io.data_type
+        )
+        updated_downstream_ids.append(downstream_io.uuid)
+        logging.debug(f"Updated input config with id {
+            downstream_io.uuid}")
+
+    return updated_downstream_ids
+
+
+def update_ios(
+    update_dict: dict[UUID, ConfigType]
+) -> list[UUID]:
+    logging.debug("Updating input/outputs.")
+
     db: Session = next(get_database())
 
-    try:
-        with db.begin():
-            cb = db.query(Block).filter_by(uuid=id).one_or_none()
+    with db.begin():
+        ids = list(update_dict.keys())
+        ios = db.query(InputOutput).filter(InputOutput.uuid.in_(ids)).all()
 
-            if not cb:
-                raise HTTPException(status_code=400, detail="Block not found.")
+        if len(ios) == 0:
+            raise HTTPException(
+                status_code=400, detail="Provided Inputs do not exist.")
 
-            # Simple Attributes
-            for attr, value in {
-                "custom_name": custom_name,
-                "x_pos": x_pos,
-                "y_pos": y_pos,
-            }.items():
-                if value is not None:
-                    setattr(cb, attr, value)
+        for io in ios:
+            updated_downstreams = _update_io(db, io, update_dict.get(io.uuid))
+            ids.extend(updated_downstreams)
 
-            entrypoint = cb.selected_entrypoint
-            if selected_entrypoint and entrypoint:
-                # Update envs safely
-                if selected_entrypoint.envs:
-                    entrypoint.envs.update(selected_entrypoint.envs)
+        logging.info("Input/Output updates committed successfully.")
 
-                _update_io(selected_entrypoint.inputs,
-                           InputOutputType.INPUT, entrypoint, db)
-                _update_io(selected_entrypoint.outputs,
-                           InputOutputType.OUTPUT, entrypoint, db)
+    updated = db.query(InputOutput).filter(
+        InputOutput.uuid.in_(set(ids))).all()
+    return updated
 
-            db.flush()
-            db.refresh(cb)
 
-        return cb.uuid
+def update_block(
+    id: UUID,
+    envs: ConfigType | None,
+    custom_name: str | None,
+    x_pos: float | None,
+    y_pos: float | None
+) -> Block:
+    db: Session = next(get_database())
 
-    except Exception as e:
-        raise e
+    block = db.query(Block).filter_by(uuid=id).one_or_none()
+    if not block:
+        raise HTTPException(status_code=404, detail="Block not found.")
+
+    if custom_name:
+        block.custom_name = custom_name
+
+    if envs:
+        _check_config_keys_mismatch(
+            "envs", block.selected_entrypoint.envs, envs, block.uuid)
+        block.selected_entrypoint.envs = {
+            **block.selected_entrypoint.envs, **envs}
+
+    if x_pos is not None:
+        block.x_pos = x_pos
+
+    if y_pos is not None:
+        block.y_pos = y_pos
+
+    db.commit()
+    db.refresh(block)
+
+    return block
 
 
 def delete_block(
     id: UUID
 ):
+    logging.debug(f"Deleting Compute Block with id: {id}")
     db: Session = next(get_database())
 
     block = db.query(Block).filter_by(uuid=id).one_or_none()
@@ -398,6 +479,7 @@ def delete_block(
 
     db.delete(block)
     db.commit()
+    logging.info(f"Successfully deleted Compute Block with id {id}")
 
 
 def create_stream_and_update_target_cfg(
@@ -405,49 +487,56 @@ def create_stream_and_update_target_cfg(
     from_output_uuid: UUID,
     to_block_uuid: UUID,
     to_input_uuid: UUID,
-):
+) -> UUID:
+    logging.debug(f"""
+                  Create Edge from block {from_block_uuid} output
+                  {from_output_uuid} to block {to_block_uuid} input
+                  {to_input_uuid}
+                  """)
     db: Session = next(get_database())
 
-    try:
-        with db.begin():
-            dependency = {
-                "upstream_block_uuid": from_block_uuid,
-                "upstream_output_uuid": from_output_uuid,
-                "downstream_block_uuid": to_block_uuid,
-                "downstream_input_uuid": to_input_uuid,
-            }
+    with db.begin():
+        dependency = {
+            "upstream_block_uuid": from_block_uuid,
+            "upstream_output_uuid": from_output_uuid,
+            "downstream_block_uuid": to_block_uuid,
+            "downstream_input_uuid": to_input_uuid,
+        }
 
-            db.execute(block_dependencies.insert().values(dependency))
+        db.execute(block_dependencies.insert().values(dependency))
 
-            # Compare the cfgs, overwrite the cfgs
-            target_io = db.query(InputOutput).filter_by(
-                uuid=to_input_uuid).one_or_none()
-            source_io = db.query(InputOutput).filter_by(
-                uuid=from_output_uuid).one_or_none()
+        # Compare the cfgs, overwrite the cfgs
+        target_io = db.query(InputOutput).filter_by(
+            uuid=to_input_uuid).one_or_none()
+        source_io = db.query(InputOutput).filter_by(
+            uuid=from_output_uuid).one_or_none()
 
-            if target_io.data_type != source_io.data_type:
-                # Data types do not match, dont allow connection
-                raise HTTPException(
-                    status_code=400,
-                    detail="Source & Target types do not match"
-                )
-
-                # Custom inputs are not overwritten
-            if (
-                    (target_io.data_type != source_io.data_type) or
-                    (target_io.data_type is DataType.CUSTOM)
-            ):
-                return target_io.uuid
-
-            extracted_defaults = _extract_default_keys_to_update_values(
-                source_io
+        if target_io.data_type != source_io.data_type:
+            # Data types do not match, dont allow connection
+            logging.error(f"Input datatype {
+                target_io.data_type} does not match with \
+                                     output type {target_io.data_type}")
+            raise HTTPException(
+                status_code=400,
+                detail="Source & Target types do not match"
             )
-            target_io.config = _updated_configs_with_values(
-                target_io, extracted_defaults, target_io.data_type)
 
+        # Custom inputs are not overwritten
+        if (
+                (target_io.data_type != source_io.data_type) or
+                (target_io.data_type is DataType.CUSTOM)
+        ):
+            logging.info("Edge from custom output to input created.")
             return target_io.uuid
-    except Exception as e:
-        raise e
+
+        logging.debug(f"Updating Input {to_input_uuid} configs.")
+        extracted_defaults = _extract_default_keys_to_update_values(
+            source_io
+        )
+        target_io.config = _updated_configs_with_values(
+            target_io, extracted_defaults, target_io.data_type)
+
+        return target_io.entrypoint_uuid
 
 
 def delete_edge(
@@ -456,6 +545,9 @@ def delete_edge(
     to_block_uuid: UUID,
     to_input_uuid: UUID,
 ):
+    logging.debug(f"Deleting Edge from block {
+        from_block_uuid} output {from_output_uuid} to \
+                         {to_block_uuid} with input {to_input_uuid}.")
     db: Session = next(get_database())
 
     stmt = delete(block_dependencies).where(

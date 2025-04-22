@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "react"
 
 interface DropdownProps<T> {
   options: T[],
@@ -17,12 +17,12 @@ export default function Dropdown<T>({
   renderOption,
   placeholder = "Select an option",
 }: DropdownProps<T>) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false)
 
   const handleSelectChange = (option: T) => {
-    onSelect(option);
-    setIsOpen(false);
-  };
+    onSelect(option)
+    setIsOpen(false)
+  }
 
   return (
     <div className="relative">
@@ -52,5 +52,5 @@ export default function Dropdown<T>({
         </div>
       )}
     </div>
-  );
+  )
 };

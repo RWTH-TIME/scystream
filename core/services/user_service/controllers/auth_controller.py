@@ -1,6 +1,5 @@
 import bcrypt
 
-from typing import Tuple
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -15,12 +14,11 @@ from utils.database.session_injector import get_database
 from services.user_service.models.user import User
 
 
-def login(email: str, password: str) -> Tuple[str, str]:
+def login(email: str, password: str) -> tuple[str, str]:
     """
     The login function takes email, and password.
     Returns a tuple of access_token and refresh_token
     """
-
     db: Session = next(get_database())
     user: User = db.query(User).filter_by(email=email).first()
 

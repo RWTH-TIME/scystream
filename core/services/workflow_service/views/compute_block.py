@@ -1,21 +1,28 @@
 from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
+import logging
 
 from utils.errors.error import handle_error
+from services.workflow_service.models.input_output import InputOutputType
 from services.workflow_service.schemas.compute_block import (
     ComputeBlockInformationRequest, ComputeBlockInformationResponse,
     CreateComputeBlockRequest, IDResponse,
-    GetNodesByProjectResponse, NodeDTO, UpdateComputeBlockRequest,
-    EdgeDTO
+    GetNodesByProjectResponse,
+    EdgeDTO, SimpleNodeDTO, InputOutputDTO, BaseInputOutputDTO,
+    UpdateInputOutuputResponseDTO, UpdateComputeBlockDTO, ConfigType,
+    BlockStatus
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
 )
 from services.workflow_service.controllers.compute_block_controller import (
     request_cb_info, create_compute_block, get_compute_blocks_by_project,
-    update_compute_block, delete_block, create_stream_and_update_target_cfg,
-    get_block_dependencies_for_blocks, delete_edge
+    delete_block, create_stream_and_update_target_cfg,
+    get_block_dependencies_for_blocks, delete_edge, get_envs_for_entrypoint,
+    get_io_for_entrypoint, update_ios, update_block
 )
+import services.workflow_service.controllers.workflow_controller as \
+    workflow_controller
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
 
@@ -31,16 +38,17 @@ async def cb_information(
         )
         return ComputeBlockInformationResponse.from_sdk_compute_block(cb)
     except Exception as e:
+        logging.error(f"Error getting compute block information: {e}")
         raise handle_error(e)
 
 
-@router.post("/", response_model=IDResponse)
+@router.post("/", response_model=SimpleNodeDTO)
 async def create(
     data: CreateComputeBlockRequest,
     _: dict = Depends(authenticate_token)
 ):
     try:
-        uuid = create_compute_block(
+        cb = create_compute_block(
             data.name,
             data.description,
             data.author,
@@ -58,10 +66,9 @@ async def create(
              for output in data.selected_entrypoint.outputs],
             data.project_id
         )
-        return IDResponse(
-            id=uuid
-        )
+        return SimpleNodeDTO.from_compute_block(cb)
     except Exception as e:
+        logging.error(f"Error creating compute block: {e}")
         raise handle_error(e)
 
 
@@ -75,13 +82,15 @@ async def get_by_project(
 
     try:
         compute_blocks = get_compute_blocks_by_project(project_id)
+        status = workflow_controller.dag_status(project_id)
 
         block_uuids = [block.uuid for block in compute_blocks]
         dependencies = get_block_dependencies_for_blocks(block_uuids)
 
         return GetNodesByProjectResponse(
             blocks=[
-                NodeDTO.from_compute_block(cb)
+                SimpleNodeDTO.from_compute_block(
+                    cb, status.get(str(cb.uuid), BlockStatus.IDLE))
                 for cb in compute_blocks
             ],
             edges=[EdgeDTO.from_block_dependencies(
@@ -89,23 +98,83 @@ async def get_by_project(
             ]
         )
     except Exception as e:
+        logging.error(f"Error getting compute blocks by project: {e}")
         raise handle_error(e)
 
 
-@router.put("/", response_model=IDResponse)
-async def update_cb(data: UpdateComputeBlockRequest):
+@router.get("/entrypoint/{entry_id}/envs/",
+            response_model=ConfigType)
+async def get_envs(
+    entry_id: UUID | None = None
+):
+    if not entry_id:
+        raise HTTPException(
+            status_code=422, detail="Entrypoint ID is required.")
+
     try:
-        id = update_compute_block(
-            id=data.id,
-            custom_name=data.custom_name,
-            selected_entrypoint=data.selected_entrypoint,
-            x_pos=data.x_pos,
-            y_pos=data.y_pos
+        return get_envs_for_entrypoint(entry_id)
+    except Exception as e:
+        logging.error(f"Error getting envs of entrypoint {entry_id}: {e}")
+        raise handle_error(e)
+
+
+@router.put("/",
+            response_model=UpdateComputeBlockDTO)
+async def update_compute_block(
+    data: UpdateComputeBlockDTO
+):
+    try:
+        b = update_block(
+            data.id,
+            data.envs,
+            data.custom_name,
+            data.x_pos,
+            data.y_pos
         )
-        return IDResponse(
-            id=id
+        return UpdateComputeBlockDTO(
+            id=b.uuid,
+            envs=b.selected_entrypoint.envs,
+            custom_name=b.custom_name,
+            x_pos=b.x_pos,
+            y_pos=b.y_pos
         )
     except Exception as e:
+        logging.error(f"Error updating compute block {data.id}: {e}")
+        raise handle_error(e)
+
+
+@router.get("/entrypoint/{entry_id}/io/", response_model=list[InputOutputDTO])
+async def get_io(
+    entry_id: UUID,
+    io_type: InputOutputType
+):
+    if not entry_id:
+        raise HTTPException(
+            status_code=422, detail="Entrypoint ID is required."
+        )
+
+    try:
+        ios = get_io_for_entrypoint(entry_id, io_type)
+        return [InputOutputDTO.from_input_output(io.name, io) for io in ios]
+    except Exception as e:
+        logging.error(f"Error getting {
+                      io_type.value}s of entrypoint {entry_id}: {e}")
+        raise handle_error(e)
+
+
+@router.put("/entrypoint/io/",
+            response_model=list[UpdateInputOutuputResponseDTO])
+async def update_io(data: list[BaseInputOutputDTO]):
+    try:
+        id_to_config_map: dict[UUID, ConfigType] = {
+            d.id: d.config for d in data
+        }
+        updated = update_ios(id_to_config_map)
+        return [UpdateInputOutuputResponseDTO.from_input_output(io)
+                for io in updated]
+    except Exception as e:
+        logging.error(f"Error updating ios with ids {
+                      list(id_to_config_map.keys())}: {e}")
         raise handle_error(e)
 
 
@@ -122,6 +191,7 @@ async def delete_compute_block(
     try:
         delete_block(block_id)
     except Exception as e:
+        logging.error(f"Error deleting compute block: {e}")
         raise handle_error(e)
 
 
@@ -138,6 +208,7 @@ def create_io_stream_and_update_io_cfg(
         )
         return IDResponse(id=id)
     except Exception as e:
+        logging.error(f"Error creating an edge and configuring input: {e}")
         raise handle_error(e)
 
 
@@ -153,4 +224,5 @@ def delete_stream(
             data.targetHandle
         )
     except Exception as e:
+        logging.error(f"Error deleting an edge: {e}")
         raise handle_error(e)

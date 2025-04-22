@@ -1,8 +1,8 @@
-import { useState } from "react";
-import type { RecordValueType } from "../CreateComputeBlockModal";
-import Input from "./Input";
-import Dropdown from "./Dropdown";
-import MultiSelectInput from "./MultiSelectInput";
+import { useState } from "react"
+import type { RecordValueType } from "../CreateComputeBlockModal"
+import Input from "./Input"
+import Dropdown from "./Dropdown"
+import MultiSelectInput from "./MultiSelectInput"
 
 type ConfigEnvsInputsProps = {
   pairs: Record<string, RecordValueType>,
@@ -10,10 +10,10 @@ type ConfigEnvsInputsProps = {
 };
 
 export default function ConfigEnvsInputs({ pairs, onUpdate }: ConfigEnvsInputsProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false)
 
   function handleChange(key: string, newValue: RecordValueType) {
-    onUpdate(key, newValue);
+    onUpdate(key, newValue)
   }
 
   function renderOption(val: boolean) {
@@ -23,19 +23,18 @@ export default function ConfigEnvsInputs({ pairs, onUpdate }: ConfigEnvsInputsPr
           {val ? "True" : "False"}
         </span>
       </div>
-    );
+    )
   }
 
   function getListTypeLabel(value: string[] | number[] | boolean[]): string {
-    if (value.every((item) => typeof item === "string")) return " | string-list";
-    if (value.every((item) => typeof item === "number")) return " | number-list";
-    if (value.every((item) => typeof item === "boolean")) return " | boolean-list";
-    return " | mixed-list";
+    if (value.every((item) => typeof item === "string")) return " | string-list"
+    if (value.every((item) => typeof item === "number")) return " | number-list"
+    if (value.every((item) => typeof item === "boolean")) return " | boolean-list"
+    return " | mixed-list"
   }
 
   return (
     <div className="border border-gray-300 rounded-lg p-4 shadow-sm">
-      {/* Small clickable area (chevron icon) */}
       <div
         className="flex items-center justify-start cursor-pointer py-2 transition-all duration-300 border-gray-200"
         onClick={() => setExpanded(!expanded)}
@@ -56,9 +55,8 @@ export default function ConfigEnvsInputs({ pairs, onUpdate }: ConfigEnvsInputsPr
         <span className="ml-2 text-md font-medium">{expanded ? "Hide Configuration" : "Show Configuration"}</span>
       </div>
 
-      {/* Animated expansion */}
       <div
-        className={`overflow-hidden transition-max-height duration-500 ease-in-out ${expanded ? "max-h-screen" : "max-h-0"}`}
+        className={`overflow-auto transition-max-height duration-500 ease-in-out ${expanded ? "max-h-screen" : "max-h-0"}`}
       >
         {Object.entries(pairs).map(([key, value]) => (
           <div key={key} className="mb-4">
@@ -103,6 +101,6 @@ export default function ConfigEnvsInputs({ pairs, onUpdate }: ConfigEnvsInputsPr
         ))}
       </div>
     </div>
-  );
+  )
 }
 
