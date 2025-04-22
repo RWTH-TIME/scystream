@@ -315,9 +315,10 @@ def delete_dag_from_airflow(project_id: UUID) -> str | None:
             api.delete_dag(
                 dag_id
             )
-        except OSError as e:
+        except OSError:
+            # The Deleting of the file might fail, because it might not yet be
+            # existant
             logging.error("Error deleting DAG file from directory")
-            raise e
         except ApiException as e:
             logging.error(f"Error deleting DAG {dag_id} from airflow: {e}")
             raise e
