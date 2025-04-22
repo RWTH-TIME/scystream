@@ -159,7 +159,11 @@ class SimpleNodeDTO(BaseNodeDTO):
     data: SimpleNodeDataDTO
 
     @classmethod
-    def from_compute_block(cls, cb, status: BlockStatus | None = None):
+    def from_compute_block(
+            cls,
+            cb,
+            status: BlockStatus = BlockStatus.IDLE
+    ):
         return cls(
             id=cb.uuid,
             position=PositionDTO(
