@@ -388,7 +388,7 @@ def _update_io(
 
 def update_ios(
     update_dict: dict[UUID, ConfigType]
-) -> list[UUID]:
+) -> list[InputOutput]:
     logging.debug("Updating input/outputs.")
 
     db: Session = next(get_database())

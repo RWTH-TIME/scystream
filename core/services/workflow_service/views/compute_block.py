@@ -159,7 +159,7 @@ async def get_io(
         return [InputOutputDTO.from_input_output(
             io.name,
             io,
-            presigned_urls.get(str(io.uuid))) for io in ios
+            presigned_urls.get(str(io.uuid), None)) for io in ios
         ]
     except Exception as e:
         logging.error(f"Error getting {
@@ -175,8 +175,12 @@ async def update_io(data: list[BaseInputOutputDTO]):
             d.id: d.config for d in data
         }
         updated = update_ios(id_to_config_map)
-        return [UpdateInputOutuputResponseDTO.from_input_output(io)
-                for io in updated]
+        validated_new_presigneds = bulk_presigned_urls_from_ios(updated)
+        return [UpdateInputOutuputResponseDTO.from_input_output(
+            io,
+            validated_new_presigneds.get(str(io.uuid), None)
+        )
+            for io in updated]
     except Exception as e:
         logging.error(f"Error updating ios with ids {
                       list(id_to_config_map.keys())}: {e}")

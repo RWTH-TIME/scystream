@@ -32,7 +32,22 @@ def _get_io_data_type(type: str) -> str:
     return data_type_map.get(type, DataType.CUSTOM.value)
 
 
+def _replace_minio_host(url: str | None) -> str | None:
+    if url:
+        defaults = get_file_cfg_defaults_dict("placeholder")
+        default_minio_url = f"{defaults.get("S3_HOST")}:{
+            defaults.get("S3_PORT")}"
+        """
+        The client can never use the presigned url with the default minio
+        host. Therefore we replace the default minio host, if it exists in
+        the presigned url,with the externally reachable url of the data
+        minio.
+        """
+        return url.replace(default_minio_url, ENV.EXTERNAL_URL_DATA_S3)
+    return url
+
 # Inputs & Outputs
+
 
 class BaseIODTO(BaseModel):
     id: UUID | None = None
@@ -50,22 +65,7 @@ class InputOutputDTO(BaseIODTO):
     name: str
     description: str | None = None
     config: ConfigType
-    presigned_url: Optional[str] = None
-
-    @classmethod
-    def replace_minio_host(cls, url: Optional[str]) -> Optional[str]:
-        if url:
-            defaults = get_file_cfg_defaults_dict("placeholder")
-            default_minio_url = f"{defaults.get("S3_HOST")}:{
-                defaults.get("S3_PORT")}"
-            """
-            The client can never use the presigned url with the default minio
-            host. Therefore we replace the default minio host, if it exists in
-            the presigned url,with the externally reachable url of the data
-            minio.
-            """
-            return url.replace(default_minio_url, ENV.EXTERNAL_URL_DATA_S3)
-        return url
+    presigned_url: str | None = None
 
     @classmethod
     def from_input_output(
@@ -80,7 +80,7 @@ class InputOutputDTO(BaseIODTO):
             data_type=(input_output.data_type),
             description=input_output.description or "",
             config=input_output.config or {},
-            presigned_url=cls.replace_minio_host(url=presigned_url)
+            presigned_url=_replace_minio_host(url=presigned_url)
         )
 
     @classmethod
@@ -350,14 +350,16 @@ class BaseInputOutputDTO(BaseModel):
 class UpdateInputOutuputResponseDTO(BaseInputOutputDTO):
     type: InputOutputType
     entrypoint_id: UUID
+    presigned_url: str | None = None
 
     @classmethod
-    def from_input_output(cls, input_output):
+    def from_input_output(cls, input_output, presigned_url: str | None = None):
         return cls(
             id=input_output.uuid,
             type=input_output.type,
             entrypoint_id=input_output.entrypoint_uuid,
-            config=input_output.config or {}
+            config=input_output.config or {},
+            presigned_url=_replace_minio_host(url=presigned_url)
         )
 
 

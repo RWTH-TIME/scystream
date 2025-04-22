@@ -1,5 +1,3 @@
-from typing import List
-
 import boto3
 import logging
 
@@ -90,7 +88,7 @@ def _get_minio_url(
     return f"{s3_host}:{str(s3_port)}"
 
 
-def bulk_presigned_urls_from_ios(ios: List[InputOutput]) -> dict:
+def bulk_presigned_urls_from_ios(ios: list[InputOutput]) -> dict:
     result = {}
     for io in ios:
         if io.data_type == DataType.FILE:
