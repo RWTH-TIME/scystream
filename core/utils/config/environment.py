@@ -1,7 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from typing import List
-
 
 class Settings(BaseSettings):
     DEVELOPMENT: bool = False
@@ -12,7 +10,7 @@ class Settings(BaseSettings):
     DATABASE_USER: str = "core"
     DATABASE_PASSWORD: str = "core"
     DATABASE_PORT: int = 5432
-    EMAIL_DOMAIN_WHITELIST: List[str] = ["time.rwth-aachen.de"]
+    EMAIL_DOMAIN_WHITELIST: list[str] = ["time.rwth-aachen.de"]
 
     LOG_LEVEL: str = "INFO"
 
@@ -26,7 +24,7 @@ class Settings(BaseSettings):
     CATAPULTE_SENDER: str = "mailing@scystream"
     CATAPULTE_SSL_ENABLED: bool = False
 
-    TRUSTED_CBC_DOMAINS: List[str] = ["github.com"]
+    TRUSTED_CBC_DOMAINS: list[str] = ["github.com"]
     MAX_CBC_FILE_SIZE: int = 10 * 1024 * 1024  # 10 MB
 
     # This has to reach the internal minio, provided by the defaults

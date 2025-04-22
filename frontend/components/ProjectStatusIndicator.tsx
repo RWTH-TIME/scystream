@@ -24,6 +24,6 @@ export function ProjectStatusIndicator({ s }: { s: ProjectStatus }) {
     [ProjectStatus.IDLE]: null
   }
 
-  return statusConfig[s] || null
+  return statusConfig[s]
 }
 

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 import logging
-from typing import List, Union, Dict, Optional
 
 from utils.errors.error import handle_error
 from utils.data.file_handling import bulk_presigned_urls_from_ios
@@ -11,7 +10,8 @@ from services.workflow_service.schemas.compute_block import (
     CreateComputeBlockRequest, IDResponse,
     GetNodesByProjectResponse,
     EdgeDTO, SimpleNodeDTO, InputOutputDTO, BaseInputOutputDTO,
-    UpdateInputOutuputResponseDTO, UpdateComputeBlockDTO
+    UpdateInputOutuputResponseDTO, UpdateComputeBlockDTO, ConfigType,
+    BlockStatus
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
@@ -91,7 +91,7 @@ async def get_by_project(
         return GetNodesByProjectResponse(
             blocks=[
                 SimpleNodeDTO.from_compute_block(
-                    cb, status.get(str(cb.uuid)))
+                    cb, status.get(str(cb.uuid), BlockStatus.IDLE))
                 for cb in compute_blocks
             ],
             edges=[EdgeDTO.from_block_dependencies(
@@ -104,10 +104,7 @@ async def get_by_project(
 
 
 @router.get("/entrypoint/{entry_id}/envs/",
-            response_model=Dict[
-                str,
-                Optional[Union[str, int, float, List, bool]]]
-            )
+            response_model=ConfigType)
 async def get_envs(
     entry_id: UUID | None = None
 ):
@@ -147,7 +144,7 @@ async def update_compute_block(
         raise handle_error(e)
 
 
-@router.get("/entrypoint/{entry_id}/io/", response_model=List[InputOutputDTO])
+@router.get("/entrypoint/{entry_id}/io/", response_model=list[InputOutputDTO])
 async def get_io(
     entry_id: UUID,
     io_type: InputOutputType
@@ -171,11 +168,10 @@ async def get_io(
 
 
 @router.put("/entrypoint/io/",
-            response_model=List[UpdateInputOutuputResponseDTO])
-async def update_io(data: List[BaseInputOutputDTO]):
+            response_model=list[UpdateInputOutuputResponseDTO])
+async def update_io(data: list[BaseInputOutputDTO]):
     try:
-        id_to_config_map: Dict[UUID, Dict[
-            str, Optional[Union[str, int, float, List, bool]]]] = {
+        id_to_config_map: dict[UUID, ConfigType] = {
             d.id: d.config for d in data
         }
         updated = update_ios(id_to_config_map)

@@ -3,7 +3,6 @@ from jinja2 import Environment, FileSystemLoader
 from fastapi import HTTPException
 import networkx as nx
 from uuid import UUID
-from typing import List
 import json
 import logging
 import time
@@ -36,12 +35,12 @@ def _project_id_to_dag_id(pi: UUID | str) -> str:
     return f"dag_{str(pi).replace("-", "_")}"
 
 
-def _dag_id_to_project_id(di: str) -> str:
-    return di.replace("dag_", "").replace("_", "-")
+def dag_id_to_project_id(di: str) -> str:
+    return di[4:].replace("_", "-")
 
 
 def _task_id_to_cb_id(ti: str) -> str:
-    return ti.replace("task_", "").replace("_", "-")
+    return ti[5:].replace("_", "-")
 
 
 def _cb_id_to_task_id(ci: UUID | str) -> str:
@@ -102,7 +101,7 @@ def init_templates():
     }
 
 
-def gen_dag_code(graph, templates, dag_id, project_uuid):
+def generate_dag_code(graph, templates, dag_id, project_uuid):
     parts = [templates["dag"].render(dag_id=dag_id)]
 
     # Convert to Airflow-compatible representation
@@ -141,7 +140,7 @@ def save_dag_to_file(dag_code, dag_id):
     return filename
 
 
-def validate_value(value: str) -> bool:
+def validate_value(value: str | list | None) -> bool:
     return value is None or value == "" or value == []
 
 
@@ -186,6 +185,28 @@ def validate_workflow(project_uuid: UUID):
         )
 
 
+def wait_for_dag_registration(
+        dag_id: str,
+        timeout: int = 10,
+        wait: float = 0.5
+) -> bool:
+    with ApiClient(airflow_config) as api_client:
+        api = DAGApi(api_client)
+        start_time = time.time()
+
+        while time.time() - start_time < timeout:
+            try:
+                api.get_dag(dag_id)
+                return True
+            except ApiException as e:
+                if e.status == 404:
+                    time.sleep(wait)
+                else:
+                    raise e
+
+    return False
+
+
 def translate_project_to_dag(project_uuid: UUID) -> str:
     """
     Parses a project and its blocks into a DAG, validates it, and saves it.
@@ -194,12 +215,8 @@ def translate_project_to_dag(project_uuid: UUID) -> str:
     graph = create_graph(project)
     templates = init_templates()
     dag_id = _project_id_to_dag_id(project_uuid)
-    dag_code = gen_dag_code(graph, templates, dag_id, project_uuid)
+    dag_code = generate_dag_code(graph, templates, dag_id, project_uuid)
     save_dag_to_file(dag_code, dag_id)
-
-    # Make sure airflow has enough time to create the dag internally
-    time.sleep(1)
-
     return dag_id
 
 
@@ -238,7 +255,7 @@ def get_all_dags():
             raise e
 
 
-def last_dag_run_overview(dag_ids: List[str]) -> dict:
+def last_dag_run_overview(dag_ids: list[str]) -> dict:
     with ApiClient(airflow_config) as api_client:
         api = DAGRunApi(api_client)
         most_recent_runs = {}
@@ -246,7 +263,8 @@ def last_dag_run_overview(dag_ids: List[str]) -> dict:
         try:
             all_runs = api.get_dag_runs_batch(ListDagRunsForm(
                 dag_ids=dag_ids,
-                order_by="execution_date"
+                order_by="execution_date",
+                page_limit=10000,
             ))
             # We only select the newest runs per DAG
             # Unfortunately airflow_client does not offer this out of the box
@@ -297,9 +315,10 @@ def delete_dag_from_airflow(project_id: UUID) -> str | None:
             api.delete_dag(
                 dag_id
             )
-        except OSError as e:
+        except OSError:
+            # The Deleting of the file might fail, because it might not yet be
+            # existant
             logging.error("Error deleting DAG file from directory")
-            raise e
         except ApiException as e:
             logging.error(f"Error deleting DAG {dag_id} from airflow: {e}")
             raise e

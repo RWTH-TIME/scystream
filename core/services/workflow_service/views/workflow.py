@@ -20,6 +20,12 @@ def translate_project_to_dag(
     try:
         workflow_controller.validate_workflow(project_id)
         dag_id = workflow_controller.translate_project_to_dag(project_id)
+        # Make sure airflow has enough time to create the dag internally
+        if not workflow_controller.wait_for_dag_registration(dag_id):
+            logging.error(f"DAG {dag_id} was not registered in time.")
+            raise HTTPException(
+                status_code=500, detail="DAG was not registered in time."
+            )
         workflow_controller.trigger_workflow_run(dag_id)
     except Exception as e:
         raise handle_error(e)
@@ -55,8 +61,7 @@ async def ws_project_status(websocket: WebSocket):
             all_proj_status = {}
 
             for di, dr in dag_runs.items():
-                project_id = di.replace(
-                    "dag_", "").replace("_", "-")
+                project_id = workflow_controller.dag_id_to_project_id(di)
                 status = WorkflowStatus.from_airflow_state(
                     str(dr.get("state"))
                 )

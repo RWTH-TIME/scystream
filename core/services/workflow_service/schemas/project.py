@@ -1,7 +1,6 @@
 from uuid import UUID
 from pydantic import BaseModel
 from datetime import datetime
-from typing import List
 
 
 # TODO:Still missing some field validation (empty name...)
@@ -32,11 +31,11 @@ class ReadByUserRequest(BaseModel):
 
 
 class ReadByUserResponse(BaseModel):
-    projects: List[Project]
+    projects: list[Project]
 
 
 class ReadAllResponse(BaseModel):
-    projects: List[Project]
+    projects: list[Project]
 
 
 class RenameProjectRequest(BaseModel):

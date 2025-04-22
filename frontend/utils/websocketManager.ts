@@ -1,7 +1,7 @@
 type Listener<T> = (data: T) => void
 type ErrorHandler = () => void
 
-class WebSocketConnection<T> {
+export class WebSocketConnection<T> {
   private websocket: WebSocket | null = null
   private listeners: Listener<T>[] = []
   private errorHandler: ErrorHandler = () => { }

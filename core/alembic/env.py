@@ -1,26 +1,43 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-
-from utils.database.connection import SQLALCHEMY_DATABASE_URL
-
-from utils.database.connection import Base
+from utils.database.connection import SQLALCHEMY_DATABASE_URL, Base
 
 """
 Import all your models here.
 We need to load all models or alembic will not recognize table changes,
 Keep in mind to ignore the linting in this case, we do not use these models
 """
-from services.user_service.models.user import User  # noqa: F401
-from services.workflow_service.models.project import Project  # noqa: F401
-from services.workflow_service.models.user_project import UserProject  # noqa: F401, E501
-from services.workflow_service.models.block import Block  # noqa: F401
-from services.workflow_service.models.block import block_dependencies  # noqa: F401, E501
-from services.workflow_service.models.entrypoint import Entrypoint  # noqa: F401, E501
-from services.workflow_service.models.input_output import InputOutput  # noqa: F401, E501
+import sys
+from pathlib import Path
+
+START_DIRECTORY = "services"
+MODELS_DIRECTORY = "models"
+
+services_path = Path(START_DIRECTORY).resolve()
+sys.path.insert(0, str(services_path.parent))
+
+
+for models_dir in services_path.rglob(MODELS_DIRECTORY):
+    if models_dir.is_dir():
+        package_parts = models_dir.relative_to(services_path.parent).parts
+        base_package = ".".join(package_parts)
+
+        for py_file in models_dir.glob("*.py"):
+            if py_file.name == "__init__.py":
+                continue
+
+            module_name = py_file.stem
+            full_module = f"{base_package}.{module_name}"
+
+            __import__(full_module)
+
+"""
+END OF DYNAMIC IMPORT LOGIC
+"""
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

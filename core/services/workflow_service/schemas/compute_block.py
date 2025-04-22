@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from typing import List, Dict, Optional, Union, Literal
+from typing import Literal
 from pydantic import BaseModel, validator
 from urllib.parse import urlparse
 
@@ -13,7 +13,7 @@ from services.workflow_service.schemas.workflow import BlockStatus
 from utils.config.environment import ENV
 from utils.config.defaults import get_file_cfg_defaults_dict
 
-ConfigType = Dict[str, Optional[Union[str, int, float, List, bool]]]
+ConfigType = dict[str, str | int | float | list | bool | None]
 
 
 def _validate_url(url: str):
@@ -35,7 +35,7 @@ def _get_io_data_type(type: str) -> str:
 # Inputs & Outputs
 
 class BaseIODTO(BaseModel):
-    id: Optional[UUID] = None
+    id: UUID | None = None
     data_type: DataType
 
     @classmethod
@@ -48,7 +48,7 @@ class BaseIODTO(BaseModel):
 
 class InputOutputDTO(BaseIODTO):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     config: ConfigType
     presigned_url: Optional[str] = None
 
@@ -112,18 +112,18 @@ class InputOutputDTO(BaseIODTO):
 # Entrypoint
 
 class BaseEntrypointDTO(BaseModel):
-    id: Optional[UUID] = None
+    id: UUID | None = None
     name: str
-    inputs: List[BaseIODTO]
-    outputs: List[BaseIODTO]
+    inputs: list[BaseIODTO]
+    outputs: list[BaseIODTO]
 
 
 class EntrypointDTO(BaseEntrypointDTO):
-    id: Optional[UUID] = None
+    id: UUID | None = None
     name: str
     description: str
-    inputs: List[InputOutputDTO]
-    outputs: List[InputOutputDTO]
+    inputs: list[InputOutputDTO]
+    outputs: list[InputOutputDTO]
     envs: ConfigType
 
     @classmethod
@@ -157,7 +157,7 @@ class BaseNodeDataDTO(BaseModel):
     description: str
     author: str
     image: str
-    status: Optional[BlockStatus] = BlockStatus.IDLE
+    status: BlockStatus = BlockStatus.IDLE
 
     @validator("status")
     def set_status(cls, status):
@@ -182,7 +182,11 @@ class SimpleNodeDTO(BaseNodeDTO):
     data: SimpleNodeDataDTO
 
     @classmethod
-    def from_compute_block(cls, cb, status: BlockStatus | None = None):
+    def from_compute_block(
+            cls,
+            cb,
+            status: BlockStatus = BlockStatus.IDLE
+    ):
         return cls(
             id=cb.uuid,
             position=PositionDTO(
@@ -262,7 +266,7 @@ class NodeDTO(BaseNodeDTO):
 # Edge:
 
 class EdgeDTO(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     source: UUID
     target: UUID
     sourceHandle: UUID
@@ -295,7 +299,7 @@ class ComputeBlockInformationResponse(BaseModel):
     description: str
     author: str
     image: str
-    entrypoints: List[EntrypointDTO]
+    entrypoints: list[EntrypointDTO]
 
     @classmethod
     def from_sdk_compute_block(cls, cb):
@@ -334,13 +338,13 @@ class IDResponse(BaseModel):
 
 
 class GetNodesByProjectResponse(BaseModel):
-    blocks: List[SimpleNodeDTO]
-    edges: List[EdgeDTO]
+    blocks: list[SimpleNodeDTO]
+    edges: list[EdgeDTO]
 
 
 class BaseInputOutputDTO(BaseModel):
     id: UUID
-    config: Optional[ConfigType] = None
+    config: ConfigType | None = None
 
 
 class UpdateInputOutuputResponseDTO(BaseInputOutputDTO):
@@ -359,7 +363,7 @@ class UpdateInputOutuputResponseDTO(BaseInputOutputDTO):
 
 class UpdateComputeBlockDTO(BaseModel):
     id: UUID
-    envs: Optional[ConfigType] = None
-    custom_name: Optional[str] = None
-    x_pos: Optional[float] = None
-    y_pos: Optional[float] = None
+    envs: ConfigType | None = None
+    custom_name: str | None = None
+    x_pos: float | None = None
+    y_pos: float | None = None
