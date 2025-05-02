@@ -150,8 +150,7 @@ export function useDeleteComputeBlockMutation(setAlert: SetAlertType, project_id
       console.error(`Deleting compute block failed ${error}`)
     },
     onSuccess: (_, del_block_id) => {
-      queryClient.setQueryData([project_id], (oldData: ComputeBlockByProjectResponse) => {
-        // TODO: Handle edges aswell
+      queryClient.setQueryData([QueryKeys.cbByProject, project_id], (oldData: ComputeBlockByProjectResponse) => {
         if (!oldData) return
         const updatedBlocks = oldData.blocks.filter(block => block.id !== del_block_id)
         return {
