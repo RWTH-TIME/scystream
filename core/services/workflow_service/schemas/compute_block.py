@@ -17,11 +17,13 @@ ConfigType = dict[str, str | int | float | list | bool | None]
 
 
 def _validate_url(url: str):
+    if url.startswith("git@"):
+        return
+
     parsed = urlparse(url)
     if parsed.scheme != "https":
-        raise ValueError("Insecure URL! Only HTTPs URLs are allowed.")
-    if parsed.netloc not in ENV.TRUSTED_CBC_DOMAINS:
-        raise ValueError("Untrusted Domain.")
+        raise ValueError(
+            "Insecure URL! Only HTTPS or SSH git URLs are allowed.")
 
 
 def _get_io_data_type(type: str) -> str:

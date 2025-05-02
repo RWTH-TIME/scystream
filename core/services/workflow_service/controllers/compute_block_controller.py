@@ -1,15 +1,13 @@
 from fastapi import HTTPException
-import requests
 import os
 import tempfile
-import urllib.parse
 import logging
+import subprocess
 
 from typing import Literal
 from uuid import UUID
 from sqlalchemy import select, case, asc, delete
 from sqlalchemy.orm import Session, contains_eager
-from utils.config.environment import ENV
 from utils.database.session_injector import get_database
 from utils.config.defaults import get_file_cfg_defaults_dict, \
     get_pg_cfg_defaults_dict
@@ -28,60 +26,40 @@ SETTINGS_CLASS = {
     DataType.FILE: FileSettings,
     DataType.PGTABLE: PostgresSettings
 }
-
-
-def _convert_github_to_raw(github_url: str) -> str:
-    logging.debug(f"Converting GitHub URL to raw format: {github_url}")
-    parsed_url = urllib.parse.urlparse(github_url)
-
-    raw_url = parsed_url._replace(
-        netloc="raw.githubusercontent.com",
-        path=parsed_url.path.replace("/blob/", "/")
-    )
-
-    return urllib.parse.urlunparse(raw_url)
+CBC_FILE_IDENTIFIER = "cbc.yaml"
 
 
 def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
-    logging.debug(f"Fetching ComputeBlock info from repository: {repo_url}")
-    if "github.com" in repo_url:
-        repo_url = _convert_github_to_raw(repo_url)
+    logging.debug(f"Cloning ComputeBlock Repo from: {repo_url}")
 
-    try:
-        response = requests.get(repo_url, timeout=10)
-        response.raise_for_status()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        try:
+            subprocess.run(
+                ["git", "clone", "--depth", "1", repo_url, tmpdir],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            cbc_path = os.path.join(tmpdir, CBC_FILE_IDENTIFIER)
 
-        if len(response.content) > ENV.MAX_CBC_FILE_SIZE:
-            logging.error("File too large to process.")
-            raise HTTPException(status_code=401, detail="File too large.")
+            if not os.path.isfile(cbc_path):
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Repository {repo_url} does not contain a cbc.yaml"
+                )
 
-        with tempfile.NamedTemporaryFile(
-                delete=False,
-                mode="w",
-                encoding="utf-8"
-        ) as tmp_file:
-            tmp_file.write(response.text)
-            temp_file_path = tmp_file.name
-
-        """
-        Convert to ComputeBlock
-        TODO: If the SDK provides us with the functionality to pass the file
-        into the load_config() function directly, without specifying the
-        path in SDK config, use this.
-        """
-        sdk_config = SDKConfig()
-        sdk_config.set_config_path(temp_file_path)
-        loaded_cb = load_config()
-
-        return loaded_cb
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching file from repository: {e}")
-        raise HTTPException(status_code=500, detail="Could not query file.")
-    except HTTPException as e:
-        raise e
-    finally:
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
+            # TODO: pass the path to load_config directly
+            sdk_config = SDKConfig()
+            sdk_config.set_config_path(cbc_path)
+            return load_config()
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Could not clone the repository {repo_url}: {e}")
+            raise HTTPException(
+                status_code=422,
+                detail=f"Couldn't clone the repository: {repo_url}"
+            )
+        except HTTPException as e:
+            raise e
 
 
 def request_cb_info(repo_url: str) -> ComputeBlock:

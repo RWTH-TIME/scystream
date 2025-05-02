@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 import logging
+import traceback
 
 from utils.errors.error import handle_error
 from utils.data.file_handling import bulk_presigned_urls_from_ios
@@ -162,8 +163,8 @@ async def get_io(
             presigned_urls.get(str(io.uuid), None)) for io in ios
         ]
     except Exception as e:
-        logging.error(f"Error getting {
-                      io_type.value}s of entrypoint {entry_id}: {e}")
+        logging.exception(f"Error getting {
+            io_type.value}s of entrypoint {entry_id}: {e}")
         raise handle_error(e)
 
 

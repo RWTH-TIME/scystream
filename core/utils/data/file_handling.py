@@ -5,19 +5,36 @@ from utils.config.environment import ENV
 from services.workflow_service.models.input_output import InputOutput, DataType
 from services.workflow_service.controllers.compute_block_controller import \
     extract_default_keys_from_io, get_file_cfg_defaults_dict
+from botocore.exceptions import (
+    EndpointConnectionError,
+    NoCredentialsError,
+    BotoCoreError
+)
+from botocore.client import BaseClient
 
 
 def get_s3_client(
     s3_url: str,
     access_key: str,
     secret_key: str
-):
-    return boto3.client(
-        "s3",
-        endpoint_url=s3_url,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key
-    )
+) -> BaseClient | None:
+    try:
+        return boto3.client(
+            "s3",
+            endpoint_url=s3_url,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key
+        )
+    except EndpointConnectionError as e:
+        logging.warning(f"Cannot reach S3 endpoint {s3_url}: {e}")
+    except NoCredentialsError:
+        logging.warning("Missing or invalid AWS credentials")
+    except BotoCoreError as e:
+        logging.warning(f"Boto3 core error while creating client: {e}")
+    except Exception as e:
+        logging.exception(f"Unexpected error creating S3 client: {e}")
+
+    return None
 
 
 def find_file_with_prefix(
@@ -102,6 +119,9 @@ def bulk_presigned_urls_from_ios(ios: list[InputOutput]) -> dict:
                 access_key=file_location_info.get("S3_ACCESS_KEY"),
                 secret_key=file_location_info.get("S3_SECRET_KEY")
             )
+            if not client:
+                continue
+
             full_file_path = find_file_with_prefix(
                 client,
                 bucket_name=file_location_info.get("BUCKET_NAME"),
