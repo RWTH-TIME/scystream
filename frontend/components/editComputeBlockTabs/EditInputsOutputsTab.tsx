@@ -1,6 +1,6 @@
 import ConfigBox from "@/components/ConfigBox"
 import LoadingAndError from "../LoadingAndError"
-import type { InputOutput, IOType, RecordValueType } from "../CreateComputeBlockModal"
+import { encodeFileToBase64, type InputOutput, type IOType, type RecordValueType } from "../CreateComputeBlockModal"
 import Button, { ButtonSentiment } from "../Button"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import type { UpdateInputOutputDTO } from "@/mutations/computeBlockMutation"
@@ -49,24 +49,56 @@ export default function EditInputsOutputsTab({ type }: EditInputsOutputsTabProps
     })
   }
 
+  function handleFileChange(name: string, file?: File) {
+    setIOS(prev =>
+      prev.map(i =>
+        i.name === name
+          ? { ...i, selected_file: file ?? undefined } // set or unset
+          : i
+      )
+    )
 
-  function handleSave() {
-    const changedData = ios
-      .map((io) => {
-        const updatedConfig = Object.fromEntries(
-          Object.entries(io.config).filter(([key]) => modifiedFields.has(key))
-        )
+    setModifiedFields((prev) => {
+      const newMap = new Map(prev)
+      newMap.set("file", "file")
+      return newMap
+    })
+  }
 
-        if (Object.keys(updatedConfig).length > 0) {
-          return { id: io.id, type: type, config: updatedConfig }
-        }
-        return null
-      })
-      .filter((io) => io !== null)
+  async function handleSave() {
+    const changedData: UpdateInputOutputDTO[] = []
 
-    mutateAsync(changedData as UpdateInputOutputDTO[])
+    for (const io of ios) {
+      const updatedConfig = Object.fromEntries(
+        Object.entries(io.config).filter(([key]) => modifiedFields.has(key))
+      )
+
+      const hasConfigChanges = Object.keys(updatedConfig).length > 0
+      const hasFileChange = modifiedFields.has("file") && io.selected_file
+
+      let selected_file_b64: string | undefined
+      let selected_file_type: string | undefined
+
+      if (hasFileChange && io.selected_file) {
+        selected_file_type = io.selected_file.name.split(".").pop()?.toLowerCase()
+        selected_file_b64 = await encodeFileToBase64(io.selected_file)
+      }
+
+      if (hasConfigChanges || selected_file_b64) {
+        changedData.push({
+          id: io.id!,
+          type: type,
+          config: hasConfigChanges ? updatedConfig : undefined,
+          selected_file_b64,
+          selected_file_type,
+        })
+      }
+    }
+
+    await mutateAsync(changedData)
     setModifiedFields(new Map())
   }
+
 
   return (
     <div>
@@ -76,6 +108,7 @@ export default function EditInputsOutputsTab({ type }: EditInputsOutputsTabProps
           description={`Configure the Compute Blocks ${type.toString().toLowerCase()}s here`}
           config={ios}
           updateConfig={handleConfigChange}
+          updateSelectedFile={handleFileChange}
         />
         <div className="flex justify-end py-5">
           <Button

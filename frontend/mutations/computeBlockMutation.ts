@@ -28,6 +28,8 @@ export type InputOutputDTO = {
   data_type: InputOutputType,
   description: string,
   config: Record<string, RecordValueType>,
+  selected_file_b64?: string,
+  selected_file_type?: string,
 }
 
 type EntrypointDTO = {
@@ -231,6 +233,8 @@ export type UpdateInputOutputDTO = {
   type: IOType,
   entrypoint_id?: string, // Set in response
   config?: Record<string, RecordValueType>,
+  selected_file_b64?: string,
+  selected_file_type?: string,
 }
 
 export type UpdateEntrypointDTO = {

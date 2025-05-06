@@ -29,7 +29,7 @@ import { useComputeBlockStatusWS, useTriggerWorkflowMutation } from "@/mutations
 import { CircularProgress } from "@mui/material"
 
 
-function useGraphData(selectedProjectUUID: string | undefined) {
+export function useGraphData(selectedProjectUUID: string | undefined) {
   const { data: projectDetails, isLoading, isError } = useComputeBlocksByProjectQuery(selectedProjectUUID)
   const [nodes, setNodes] = useState<ComputeBlockNodeType[]>([])
   const [edges, setEdges] = useState<Edge[]>([])

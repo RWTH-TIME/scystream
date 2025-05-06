@@ -1,13 +1,14 @@
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import { useGetComputeBlockInfoMutation } from "@/mutations/computeBlockMutation"
-import { type PageProps, type Entrypoint, type InputOutput, type ComputeBlockDraft, InputOutputType } from "@/components/CreateComputeBlockModal"
+import { IOType } from "@/components/CreateComputeBlockModal"
+import { type PageProps, type Entrypoint, type InputOutput, type ComputeBlockDraft } from "@/components/CreateComputeBlockModal"
 import { useState } from "react"
 import LoadingAndError from "@/components/LoadingAndError"
 import Input from "@/components/inputs/Input"
 import Button, { ButtonSentiment } from "../Button"
 
-const mapInputOutput = (data: InputOutput) => ({
-  type: data.data_type === InputOutputType.FILE ? "file" : "db_table",
+const mapInputOutput = (data: InputOutput, type: IOType) => ({
+  type: type,
   name: data.name,
   data_type: data.data_type,
   description: data.description || "",
@@ -41,8 +42,8 @@ export default function CreateComputeBlockInformationStep({
           entrypoints: cb.entrypoints.map((entrypoint: Entrypoint) => ({
             name: entrypoint.name,
             description: entrypoint.description,
-            inputs: entrypoint.inputs.map(mapInputOutput),
-            outputs: entrypoint.outputs.map(mapInputOutput),
+            inputs: entrypoint.inputs.map(i => mapInputOutput(i, IOType.INPUT)),
+            outputs: entrypoint.outputs.map(o => mapInputOutput(o, IOType.OUTPUT)),
             envs: entrypoint.envs || {},
           })),
           cbc_url: repoURL

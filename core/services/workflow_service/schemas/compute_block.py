@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from typing import Literal
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, model_validator
 from urllib.parse import urlparse
 
 from services.workflow_service.models.input_output import (
@@ -65,9 +65,22 @@ class BaseIODTO(BaseModel):
 
 class InputOutputDTO(BaseIODTO):
     name: str
+    type: InputOutputType | None = None
     description: str | None = None
     config: ConfigType
     presigned_url: str | None = None
+    selected_file_b64: str | None = None
+    selected_file_type: str | None = None
+
+    @model_validator(mode="after")
+    def validate_selected_file_fields(self):
+        if self.selected_file_b64 and not self.selected_file_type:
+            raise ValueError(
+                """
+                selected_file_type must be set if selected_file_b64 is provided
+                """
+            )
+        return self
 
     @classmethod
     def from_input_output(
@@ -79,6 +92,7 @@ class InputOutputDTO(BaseIODTO):
         return cls(
             id=getattr(input_output, "uuid", None),
             name=name,
+            type=input_output.type,
             data_type=(input_output.data_type),
             description=input_output.description or "",
             config=input_output.config or {},
@@ -347,6 +361,18 @@ class GetNodesByProjectResponse(BaseModel):
 class BaseInputOutputDTO(BaseModel):
     id: UUID
     config: ConfigType | None = None
+    selected_file_b64: str | None = None
+    selected_file_type: str | None = None
+
+    @model_validator(mode="after")
+    def validate_selected_file_fields(self):
+        if self.selected_file_b64 and not self.selected_file_type:
+            raise ValueError(
+                """
+                selected_file_type must be set if selected_file_b64 is provided
+                """
+            )
+        return self
 
 
 class UpdateInputOutuputResponseDTO(BaseInputOutputDTO):

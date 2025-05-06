@@ -15,7 +15,7 @@ export default function Modal({
 }: ModalProps) {
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      className={`fixed inset-0 z-100 flex items-center justify-center transition-opacity ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
     >
       <div

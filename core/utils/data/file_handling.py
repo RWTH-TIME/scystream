@@ -3,8 +3,9 @@ import logging
 
 from utils.config.environment import ENV
 from services.workflow_service.models.input_output import InputOutput, DataType
-from services.workflow_service.controllers.compute_block_controller import \
-    extract_default_keys_from_io, get_file_cfg_defaults_dict
+from utils.config.defaults import (
+    get_file_cfg_defaults_dict, extract_default_keys_from_io
+)
 from botocore.exceptions import (
     EndpointConnectionError,
     NoCredentialsError,
@@ -82,7 +83,7 @@ def generate_presigned_url(
             f"Error generating pre-signed URL for {file_path}: {e}")
 
 
-def _get_minio_url(
+def get_minio_url(
     s3_host: str,
     s3_port: int
 ):
@@ -97,8 +98,8 @@ def _get_minio_url(
 
     defaults = get_file_cfg_defaults_dict("placeholder")
     if (
-            s3_host == defaults.get("S3_HOST") and
-            s3_port == defaults.get("S3_PORT")
+        s3_host == defaults.get("S3_HOST") and
+        s3_port == defaults.get("S3_PORT")
     ):
         return f"{ENV.EXTERNAL_URL_DATA_S3}"
 
@@ -110,7 +111,7 @@ def bulk_presigned_urls_from_ios(ios: list[InputOutput]) -> dict:
     for io in ios:
         if io.data_type == DataType.FILE:
             file_location_info = extract_default_keys_from_io(io)
-            s3_url = _get_minio_url(
+            s3_url = get_minio_url(
                 file_location_info.get("S3_HOST"),
                 file_location_info.get("S3_PORT")
             )
@@ -119,6 +120,7 @@ def bulk_presigned_urls_from_ios(ios: list[InputOutput]) -> dict:
                 access_key=file_location_info.get("S3_ACCESS_KEY"),
                 secret_key=file_location_info.get("S3_SECRET_KEY")
             )
+            print("GOOOOCKEL")
             if not client:
                 continue
 
@@ -145,3 +147,21 @@ def bulk_presigned_urls_from_ios(ios: list[InputOutput]) -> dict:
                     )
 
     return result
+
+
+def get_presigned_post_url(
+    client,
+    bucket_name: str,
+    file_name: str,
+    expiration: int = 86400  # 1 day
+) -> str:
+    """
+    This function generates and returns a put url for a file to be
+    uploaded to our default minio bucket.
+    """
+    url = client.generate_presigned_post(
+        bucket_name,
+        file_name,
+        ExpiresIn=expiration
+    )
+    return url
