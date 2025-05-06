@@ -120,7 +120,6 @@ def bulk_presigned_urls_from_ios(ios: list[InputOutput]) -> dict:
                 access_key=file_location_info.get("S3_ACCESS_KEY"),
                 secret_key=file_location_info.get("S3_SECRET_KEY")
             )
-            print("GOOOOCKEL")
             if not client:
                 continue
 
