@@ -1,13 +1,11 @@
 import {
   type RecordValueType,
   type InputOutput,
-  ComputeBlockStatus,
   IOType,
   InputOutputType
 } from "@/components/CreateComputeBlockModal"
 import ConfigEnvsInputs from "@/components/inputs/ConfigEnvsInputs"
 import Button, { ButtonSentiment } from "./Button"
-import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useGraphData } from "./Workbench"
 import { useState } from "react"
