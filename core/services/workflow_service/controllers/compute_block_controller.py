@@ -29,7 +29,7 @@ from scystream.sdk.config import SDKConfig, load_config
 from scystream.sdk.config.models import ComputeBlock
 
 
-CBC_FILE_IDENTIFIER = "cbc_multiple.yaml"
+CBC_FILE_IDENTIFIER = "cbc.yaml"
 
 
 def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
