@@ -26,7 +26,7 @@ from services.workflow_service.schemas.compute_block import (
     ConfigType,
     InputOutputDTO,
 )
-from scystream.sdk.config import SDKConfig, load_config
+from scystream.sdk.config import load_config
 from scystream.sdk.config.models import ComputeBlock
 
 
@@ -48,10 +48,7 @@ def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
                     detail=f"Repository {repo_url} does not contain a cbc.yaml"
                 )
 
-            # TODO: pass the path to load_config directly
-            sdk_config = SDKConfig()
-            sdk_config.set_config_path(cbc_path)
-            return load_config()
+            return load_config(cbc_path)
         except subprocess.CalledProcessError as e:
             logging.error(f"Could not clone the repository {repo_url}: {e}")
             raise HTTPException(
