@@ -5,6 +5,7 @@ import logging
 import subprocess
 import base64
 
+from git import Repo
 from typing import Literal
 from uuid import UUID, uuid4
 from sqlalchemy import select, case, asc, delete
@@ -37,12 +38,7 @@ def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
-            subprocess.run(
-                ["git", "clone", "--depth", "1", repo_url, tmpdir],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
+            Repo.clone_from(repo_url, tmpdir, multi_options=["--depth=1"])
 
             cbc_path = os.path.join(tmpdir, CBC_FILE_IDENTIFIER)
 

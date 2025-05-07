@@ -38,8 +38,7 @@ export default function EditInputsOutputsTab({ type }: EditInputsOutputsTabProps
               [key]: value,
             },
           }
-          : io
-      )
+          : io)
     )
 
     setModifiedFields((prev) => {
@@ -54,9 +53,7 @@ export default function EditInputsOutputsTab({ type }: EditInputsOutputsTabProps
       prev.map(i =>
         i.name === name
           ? { ...i, selected_file: file ?? undefined } // set or unset
-          : i
-      )
-    )
+          : i))
 
     setModifiedFields((prev) => {
       const newMap = new Map(prev)
