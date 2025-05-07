@@ -104,8 +104,19 @@ const STEPS_INFORMATION = [
 ]
 
 export async function encodeFileToBase64(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer()
-  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        const base64Data = reader.result.split(",")[1]
+        resolve(base64Data)
+      } else {
+        reject(new Error("Failed to read file as base64"))
+      }
+    }
+    reader.onerror = reject
+  })
 }
 
 export default function CreateComputeBlockModal({
