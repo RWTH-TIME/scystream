@@ -29,7 +29,7 @@ import { useComputeBlockStatusWS, useTriggerWorkflowMutation } from "@/mutations
 import { CircularProgress } from "@mui/material"
 
 
-function useGraphData(selectedProjectUUID: string | undefined) {
+export function useGraphData(selectedProjectUUID: string | undefined) {
   const { data: projectDetails, isLoading, isError } = useComputeBlocksByProjectQuery(selectedProjectUUID)
   const [nodes, setNodes] = useState<ComputeBlockNodeType[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
@@ -37,7 +37,6 @@ function useGraphData(selectedProjectUUID: string | undefined) {
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { setAlert } = useAlert()
 
-  useComputeBlockStatusWS(setAlert, selectedProjectUUID)
 
   useEffect(() => {
     if (projectDetails) {
@@ -125,6 +124,8 @@ export function Workbench() {
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
   const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false)
   const [dropCoordinates, setDropCoordinates] = useState({ x: 0, y: 0 })
+
+  useComputeBlockStatusWS(setAlert, selectedProject?.uuid)
 
   useEffect(() => {
     setTimeout(() => {
