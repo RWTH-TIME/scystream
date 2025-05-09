@@ -29,13 +29,14 @@ export type RecordValueType = string | number | boolean | string[] | number[] | 
 
 export type InputOutput = {
   id?: string,
-  type: string,
+  type: IOType,
   name: string,
   data_type: InputOutputType,
   description: string,
   config: Record<string, RecordValueType>,
+  presigned_url: string,
+  selected_file?: File,
 }
-
 
 export type Entrypoint = {
   id?: string,
@@ -102,6 +103,22 @@ const STEPS_INFORMATION = [
   { label: "Configuration" },
 ]
 
+export async function encodeFileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        const base64Data = reader.result.split(",")[1]
+        resolve(base64Data)
+      } else {
+        reject(new Error("Failed to read file as base64"))
+      }
+    }
+    reader.onerror = reject
+  })
+}
+
 export default function CreateComputeBlockModal({
   isOpen,
   onClose,
@@ -132,12 +149,22 @@ export default function CreateComputeBlockModal({
     }
   };
 
-  function mapInputOutputToDTO(inputOutput: InputOutput): InputOutputDTO {
+  async function mapInputOutputToDTO(inputOutput: InputOutput): Promise<InputOutputDTO> {
+    let encodedFile: string | undefined
+    let fileType: string | undefined
+
+    if (inputOutput.selected_file) {
+      fileType = inputOutput.selected_file.name.split(".").pop()?.toLowerCase()
+      encodedFile = await encodeFileToBase64(inputOutput.selected_file)
+    }
+
     return {
       name: inputOutput.name,
       data_type: inputOutput.data_type,
       description: inputOutput.description,
       config: inputOutput.config,
+      selected_file_b64: encodedFile,
+      selected_file_type: fileType
     }
   }
 
@@ -160,8 +187,8 @@ export default function CreateComputeBlockModal({
       selected_entrypoint: {
         name: selectedEntrypoint.name,
         description: selectedEntrypoint.description,
-        inputs: selectedEntrypoint.inputs.map(mapInputOutputToDTO),
-        outputs: selectedEntrypoint.outputs.map(mapInputOutputToDTO),
+        inputs: await Promise.all(selectedEntrypoint.inputs.map(mapInputOutputToDTO)),
+        outputs: await Promise.all(selectedEntrypoint.outputs.map(mapInputOutputToDTO)),
         envs: selectedEntrypoint.envs
       },
       x_pos: dropCoordinates.x,

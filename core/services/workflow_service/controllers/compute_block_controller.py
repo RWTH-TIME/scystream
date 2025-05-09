@@ -1,107 +1,62 @@
 from fastapi import HTTPException
-import requests
 import os
+import tempfile
+import logging
+import subprocess
+import base64
+
+from git import Repo
 from typing import Literal
 from uuid import UUID, uuid4
-import tempfile
-import urllib.parse
-import logging
-
 from sqlalchemy import select, case, asc, delete
 from sqlalchemy.orm import Session, contains_eager
 from utils.database.session_injector import get_database
+from utils.config.defaults import (
+    get_file_cfg_defaults_dict,
+    get_pg_cfg_defaults_dict,
+    SETTINGS_CLASS, extract_default_keys_from_io
+)
+import utils.data.file_handling as fh
 from services.workflow_service.models.block import Block, block_dependencies
-from utils.config.environment import ENV
 from services.workflow_service.models.entrypoint import Entrypoint
 from services.workflow_service.models.input_output import (
     InputOutput, InputOutputType, DataType
 )
-from services.workflow_service.schemas.compute_block import ConfigType
-from scystream.sdk.config import SDKConfig, load_config
-from scystream.sdk.env.settings import PostgresSettings, FileSettings
+from services.workflow_service.schemas.compute_block import (
+    ConfigType,
+    InputOutputDTO,
+)
+from scystream.sdk.config import load_config
 from scystream.sdk.config.models import ComputeBlock
 
 
-def _get_file_cfg_defaults_dict(io_name: str) -> dict:
-    return {
-        "S3_HOST": ENV.DEFAULT_CB_CONFIG_S3_HOST,
-        "S3_PORT": ENV.DEFAULT_CB_CONFIG_S3_PORT,
-        "S3_ACCESS_KEY": ENV.DEFAULT_CB_CONFIG_S3_ACCESS_KEY,
-        "S3_SECRET_KEY": ENV.DEFAULT_CB_CONFIG_S3_SECRET_KEY,
-        "BUCKET_NAME": ENV.DEFAULT_CB_CONFIG_S3_BUCKET_NAME,
-        "FILE_PATH": ENV.DEFAULT_CB_CONFIG_S3_FILE_PATH,
-        "FILE_NAME": f"file_{io_name}_{uuid4()}",
-    }
-
-
-def _get_pg_cfg_defaults_dict(io_name: str) -> dict:
-    return {
-        "PG_USER": ENV.DEFAULT_CB_CONFIG_PG_USER,
-        "PG_PASS": ENV.DEFAULT_CB_CONFIG_PG_PASS,
-        "PG_HOST": ENV.DEFAULT_CB_CONFIG_S3_HOST,
-        "PG_PORT": ENV.DEFAULT_CB_CONFIG_PG_PORT,
-        "DB_TABLE": f"table_{io_name}_{uuid4()}",
-    }
-
-
-SETTINGS_CLASS = {
-    DataType.FILE: FileSettings,
-    DataType.PGTABLE: PostgresSettings
-}
-
-
-def _convert_github_to_raw(github_url: str) -> str:
-    logging.debug(f"Converting GitHub URL to raw format: {github_url}")
-    parsed_url = urllib.parse.urlparse(github_url)
-
-    raw_url = parsed_url._replace(
-        netloc="raw.githubusercontent.com",
-        path=parsed_url.path.replace("/blob/", "/")
-    )
-
-    return urllib.parse.urlunparse(raw_url)
+CBC_FILE_IDENTIFIER = "cbc.yaml"
 
 
 def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
-    logging.debug(f"Fetching ComputeBlock info from repository: {repo_url}")
-    if "github.com" in repo_url:
-        repo_url = _convert_github_to_raw(repo_url)
+    logging.debug(f"Cloning ComputeBlock Repo from: {repo_url}")
 
-    try:
-        response = requests.get(repo_url, timeout=10)
-        response.raise_for_status()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        try:
+            Repo.clone_from(repo_url, tmpdir, multi_options=["--depth=1"])
 
-        if len(response.content) > ENV.MAX_CBC_FILE_SIZE:
-            logging.error("File too large to process.")
-            raise HTTPException(status_code=401, detail="File too large.")
+            cbc_path = os.path.join(tmpdir, CBC_FILE_IDENTIFIER)
 
-        with tempfile.NamedTemporaryFile(
-                delete=False,
-                mode="w",
-                encoding="utf-8"
-        ) as tmp_file:
-            tmp_file.write(response.text)
-            temp_file_path = tmp_file.name
+            if not os.path.isfile(cbc_path):
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Repository {repo_url} does not contain a cbc.yaml"
+                )
 
-        """
-        Convert to ComputeBlock
-        TODO: If the SDK provides us with the functionality to pass the file
-        into the load_config() function directly, without specifying the
-        path in SDK config, use this.
-        """
-        sdk_config = SDKConfig()
-        sdk_config.set_config_path(temp_file_path)
-        loaded_cb = load_config()
-
-        return loaded_cb
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching file from repository: {e}")
-        raise HTTPException(status_code=500, detail="Could not query file.")
-    except HTTPException as e:
-        raise e
-    finally:
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
+            return load_config(cbc_path)
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Could not clone the repository {repo_url}: {e}")
+            raise HTTPException(
+                status_code=422,
+                detail=f"Couldn't clone the repository: {repo_url}"
+            )
+        except HTTPException as e:
+            raise e
 
 
 def request_cb_info(repo_url: str) -> ComputeBlock:
@@ -116,20 +71,20 @@ def request_cb_info(repo_url: str) -> ComputeBlock:
                 else DataType.PGTABLE
             )
             default_values = (
-                _get_file_cfg_defaults_dict(on)
+                get_file_cfg_defaults_dict(on)
                 if o_type is DataType.FILE
-                else _get_pg_cfg_defaults_dict(on)
+                else get_pg_cfg_defaults_dict(on)
             )
 
             # Update the config with default values
-            output.config = _updated_configs_with_values(
+            output.config = updated_configs_with_values(
                 output, default_values, o_type
             )
 
     return cb
 
 
-def _updated_configs_with_values(
+def updated_configs_with_values(
         io: InputOutput,
         default_values: dict,
         type: DataType
@@ -166,32 +121,48 @@ def _updated_configs_with_values(
     return new_config
 
 
-def _extract_default_keys_to_update_values(
-    io: InputOutput
+def _upload_file_to_bucket(
+    file_b64: str,
+    file_ext: str
 ):
-    """
-    This class returns a dict that maps the previously prefixed
-    default keys values to their default keys.
+    ext = file_ext.lstrip(".")
+    file_uuid = uuid4()
+    configs = get_file_cfg_defaults_dict(file_uuid, ext)
+    target_file_name = configs["FILE_NAME"]
 
-    e.g.
-    d = {
-        prefix_S3_HOST: test
-    }
-
-    to:
-
-    p = {
-        S3_HOST: test
-    }
-    """
-    settings_class = SETTINGS_CLASS.get(io.data_type)
-    default_keys = set(
-        settings_class.__annotations__.keys()
+    s3_url = fh.get_minio_url(
+        configs["S3_HOST"], configs["S3_PORT"])
+    client = fh.get_s3_client(
+        s3_url=s3_url,
+        access_key=configs["S3_ACCESS_KEY"],
+        secret_key=configs["S3_SECRET_KEY"]
     )
-    return {
-        dk: value for key, value in io.config.items()
-        if (dk := next((d for d in default_keys if d in key), None))
-    }
+
+    # Decode and upload
+    file_bytes = base64.b64decode(file_b64)
+    client.put_object(
+        Bucket=configs["BUCKET_NAME"],
+        Key=target_file_name,
+        Body=file_bytes
+    )
+
+    return configs
+
+
+def bulk_upload_files(
+    data: list[InputOutputDTO]
+) -> list[InputOutput]:
+    for inp in data:
+        if inp.selected_file_b64 and inp.selected_file_type:
+            file_loc_desc = _upload_file_to_bucket(
+                inp.selected_file_b64,
+                inp.selected_file_type.lstrip(".")
+            )
+            updated_cfgs = updated_configs_with_values(
+                inp, file_loc_desc, DataType.FILE)
+            inp.config = updated_cfgs
+
+    return data
 
 
 def create_compute_block(
@@ -267,6 +238,14 @@ def get_envs_for_entrypoint(e_id: UUID) -> ConfigType | None:
         return HTTPException(status_code=404, detail="Entrypoint not found.")
 
     return e.envs
+
+
+def get_ios_by_ids(
+        ids: list[UUID]
+) -> list[InputOutput]:
+    db: Session = next(get_database())
+
+    return db.query(InputOutput).filter(InputOutput.uuid.in_(ids)).all()
 
 
 def get_io_for_entrypoint(
@@ -395,8 +374,8 @@ def _update_io(
     # We are sure here that the downstream has the same type
     updated_downstream_ids = []
     for downstream_io in downstream_ios:
-        update_dict = _extract_default_keys_to_update_values(io)
-        downstream_io.config = _updated_configs_with_values(
+        update_dict = extract_default_keys_from_io(io)
+        downstream_io.config = updated_configs_with_values(
             downstream_io, update_dict, downstream_io.data_type
         )
         updated_downstream_ids.append(downstream_io.uuid)
@@ -408,7 +387,7 @@ def _update_io(
 
 def update_ios(
     update_dict: dict[UUID, ConfigType]
-) -> list[UUID]:
+) -> list[InputOutput]:
     logging.debug("Updating input/outputs.")
 
     db: Session = next(get_database())
@@ -530,10 +509,10 @@ def create_stream_and_update_target_cfg(
             return target_io.uuid
 
         logging.debug(f"Updating Input {to_input_uuid} configs.")
-        extracted_defaults = _extract_default_keys_to_update_values(
+        extracted_defaults = extract_default_keys_from_io(
             source_io
         )
-        target_io.config = _updated_configs_with_values(
+        target_io.config = updated_configs_with_values(
             target_io, extracted_defaults, target_io.data_type)
 
         return target_io.entrypoint_uuid

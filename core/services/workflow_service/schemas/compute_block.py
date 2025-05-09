@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from typing import Literal
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, model_validator
 from urllib.parse import urlparse
 
 from services.workflow_service.models.input_output import (
@@ -11,16 +11,19 @@ from services.workflow_service.models.input_output import (
 )
 from services.workflow_service.schemas.workflow import BlockStatus
 from utils.config.environment import ENV
+from utils.config.defaults import get_file_cfg_defaults_dict
 
 ConfigType = dict[str, str | int | float | list | bool | None]
 
 
 def _validate_url(url: str):
+    if url.startswith("git@"):
+        return
+
     parsed = urlparse(url)
     if parsed.scheme != "https":
-        raise ValueError("Insecure URL! Only HTTPs URLs are allowed.")
-    if parsed.netloc not in ENV.TRUSTED_CBC_DOMAINS:
-        raise ValueError("Untrusted Domain.")
+        raise ValueError(
+            "Insecure URL! Only HTTPS or SSH git URLs are allowed.")
 
 
 def _get_io_data_type(type: str) -> str:
@@ -31,7 +34,22 @@ def _get_io_data_type(type: str) -> str:
     return data_type_map.get(type, DataType.CUSTOM.value)
 
 
+def _replace_minio_host(url: str | None) -> str | None:
+    if url:
+        defaults = get_file_cfg_defaults_dict("placeholder")
+        default_minio_url = f"{defaults.get("S3_HOST")}:{
+            defaults.get("S3_PORT")}"
+        """
+        The client can never use the presigned url with the default minio
+        host. Therefore we replace the default minio host, if it exists in
+        the presigned url,with the externally reachable url of the data
+        minio.
+        """
+        return url.replace(default_minio_url, ENV.EXTERNAL_URL_DATA_S3)
+    return url
+
 # Inputs & Outputs
+
 
 class BaseIODTO(BaseModel):
     id: UUID | None = None
@@ -47,17 +65,38 @@ class BaseIODTO(BaseModel):
 
 class InputOutputDTO(BaseIODTO):
     name: str
+    type: InputOutputType | None = None
     description: str | None = None
     config: ConfigType
+    presigned_url: str | None = None
+    selected_file_b64: str | None = None
+    selected_file_type: str | None = None
+
+    @model_validator(mode="after")
+    def validate_selected_file_fields(self):
+        if self.selected_file_b64 and not self.selected_file_type:
+            raise ValueError(
+                """
+                selected_file_type must be set if selected_file_b64 is provided
+                """
+            )
+        return self
 
     @classmethod
-    def from_input_output(cls, name: str, input_output):
+    def from_input_output(
+            cls,
+            name: str,
+            input_output,
+            presigned_url: str | None = None,
+    ):
         return cls(
             id=getattr(input_output, "uuid", None),
             name=name,
+            type=input_output.type,
             data_type=(input_output.data_type),
             description=input_output.description or "",
-            config=input_output.config or {}
+            config=input_output.config or {},
+            presigned_url=_replace_minio_host(url=presigned_url)
         )
 
     @classmethod
@@ -322,19 +361,33 @@ class GetNodesByProjectResponse(BaseModel):
 class BaseInputOutputDTO(BaseModel):
     id: UUID
     config: ConfigType | None = None
+    selected_file_b64: str | None = None
+    selected_file_type: str | None = None
+
+    @model_validator(mode="after")
+    def validate_selected_file_fields(self):
+        if self.selected_file_b64 and not self.selected_file_type:
+            raise ValueError(
+                """
+                selected_file_type must be set if selected_file_b64 is provided
+                """
+            )
+        return self
 
 
 class UpdateInputOutuputResponseDTO(BaseInputOutputDTO):
     type: InputOutputType
     entrypoint_id: UUID
+    presigned_url: str | None = None
 
     @classmethod
-    def from_input_output(cls, input_output):
+    def from_input_output(cls, input_output, presigned_url: str | None = None):
         return cls(
             id=input_output.uuid,
             type=input_output.type,
             entrypoint_id=input_output.entrypoint_uuid,
-            config=input_output.config or {}
+            config=input_output.config or {},
+            presigned_url=_replace_minio_host(url=presigned_url)
         )
 
 

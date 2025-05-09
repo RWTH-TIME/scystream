@@ -67,6 +67,24 @@ export default function CreateComputeBlockConfigurationStep({
     })
   }
 
+  function updateSelectedFile(name: string, file?: File) {
+    // Set/Unset the selected File
+    if (!selectedEntrypoint || !setSelectedEntrypoint) return
+
+    setSelectedEntrypoint(prev => {
+      if (!prev) return prev
+
+      return {
+        ...prev,
+        inputs: prev.inputs.map(input =>
+          input.name === name
+            ? { ...input, selected_file: file }
+            : input
+        ),
+      }
+    })
+  }
+
   function handleCustomNameChange(value: string) {
     if (!setComputeBlock) return
 
@@ -118,10 +136,11 @@ export default function CreateComputeBlockConfigurationStep({
           description="Configure the Compute Blocks inputs here"
           config={selectedEntrypoint?.inputs}
           updateConfig={(key, value) => updateConfig("inputs", key, value)}
+          updateSelectedFile={updateSelectedFile}
         />
       )}
 
-      {selectedEntrypoint?.inputs && (
+      {selectedEntrypoint?.outputs && (
         <ConfigBox
           headline="Outputs"
           description="Configure the Compute Blocks outputs here"
