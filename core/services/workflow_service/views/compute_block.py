@@ -1,12 +1,24 @@
 import logging
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
 from services.workflow_service.controllers import workflow_controller
-from utils.errors.error import handle_error
-from utils.data.file_handling import bulk_presigned_urls_from_ios
-from services.workflow_service.models.input_output import (
-    InputOutputType
+from services.workflow_service.controllers.compute_block_controller import (
+    bulk_upload_files,
+    create_compute_block,
+    create_stream_and_update_target_cfg,
+    delete_block,
+    delete_edge,
+    get_block_dependencies_for_blocks,
+    get_compute_blocks_by_project,
+    get_envs_for_entrypoint,
+    get_io_for_entrypoint,
+    get_ios_by_ids,
+    request_cb_info,
+    update_block,
+    update_ios,
 )
+from services.workflow_service.models.input_output import InputOutputType
 from services.workflow_service.schemas.compute_block import (
     BaseInputOutputDTO,
     BlockStatus,
@@ -21,17 +33,8 @@ from services.workflow_service.schemas.compute_block import (
     SimpleNodeDTO,
     UpdateComputeBlockDTO,
     UpdateInputOutuputResponseDTO,
-    EdgeDTO, SimpleNodeDTO, InputOutputDTO, BaseInputOutputDTO,
-    UpdateInputOutuputResponseDTO, UpdateComputeBlockDTO, ConfigType,
-    BlockStatus
 )
-from services.workflow_service.controllers.compute_block_controller import (
-    request_cb_info, create_compute_block, get_compute_blocks_by_project,
-    delete_block, create_stream_and_update_target_cfg,
-    get_block_dependencies_for_blocks, delete_edge, get_envs_for_entrypoint,
-    get_io_for_entrypoint, update_ios, update_block, bulk_upload_files,
-    get_ios_by_ids,
-)
+from utils.data.file_handling import bulk_presigned_urls_from_ios
 from utils.errors.error import handle_error
 from utils.security.token import UserInfo, get_user
 
@@ -64,7 +67,7 @@ async def create(
         accordingly
         """
         updated_is = bulk_upload_files(
-            data.selected_entrypoint.inputs
+            data.selected_entrypoint.inputs,
         )
 
         cb = create_compute_block(
@@ -79,11 +82,12 @@ async def create(
             data.selected_entrypoint.name,
             data.selected_entrypoint.description,
             data.selected_entrypoint.envs,
-            [input.to_input_output(input, "Input")
-             for input in updated_is],
-            [output.to_input_output(output, "Output")
-             for output in data.selected_entrypoint.outputs],
-            data.project_id
+            [input.to_input_output(input, "Input") for input in updated_is],
+            [
+                output.to_input_output(output, "Output")
+                for output in data.selected_entrypoint.outputs
+            ],
+            data.project_id,
         )
         return SimpleNodeDTO.from_compute_block(cb)
     except Exception as e:
@@ -92,7 +96,8 @@ async def create(
 
 
 @router.get(
-    "/by_project/{project_id}", response_model=GetNodesByProjectResponse
+    "/by_project/{project_id}",
+    response_model=GetNodesByProjectResponse,
 )
 async def get_by_project(
     project_id: UUID | None = None,
@@ -111,7 +116,8 @@ async def get_by_project(
         return GetNodesByProjectResponse(
             blocks=[
                 SimpleNodeDTO.from_compute_block(
-                    cb, status.get(str(cb.uuid), BlockStatus.IDLE)
+                    cb,
+                    status.get(str(cb.uuid), BlockStatus.IDLE),
                 )
                 for cb in compute_blocks
             ],
@@ -129,7 +135,8 @@ async def get_envs(
 ):
     if not entry_id:
         raise HTTPException(
-            status_code=422, detail="Entrypoint ID is required."
+            status_code=422,
+            detail="Entrypoint ID is required.",
         )
 
     try:
@@ -178,22 +185,28 @@ async def get_io(
     try:
         ios = get_io_for_entrypoint(entry_id, io_type)
         presigned_urls = bulk_presigned_urls_from_ios(ios)
-        return [InputOutputDTO.from_input_output(
-            io.name,
-            io,
-            presigned_urls.get(str(io.uuid), None)) for io in ios
+        return [
+            InputOutputDTO.from_input_output(
+                io.name,
+                io,
+                presigned_urls.get(str(io.uuid), None),
+            )
+            for io in ios
         ]
     except Exception as e:
-        logging.exception(f"Error getting {
-            io_type.value}s of entrypoint {entry_id}: {e}")
+        logging.exception(
+            f"Error getting {io_type.value}s of entrypoint {entry_id}: {e}",
+        )
         raise handle_error(e)
 
 
 @router.put(
-    "/entrypoint/io/", response_model=list[UpdateInputOutuputResponseDTO]
+    "/entrypoint/io/",
+    response_model=list[UpdateInputOutuputResponseDTO],
 )
 async def update_io(
-    data: list[BaseInputOutputDTO], _: UserInfo = Depends(get_user)
+    data: list[BaseInputOutputDTO],
+    _: UserInfo = Depends(get_user),
 ):
     try:
         upload_candidates = [
@@ -219,14 +232,15 @@ async def update_io(
         return [
             UpdateInputOutuputResponseDTO.from_input_output(
                 io,
-                presigneds.get(str(io.uuid))
+                presigneds.get(str(io.uuid)),
             )
             for io in updated
         ]
 
     except Exception as e:
-        logging.exception(f"Error updating ios with ids {
-            [d.id for d in data]}: {e}")
+        logging.exception(
+            f"Error updating ios with ids {[d.id for d in data]}: {e}",
+        )
         raise handle_error(e)
 
 
