@@ -38,8 +38,7 @@ export default function EditInputsOutputsTab({ type }: EditInputsOutputsTabProps
               [key]: value,
             },
           }
-          : io)
-    )
+          : io))
 
     setModifiedFields((prev) => {
       const newMap = new Map(prev)
