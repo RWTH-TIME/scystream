@@ -7,6 +7,7 @@ import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import { ProjectStatusIndicator } from "./ProjectStatusIndicator"
 import { useProjectsQuery } from "@/mutations/projectMutation"
+import { useRouter } from "next/navigation"
 
 export enum ProjectListVariant {
   LIST,
@@ -20,6 +21,8 @@ type ProjectListProps = {
 export default function ProjectList({
   variant
 }: ProjectListProps) {
+  const router = useRouter()
+
   const [createProjectOpen, setCreateProjectOpen] = useState<boolean>(false)
   const { selectedProject, setSelectedProject } = useSelectedProject()
   const { setSelectedComputeBlock } = useSelectedComputeBlock()
@@ -83,6 +86,11 @@ export default function ProjectList({
             {projects?.map((project: Project) => (
               <div
                 key={project.uuid}
+                onClick={() => {
+                  setSelectedProject(project)
+                  setSelectedComputeBlock(undefined)
+                  router.push(`/dashboard/project/${project.uuid}`)
+                }}
                 className="rounded-2xl border border-gray-200 shadow-sm p-4 bg-white flex justify-between items-center transition-colors duration-200 hover:bg-gray-50 cursor-pointer"
               >
                 <div>
@@ -106,6 +114,4 @@ export default function ProjectList({
       </LoadingAndError>
     )
   }
-
-
 }

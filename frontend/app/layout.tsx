@@ -4,6 +4,8 @@ import "./globals.css"
 import QueryProvider from "@/hooks/useQueryClient"
 import { AlertProvider } from "@/hooks/useAlert"
 import Alert from "@/components/Alert"
+import { SelectedProjectProvider } from "@/hooks/useSelectedProject"
+import { SelectedComputeBlockProvider } from "@/hooks/useSelectedComputeBlock"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -22,8 +24,12 @@ export default function RootLayout({
       <body className={inter.className}>
         <QueryProvider>
           <AlertProvider>
-            {children}
-            <Alert />
+            <SelectedProjectProvider>
+              <SelectedComputeBlockProvider>
+                {children}
+                <Alert />
+              </SelectedComputeBlockProvider>
+            </SelectedProjectProvider>
           </AlertProvider>
         </QueryProvider>
       </body>

@@ -2,8 +2,8 @@ import Button, { ButtonSentiment } from "./Button"
 import ProjectList, { ProjectListVariant } from "./ProjectList"
 
 const mockTemplates = [
-  { id: "a", name: "ETL Template", description: "Extract, Transform, Load basic pipeline" },
-  { id: "b", name: "ML Training", description: "Template for training machine learning models" }
+  { id: "a", name: "WOS Downloader", description: "WOS Downloader" },
+  { id: "b", name: "NLP Processing", description: "Template for crawling and natural language processing" }
 ]
 
 export default function Home() {
