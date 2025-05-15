@@ -38,7 +38,16 @@ def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
-            Repo.clone_from(repo_url, tmpdir, multi_options=["--depth=1"])
+            Repo.clone_from(
+                repo_url,
+                tmpdir,
+                multi_options=[
+                    "--depth=1",
+                    "-c",
+                    "core.sshCommand=ssh -o StrictHostKeyChecking=no"
+                ],
+                allow_unsafe_options=True
+            )
 
             cbc_path = os.path.join(tmpdir, CBC_FILE_IDENTIFIER)
 

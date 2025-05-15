@@ -17,8 +17,7 @@ function validateSection(
     return Object.values(section as Record<string, RecordValueType>).every(isValid)
   } else {
     return (section as InputOutput[]).every((item) =>
-      Object.values(item.config).every(isValid)
-    )
+      Object.values(item.config).every(isValid))
   }
 }
 
@@ -79,8 +78,7 @@ export default function CreateComputeBlockConfigurationStep({
         inputs: prev.inputs.map(input =>
           input.name === name
             ? { ...input, selected_file: file }
-            : input
-        ),
+            : input),
       }
     })
   }

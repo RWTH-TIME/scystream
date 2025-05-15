@@ -21,7 +21,7 @@ ENV PYTHONUNBUFFERED 1
 ENV PORT 80
 ENV HOST "0.0.0.0"
 
-RUN apk update && apk upgrade --no-cache && apk add git=2.47.2-r0
+RUN apk update && apk upgrade --no-cache && apk add git=2.47.2-r0 openssh
 
 COPY --from=builder /build/venv /usr/local/
 COPY . /app
