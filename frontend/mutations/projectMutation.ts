@@ -27,7 +27,8 @@ function useProjectsQuery() {
       const response = await api.get(GET_PROJECTS_ENDPOINT)
       return response.data.projects
     },
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 3
   })
 }
 
