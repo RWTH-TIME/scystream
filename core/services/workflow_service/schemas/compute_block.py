@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from enum import Enum
 from typing import Literal
 from pydantic import BaseModel, validator, model_validator
 from urllib.parse import urlparse
@@ -9,11 +10,31 @@ from services.workflow_service.models.input_output import (
     InputOutput,
     InputOutputType
 )
-from services.workflow_service.schemas.workflow import BlockStatus
 from utils.config.environment import ENV
 from utils.config.defaults import get_file_cfg_defaults_dict
 
 ConfigType = dict[str, str | int | float | list | bool | None]
+
+
+class BlockStatus(Enum):
+    SUCCESS = "SUCCESS"
+    RUNNING = "RUNNING"
+    FAILED = "FAILED"
+    SCHEDULED = "SCHEDULED"
+    IDLE = "IDLE"
+
+    @classmethod
+    def from_airflow_state(cls, airflow_state: str | None) -> "BlockStatus":
+        if airflow_state is None:
+            return cls.IDLE
+        state_mapping = {
+            "success": cls.SUCCESS,
+            "running": cls.RUNNING,
+            "failed": cls.FAILED,
+            "scheduled": cls.SCHEDULED,
+        }
+
+        return state_mapping.get(airflow_state.lower(), cls.IDLE)
 
 
 def _validate_url(url: str):

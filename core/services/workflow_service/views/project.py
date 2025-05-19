@@ -14,7 +14,9 @@ from services.workflow_service.schemas.project import (
     ReadProjectRequest,
     ReadByUserResponse,
     ReadAllResponse,
-    RenameProjectRequest
+    RenameProjectRequest,
+    CreateProjectFromTemplateResponse,
+    CreateProjectFromTemplateRequest
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
@@ -36,6 +38,25 @@ async def create_project(
         return CreateProjectResponse(project_uuid=project_uuid)
     except Exception as e:
         logging.error(f"Error creating project: {e}")
+        raise handle_error(e)
+
+
+@router.post(
+    "/from_template",
+    response_model=CreateProjectFromTemplateResponse
+)
+async def create_project_from_template(
+    data: CreateProjectFromTemplateRequest,
+    token_data: dict = Depends(authenticate_token)
+):
+    try:
+        project_controller.create_project_from_template(
+            data.name,
+            data.template_id,
+            token_data["uuid"]
+        )
+    except Exception as e:
+        logging.error(f"Error creating project from template: {e}")
         raise handle_error(e)
 
 

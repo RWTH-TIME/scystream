@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from enum import Enum
 
+from services.workflow_service.schemas.compute_block import ConfigType
+
 
 class WorkflowStatus(Enum):
     RUNNING = "RUNNING"
@@ -18,27 +20,48 @@ class WorkflowStatus(Enum):
         return state_mapping.get(airflow_state.lower(), cls.IDLE)
 
 
-class BlockStatus(Enum):
-    SUCCESS = "SUCCESS"
-    RUNNING = "RUNNING"
-    FAILED = "FAILED"
-    SCHEDULED = "SCHEDULED"
-    IDLE = "IDLE"
-
-    @classmethod
-    def from_airflow_state(cls, airflow_state: str | None) -> "BlockStatus":
-        if airflow_state is None:
-            return cls.IDLE
-        state_mapping = {
-            "success": cls.SUCCESS,
-            "running": cls.RUNNING,
-            "failed": cls.FAILED,
-            "scheduled": cls.SCHEDULED,
-        }
-
-        return state_mapping.get(airflow_state.lower(), cls.IDLE)
-
-
 class WorfklowValidationError(BaseModel):
     project_id: str
     missing_configs: dict[str, list[str]]
+
+
+class WorkflowTemplateMetaData(BaseModel):
+    file_identifier: str
+    name: str
+    description: str
+
+
+class DependsOn(BaseModel):
+    block: str
+    output: str
+
+
+class Input(BaseModel):
+    identifier: str
+    settings: ConfigType | None = None
+    depends_on: DependsOn | None = None
+
+
+class Output(BaseModel):
+    identifier: str
+    settings: ConfigType | None = None
+
+
+class Block(BaseModel):
+    name: str
+    image: str
+    entrypoint: str
+    settings: ConfigType | None = None
+    inputs: list[Input] | None = None
+    outputs: list[Output] | None = None
+
+
+class PipelineMetadata(BaseModel):
+    name: str
+    description: str
+
+
+class WorkflowTemplate(BaseModel):
+    file_identifier: str
+    pipeline: PipelineMetadata
+    blocks: list[Block]

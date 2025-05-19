@@ -65,32 +65,34 @@ export default function Register() {
 
   return (
     <PageWithHeader breadcrumbs={[{ text: "Signup", link: "/sign-up" }]}>
-      <form onSubmit={(e) => signUp(e)} className="w-1/2 bg-slate-50 m-auto p-10 min-h-96 rounded-lg flex flex-col gap-5 drop-shadow-sm justify-center">
-        <Input
-          type="text"
-          value={mail}
-          label="E-Mail"
-          onChange={setMail}
-          leftAdornment={<InputAdornment type="email" />}
-        />
-        <Input
-          type={showPass ? "text" : "password"}
-          value={password}
-          label="Password"
-          onChange={setPassword}
-          leftAdornment={<InputAdornment type="password" />}
-          rightAdornment={<InputAdornment type={showPass ? "visibility" : "visibilityOff"} onClick={() => setShowPass(!showPass)} />}
-        />
-        <Input
-          type="password"
-          value={passwordRep}
-          label="Repeat password"
-          onChange={setPasswordRep}
-          leftAdornment={<InputAdornment type="password" />}
-        />
-        <Button sentiment={ButtonSentiment.POSITIVE} type="submit">Create Account</Button>
-        <Link href="login"><u>Already have an account? - Login here</u></Link>
-      </form>
+      <div className="flex items-center justify-center h-full">
+        <form onSubmit={(e) => signUp(e)} className="w-1/2 bg-slate-50 m-auto p-10 min-h-96 rounded-lg flex flex-col gap-5 drop-shadow-sm justify-center">
+          <Input
+            type="text"
+            value={mail}
+            label="E-Mail"
+            onChange={setMail}
+            leftAdornment={<InputAdornment type="email" />}
+          />
+          <Input
+            type={showPass ? "text" : "password"}
+            value={password}
+            label="Password"
+            onChange={setPassword}
+            leftAdornment={<InputAdornment type="password" />}
+            rightAdornment={<InputAdornment type={showPass ? "visibility" : "visibilityOff"} onClick={() => setShowPass(!showPass)} />}
+          />
+          <Input
+            type="password"
+            value={passwordRep}
+            label="Repeat password"
+            onChange={setPasswordRep}
+            leftAdornment={<InputAdornment type="password" />}
+          />
+          <Button sentiment={ButtonSentiment.POSITIVE} type="submit">Create Account</Button>
+          <Link href="login"><u>Already have an account? - Login here</u></Link>
+        </form>
+      </div>
     </PageWithHeader>
   )
 }

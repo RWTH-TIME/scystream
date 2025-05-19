@@ -2,7 +2,7 @@ import type { SetAlertType } from "@/hooks/useAlert"
 import { AlertType } from "@/hooks/useAlert"
 import { api } from "@/utils/axios"
 import { getConfig } from "@/utils/config"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { useEffect, useRef } from "react"
 import { QueryKeys } from "./queryKeys"
@@ -15,8 +15,21 @@ const config = getConfig()
 const PROJECT_STATUS_WS = "workflow/ws/project_status"
 const CB_STATUS_WS = "workflow/ws/workflow_status/"
 const TRIGGER_WORKFLOW = "workflow/"
+const GET_WORKFLOW_TEMPLATES = "workflow/workflow_templates"
 
 type ProjectStatusEvent = Record<string, string>
+
+export function useWorkflowTemplatesQuery() {
+  return useQuery({
+    queryKey: [QueryKeys.workflowTemplates],
+    queryFn: async function getWorkflowTemplates() {
+      const response = await api.get(GET_WORKFLOW_TEMPLATES)
+      return response.data
+    },
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 3
+  })
+}
 
 export function useTriggerWorkflowMutation(setAlert: SetAlertType) {
   const queryClient = useQueryClient()

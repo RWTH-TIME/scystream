@@ -68,6 +68,15 @@ def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
             raise e
 
 
+def create_project_and_dag_from_template(
+        name: str,
+        template_id: str,
+        current_user_uuid: UUID
+) -> UUID:
+    # TODO
+    return None
+
+
 def request_cb_info(repo_url: str) -> ComputeBlock:
     logging.debug(f"Requesting ComputeBlock info for: {repo_url}")
     cb = _get_cb_info_from_repo(repo_url)

@@ -5,7 +5,9 @@ import asyncio
 import logging
 
 from services.workflow_service.controllers import workflow_controller
-from services.workflow_service.schemas.workflow import WorkflowStatus
+from services.workflow_service.schemas.workflow import (
+    WorkflowStatus, WorkflowTemplateMetaData
+)
 
 router = APIRouter(prefix="/workflow", tags=["workflow"])
 
@@ -42,6 +44,25 @@ def pause_dag(
 
     try:
         workflow_controller.unpause_dag(dag_id, True)
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.get(
+    "/workflow_templates",
+    response_model=list[WorkflowTemplateMetaData]
+)
+async def workflow_templates():
+    try:
+        templates = workflow_controller.get_workflow_templates()
+        return [
+            WorkflowTemplateMetaData(
+                file_identifier=tpl.file_identifier,
+                name=tpl.pipeline.name,
+                description=tpl.pipeline.description,
+            )
+            for tpl in templates
+        ]
     except Exception as e:
         raise handle_error(e)
 
