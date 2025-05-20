@@ -88,7 +88,8 @@ export default function useAuth() {
         setUser(undefined)
         localStorage.removeItem(config.accessTokenKey)
         localStorage.removeItem(config.refreshTokenKey)
-        router.push("/login")
+
+        router.push("/") // make the redirect automatic
       }
     }
     checkToken()
