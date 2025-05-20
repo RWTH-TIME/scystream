@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from services.user_service.views import user as user_view
 from services.workflow_service.views import compute_block as compute_block_view
 from services.workflow_service.views import project as project_view
 from services.workflow_service.views import workflow as workflow_view
@@ -27,7 +26,7 @@ async def lifespan(_: FastAPI):
     try:
         engine.connect()
     except OperationalError:
-        logging.error("Connection to database failed.")
+        logging.exception("Connection to database failed.")
         raise RuntimeError("Shutdown, database connection failed.")
 
 
@@ -41,7 +40,6 @@ app.add_middleware(
 )
 
 
-app.include_router(user_view.router)
 app.include_router(workflow_view.router)
 app.include_router(project_view.router)
 app.include_router(compute_block_view.router)

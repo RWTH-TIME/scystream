@@ -36,7 +36,7 @@ from services.workflow_service.schemas.compute_block import (
 )
 from utils.data.file_handling import bulk_presigned_urls_from_ios
 from utils.errors.error import handle_error
-from utils.security.token import UserInfo, get_user
+from utils.security.token import User, get_user
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
 
@@ -44,7 +44,7 @@ router = APIRouter(prefix="/compute_block", tags=["compute_block"])
 @router.post("/information", response_model=ComputeBlockInformationResponse)
 async def cb_information(
     data: ComputeBlockInformationRequest,
-    _: UserInfo = Depends(get_user),
+    _: User = Depends(get_user),
 ):
     try:
         cb = request_cb_info(
@@ -59,7 +59,7 @@ async def cb_information(
 @router.post("/", response_model=SimpleNodeDTO)
 async def create(
     data: CreateComputeBlockRequest,
-    _: UserInfo = Depends(get_user),
+    _: User = Depends(get_user),
 ):
     try:
         """
@@ -101,7 +101,7 @@ async def create(
 )
 async def get_by_project(
     project_id: UUID | None = None,
-    _: UserInfo = Depends(get_user),
+    _: User = Depends(get_user),
 ):
     if not project_id:
         raise HTTPException(status_code=422, detail="Project ID is required.")
@@ -131,7 +131,7 @@ async def get_by_project(
 @router.get("/entrypoint/{entry_id}/envs/", response_model=ConfigType)
 async def get_envs(
     entry_id: UUID | None = None,
-    _: UserInfo = Depends(get_user),
+    _: User = Depends(get_user),
 ):
     if not entry_id:
         raise HTTPException(
@@ -149,7 +149,7 @@ async def get_envs(
 @router.put("/", response_model=UpdateComputeBlockDTO)
 async def update_compute_block(
     data: UpdateComputeBlockDTO,
-    _: UserInfo = Depends(get_user),
+    _: User = Depends(get_user),
 ):
     try:
         b = update_block(
@@ -175,7 +175,7 @@ async def update_compute_block(
 async def get_io(
     entry_id: UUID,
     io_type: InputOutputType,
-    _: UserInfo = Depends(get_user),
+    _: User = Depends(get_user),
 ):
     if not entry_id:
         raise HTTPException(
@@ -206,7 +206,7 @@ async def get_io(
 )
 async def update_io(
     data: list[BaseInputOutputDTO],
-    _: UserInfo = Depends(get_user),
+    _: User = Depends(get_user),
 ):
     try:
         upload_candidates = [
@@ -247,7 +247,7 @@ async def update_io(
 @router.delete("/{block_id}", status_code=200)
 async def delete_compute_block(
     block_id: UUID | None = None,
-    _: UserInfo = Depends(get_user),
+    _: User = Depends(get_user),
 ):
     if not block_id:
         return HTTPException(
@@ -265,7 +265,7 @@ async def delete_compute_block(
 @router.post("/edge", response_model=IDResponse)
 def create_io_stream_and_update_io_cfg(
     data: EdgeDTO,
-    _: UserInfo = Depends(get_user),
+    _: User = Depends(get_user),
 ):
     try:
         id = create_stream_and_update_target_cfg(
@@ -283,7 +283,7 @@ def create_io_stream_and_update_io_cfg(
 @router.post("/edge/delete", status_code=200)
 def delete_stream(
     data: EdgeDTO,
-    _: UserInfo = Depends(get_user),
+    _: User = Depends(get_user),
 ):
     try:
         delete_edge(

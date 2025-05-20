@@ -5,6 +5,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from keycloak import KeycloakOpenID
 from keycloak.exceptions import KeycloakAuthenticationError, KeycloakPostError
 from pydantic import BaseModel
+from services.workflow_service.controllers.project_controller import (
+    read_projects_by_user_uuid,
+)
+from services.workflow_service.models.project import Project
 from utils.config.environment import ENV
 
 bearer_scheme = HTTPBearer()
@@ -17,7 +21,7 @@ keycloak_openid = KeycloakOpenID(
 )
 
 
-class UserInfo(BaseModel):
+class User(BaseModel):
     uuid: UUID4
 
     username: str
@@ -27,8 +31,12 @@ class UserInfo(BaseModel):
 
     fullname: str | None = None
 
+    @property
+    def projects(self) -> list[Project]:
+        return read_projects_by_user_uuid(self.uuid)
 
-def verify(token: str) -> UserInfo:
+
+def verify(token: str) -> User:
     try:
         user_info = keycloak_openid.userinfo(token)
 
@@ -38,7 +46,7 @@ def verify(token: str) -> UserInfo:
                 detail="Invalid token",
             )
 
-        return UserInfo(
+        return User(
             uuid=user_info["sub"],
             username=user_info["preferred_username"],
             email=user_info.get("email"),
@@ -54,7 +62,7 @@ def verify(token: str) -> UserInfo:
 
 def get_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-) -> UserInfo:
+) -> User:
     token = credentials.credentials
 
     user_info = verify(token)
