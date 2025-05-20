@@ -5,10 +5,6 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from keycloak import KeycloakOpenID
 from keycloak.exceptions import KeycloakAuthenticationError, KeycloakPostError
 from pydantic import BaseModel
-from services.workflow_service.controllers.project_controller import (
-    read_projects_by_user_uuid,
-)
-from services.workflow_service.models.project import Project
 from utils.config.environment import ENV
 
 bearer_scheme = HTTPBearer()
@@ -30,10 +26,6 @@ class User(BaseModel):
     email_verified: bool = False
 
     fullname: str | None = None
-
-    @property
-    def projects(self) -> list[Project]:
-        return read_projects_by_user_uuid(self.uuid)
 
 
 def verify(token: str) -> User:

@@ -54,8 +54,6 @@ api.interceptors.response.use(function(response) {
       localStorage.removeItem(config.accessTokenKey)
       localStorage.removeItem(config.refreshTokenKey)
 
-      // window.location.href = "/login"
-
       return Promise.reject(error)
     }
   }
