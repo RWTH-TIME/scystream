@@ -29,8 +29,7 @@ export default function MultiSelectInput<T extends string | number | boolean>({
 
   function handleChange(_: React.SyntheticEvent, newValue: (string | T)[]) {
     const filteredValues = newValue.filter((val) =>
-      isValidValue(typeof val === "string" ? val : getValue(val))
-    )
+      isValidValue(typeof val === "string" ? val : getValue(val)))
 
     const convertedValues = filteredValues.map((val) => {
       if (typeof selectedValues[0] === "boolean") {

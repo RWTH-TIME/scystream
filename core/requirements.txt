@@ -2,7 +2,7 @@ uvicorn==0.34.2
 fastapi==0.115.12
 pydantic==2.11.4
 pydantic-settings==2.9.1
-SQLAlchemy==2.0.40
+SQLAlchemy==2.0.41
 psycopg2-binary==2.9.10
 alembic==1.15.2
 bcrypt==4.3.0

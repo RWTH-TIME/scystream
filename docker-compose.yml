@@ -31,6 +31,7 @@ x-airflow-common:
     - airflow-config:/opt/airflow/config
     - airflow-plugins:/opt/airflow/plugins
     - /var/run/docker.sock:/var/run/docker.sock
+    - ~/.docker:/root/.docker:ro
   user: "0:0"
   depends_on:
     &airflow-common-depends-on
@@ -306,6 +307,7 @@ services:
     ports:
       - "4000:80"
     environment:
+      SSH_AUTH_SOCK: /ssh-agent
       EXTERNAL_URL: "http://localhost:8000"
       AIRFLOW_HOST: "http://airflow-webserver:8080/api/v1"
     depends_on:
@@ -315,6 +317,7 @@ services:
         condition: service_healthy
     volumes:
       - ./airflow-dags:/airflow-dags
+      - ${SSH_AUTH_SOCK}:/ssh-agent:ro
     networks:
       - core
       - data_processing
