@@ -10,8 +10,7 @@ from utils.database.session_injector import get_database
 
 def create_project(name: str, current_user_uuid: UUID) -> UUID:
     logging.debug(
-        f"Creating project with name: {
-        name} for user: {current_user_uuid}",
+        f"Creating project with name: {name} for user: {current_user_uuid}",
     )
     db: Session = next(get_database())
     project: Project = Project()
@@ -20,10 +19,6 @@ def create_project(name: str, current_user_uuid: UUID) -> UUID:
     project.name = name
     project.created_at = datetime.now(timezone.utc)
     project.users = [current_user_uuid]
-
-    if not current_user:
-        logging.error(f"User {current_user_uuid} not found.")
-        raise HTTPException(404, detail="User not found")
 
     db.add(project)
     db.commit()
@@ -77,8 +72,7 @@ def add_user(project_uuid: UUID, user_uuid: UUID) -> None:
 
     if user_uuid in project.users:
         logging.warning(
-            f"User {user_uuid} is already part of project {
-            project_uuid}.",
+            f"User {user_uuid} is already part of project {project_uuid}.",
         )
         raise HTTPException(
             status_code=404,
@@ -144,11 +138,18 @@ def read_projects_by_user_uuid(user_uuid: UUID) -> list[Project]:
     logging.debug(f"Fetching projects for user UUID: {user_uuid}")
     db: Session = next(get_database())
 
-    projects = db.query(Project).filter(Project.user_uuids.contains([user_uuid])).all()
+    projects = (
+        db.query(Project)
+        .filter(Project.user_uuids.contains([user_uuid]))
+        .all()
+    )
 
     if not projects:
         logging.error(f"No projects found for user {user_uuid}")
-        raise HTTPException(status_code=404, detail="No projects found for user")
+        raise HTTPException(
+            status_code=404,
+            detail="No projects found for user",
+        )
 
     logging.info(f"Retrieved {len(projects)} projects for user {user_uuid}")
     return projects
