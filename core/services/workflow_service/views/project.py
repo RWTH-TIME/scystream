@@ -21,6 +21,7 @@ from services.workflow_service.schemas.project import (
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
 )
+from utils.database.session_injector import get_database
 
 
 router = APIRouter(prefix="/project", tags=["project"])
@@ -31,10 +32,12 @@ async def create_project(
     data: CreateProjectRequest,
     token_data: dict = Depends(authenticate_token)
 ):
+    db = next(get_database())
     try:
-        project_uuid = project_controller.create_project(
-            data.name, token_data["uuid"]
-        )
+        with db.begin():
+            project_uuid = project_controller.create_project(
+                db, data.name, token_data["uuid"]
+            )
         return CreateProjectResponse(project_uuid=project_uuid)
     except Exception as e:
         logging.error(f"Error creating project: {e}")
@@ -47,13 +50,13 @@ async def create_project(
 )
 async def create_project_from_template(
     data: CreateProjectFromTemplateRequest,
-    token_data: dict = Depends(authenticate_token)
+    # token_data: dict = Depends(authenticate_token)
 ):
     try:
         project_controller.create_project_from_template(
             data.name,
-            data.template_id,
-            token_data["uuid"]
+            data.template_identifier,
+            "bda1216d-a6a4-4c87-88c9-b049e67bb5ba"
         )
     except Exception as e:
         logging.error(f"Error creating project from template: {e}")

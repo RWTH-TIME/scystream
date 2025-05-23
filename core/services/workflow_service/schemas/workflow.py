@@ -25,6 +25,8 @@ class WorfklowValidationError(BaseModel):
     missing_configs: dict[str, list[str]]
 
 
+# Worklow Templates:
+
 class WorkflowTemplateMetaData(BaseModel):
     file_identifier: str
     name: str
@@ -49,7 +51,7 @@ class Output(BaseModel):
 
 class Block(BaseModel):
     name: str
-    image: str
+    repo_url: str
     entrypoint: str
     settings: ConfigType | None = None
     inputs: list[Input] | None = None

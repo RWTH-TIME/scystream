@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 import logging
 
+from utils.database.session_injector import get_database
 from utils.errors.error import handle_error
 from utils.data.file_handling import bulk_presigned_urls_from_ios
 from services.workflow_service.models.input_output import (
@@ -51,6 +52,8 @@ async def create(
     data: CreateComputeBlockRequest,
     _: dict = Depends(authenticate_token)
 ):
+    db = next(get_database())
+
     try:
         """
         Upload the files to the default bucket and update the configs
@@ -60,24 +63,26 @@ async def create(
             data.selected_entrypoint.inputs
         )
 
-        cb = create_compute_block(
-            data.name,
-            data.description,
-            data.author,
-            data.image,
-            data.cbc_url,
-            data.custom_name,
-            data.x_pos,
-            data.y_pos,
-            data.selected_entrypoint.name,
-            data.selected_entrypoint.description,
-            data.selected_entrypoint.envs,
-            [input.to_input_output(input, "Input")
-             for input in updated_is],
-            [output.to_input_output(output, "Output")
-             for output in data.selected_entrypoint.outputs],
-            data.project_id
-        )
+        with db.begin():
+            cb = create_compute_block(
+                db,
+                data.name,
+                data.description,
+                data.author,
+                data.image,
+                data.cbc_url,
+                data.custom_name,
+                data.x_pos,
+                data.y_pos,
+                data.selected_entrypoint.name,
+                data.selected_entrypoint.description,
+                data.selected_entrypoint.envs,
+                [input.to_input_output(input, "Input")
+                 for input in updated_is],
+                [output.to_input_output(output, "Output")
+                 for output in data.selected_entrypoint.outputs],
+                data.project_id,
+            )
         return SimpleNodeDTO.from_compute_block(cb)
     except Exception as e:
         logging.error(f"Error creating compute block: {e}")

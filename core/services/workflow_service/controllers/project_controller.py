@@ -7,12 +7,16 @@ import logging
 from utils.database.session_injector import get_database
 from services.workflow_service.models.project import Project
 from services.user_service.models.user import User
+from services.workflow_service.controllers.compute_block_controller import (
+    create_compute_blocks_from_template
+)
+import services.workflow_service.controllers.workflow_controller as \
+    workflow_controller
 
 
-def create_project(name: str, current_user_uuid: UUID) -> UUID:
+def create_project(db: Session, name: str, current_user_uuid: UUID) -> UUID:
     logging.debug(f"Creating project with name: {
         name} for user: {current_user_uuid}")
-    db: Session = next(get_database())
     project: Project = Project()
 
     project.uuid = uuid4()
@@ -28,11 +32,39 @@ def create_project(name: str, current_user_uuid: UUID) -> UUID:
         raise HTTPException(404, detail="User not found")
 
     db.add(project)
-    db.commit()
-    db.refresh(project)
 
     logging.info(f"Project {project.uuid} created successfully")
     return project.uuid
+
+
+def create_project_from_template(
+        name: str,
+        template_identifier: str,
+        current_user_uuid: UUID
+) -> UUID:
+    """
+    This method will handle the creation of project, blocks and edges as
+    defined in the template.yaml
+    """
+    db: Session = next(get_database())
+
+    template = workflow_controller.get_workflow_template_by_identifier(
+        template_identifier
+    )
+
+    # TODO:
+    # - Test if Template overwrites io configs correctly.
+    # - Coordinates
+    # - Create Edges
+    # - Test!!
+    try:
+        with db.begin():
+            project_id = create_project(db, name, current_user_uuid)
+            create_compute_blocks_from_template(db, template, project_id)
+
+    except Exception as e:
+        logging.exception(f"Error creating project from template: {e}")
+        raise e
 
 
 def read_project(project_uuid: UUID) -> Project:

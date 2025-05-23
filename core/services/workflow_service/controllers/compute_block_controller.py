@@ -26,8 +26,18 @@ from services.workflow_service.schemas.compute_block import (
     ConfigType,
     InputOutputDTO,
 )
+from services.workflow_service.schemas.workflow import (
+    WorkflowTemplate,
+    Block as BlockTemplate,
+    Input as InputTemplate,
+    Output as OutputTemplate
+)
 from scystream.sdk.config import load_config
-from scystream.sdk.config.models import ComputeBlock
+from scystream.sdk.config.models import (
+    ComputeBlock,
+    Entrypoint as SDKEntrypoint,
+    InputOutputModel
+)
 
 
 CBC_FILE_IDENTIFIER = "cbc.yaml"
@@ -68,15 +78,6 @@ def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
             raise e
 
 
-def create_project_and_dag_from_template(
-        name: str,
-        template_id: str,
-        current_user_uuid: UUID
-) -> UUID:
-    # TODO
-    return None
-
-
 def request_cb_info(repo_url: str) -> ComputeBlock:
     logging.debug(f"Requesting ComputeBlock info for: {repo_url}")
     cb = _get_cb_info_from_repo(repo_url)
@@ -84,10 +85,7 @@ def request_cb_info(repo_url: str) -> ComputeBlock:
     for entry_name, entry in cb.entrypoints.items():
         for on, output in entry.outputs.items():
             # Determine the type and the default values
-            o_type = (
-                DataType.FILE if output.type == "file"
-                else DataType.PGTABLE
-            )
+            o_type = DataType(output.type)
             default_values = (
                 get_file_cfg_defaults_dict(on)
                 if o_type is DataType.FILE
@@ -139,6 +137,23 @@ def updated_configs_with_values(
     return new_config
 
 
+def _extract_block_urls_from_template(template: WorkflowTemplate) -> list[str]:
+    """
+    Extracts the urls of all blocks used in the template.
+    Makes sure that there are no duplicates in the returned list.
+    """
+    seen = set()
+    urls = []
+
+    for template_block in template.blocks:
+        url = template_block.repo_url
+        if url not in seen:
+            seen.add(url)
+            urls.append(url)
+
+    return urls
+
+
 def _upload_file_to_bucket(
     file_b64: str,
     file_ext: str
@@ -183,7 +198,231 @@ def bulk_upload_files(
     return data
 
 
+def _bulk_query_blocks(repo_urls: list[str]) -> dict[str, ComputeBlock]:
+    """
+    Returns a mapping of repo_url to a ComputeBlock instance
+    """
+    blocks: dict[str, Block] = {}
+
+    for repo_url in repo_urls:
+        logging.debug(f"Querying block from: {repo_url}")
+        blocks[repo_url] = _get_cb_info_from_repo(repo_url)
+
+    return blocks
+
+
+def _build_io(
+    identifier: str,
+    io_type: InputOutputType,
+    data_type: DataType,
+    description: str,
+    config: dict,
+    template_settings: dict | None = None
+) -> InputOutput:
+    """
+    Constructs an InputOutput object, applying default values for outputs
+    and merging template settings if provided.
+    """
+    io = InputOutput(
+        type=io_type,
+        name=identifier,
+        data_type=data_type,
+        description=description,
+        config=config
+    )
+
+    if io_type is InputOutputType.OUTPUT:
+        default_values = (
+            get_file_cfg_defaults_dict(identifier)
+            if data_type is DataType.FILE
+            else get_pg_cfg_defaults_dict(identifier)
+        )
+        io.config = updated_configs_with_values(io, default_values, data_type)
+
+    if template_settings:
+        io.config = {**io.config, **template_settings}
+
+    return io
+
+
+def _configure_io_items(
+    template_ios: list[InputTemplate] | list[OutputTemplate],
+    unconfigured_ios: dict[str, InputOutputModel],
+    io_type: InputOutputType
+) -> list[InputOutput]:
+    """
+    Iterates over the compute blocks ios.
+    If the template provides configs to overwrite the compute blocks configs,
+    this will be configured.
+    If not, default values will be used where appropriate.
+    """
+
+    configured: list[InputOutput] = []
+    template_map = {t.identifier: t for t in template_ios}
+
+    for identifier, unconfigured_io in unconfigured_ios.items():
+        template = template_map.get(identifier)
+        data_type = DataType(unconfigured_io.type)
+
+        if template:
+            if not do_config_keys_match(
+                config_type="io",
+                original_config=unconfigured_io.config,
+                update_config=template.settings or {},
+            ):
+                logging.error(f"""
+                    Keys used in template to configure {template.identifier}
+                    do not match the compute block IO definition.
+                """)
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"The keys used in the template to configure IO '{
+                            template.identifier}' "
+                        f"do not match those in the compute block definition."
+                    )
+                )
+
+            configured.append(
+                _build_io(
+                    identifier=template.identifier,
+                    io_type=io_type,
+                    data_type=data_type,
+                    description=unconfigured_io.description,
+                    config=unconfigured_io.config,
+                    template_settings=template.settings
+                )
+            )
+        else:
+            configured.append(
+                _build_io(
+                    identifier=identifier,
+                    io_type=io_type,
+                    data_type=data_type,
+                    description=unconfigured_io.description,
+                    config=unconfigured_io.config
+                )
+            )
+
+    return configured
+
+
+def _configure_block(
+    block_template: BlockTemplate,
+    unconfigured_entry: SDKEntrypoint
+) -> (
+    ConfigType,
+    list[InputOutput],
+    list[InputOutput]
+):
+    """
+    This method returns:
+        :dict: the configuration from the template applied to the configuration
+            of the compute block
+        :list[InputOutput]: All Inputs with the configurations from the
+            template applied
+        :list[InputOutput]: All Outputs with the configurations from the
+            template applied
+    """
+    envs = unconfigured_entry.envs
+    envs_from_template = block_template.settings
+
+    if do_config_keys_match(
+        config_type="envs",
+        original_config=envs,
+        update_config=envs_from_template or {},
+    ):
+        # TODO: Test what happens if envs from template are None
+        configured_envs = {**envs, **(envs_from_template or {})}
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail=f"""
+                The Config-Keys provided by the template
+                do not match with the configs that the block
+                {block_template.name} offers.
+                """
+        )
+
+    configured_inputs: list[InputOutput] = _configure_io_items(
+        block_template.inputs or [],
+        unconfigured_entry.inputs or {},
+        InputOutputType.INPUT
+    )
+
+    configured_outputs: list[InputOutput] = _configure_io_items(
+        block_template.outputs or [],
+        unconfigured_entry.outputs or {},
+        InputOutputType.OUTPUT
+    )
+
+    return (configured_envs, configured_inputs, configured_outputs)
+
+
+def create_compute_blocks_from_template(
+    db: Session,
+    workflow_template: WorkflowTemplate,
+    project_id: UUID
+) -> list[Block]:
+    """
+    Creates and configures all compute blocks as defined in the template.
+    Make sure to pass a db session with transaction activated
+    """
+    required_blocks = _extract_block_urls_from_template(workflow_template)
+    unconfigured_blocks = _bulk_query_blocks(required_blocks)
+
+    try:
+        for block_template in workflow_template.blocks:
+            unconfigured_block: ComputeBlock = \
+                unconfigured_blocks.get(
+                    block_template.repo_url
+                )
+            unconfigured_entrypoint: SDKEntrypoint = \
+                unconfigured_block.entrypoints.get(
+                    block_template.entrypoint
+                )
+
+            if unconfigured_entrypoint is None:
+                logging.error(f"""
+                              Template definition of block
+                              {block_template.name} is invalid,
+                              given entrypoint {block_template.entrypoint}
+                              does not exist on Compute Block!
+                              """)
+                raise HTTPException(
+                    status_code=422,
+                    detail="Template definition is invalid!"
+                )
+
+            configured_env, configured_entry_inputs, \
+                configured_entry_outputs = _configure_block(
+                    block_template,
+                    unconfigured_entrypoint,
+                )
+            create_compute_block(
+                db,
+                unconfigured_block.name,
+                unconfigured_block.description,
+                unconfigured_block.author,
+                unconfigured_block.docker_image,
+                block_template.repo_url,
+                block_template.name,
+                1000,
+                1000,
+                entry_name=block_template.entrypoint,
+                entry_description=unconfigured_block.description,
+                envs=configured_env,
+                inputs=configured_entry_inputs,
+                outputs=configured_entry_outputs,
+                project_id=project_id
+            )
+    except Exception as e:
+        logging.exception(f"Error compute blocks from template: {e}")
+        raise e
+
+
 def create_compute_block(
+        db: Session,
         name: str,
         description: str,
         author: str,
@@ -199,47 +438,49 @@ def create_compute_block(
         outputs: list[InputOutput],
         project_id: str
 ) -> Block:
+    """
+    Creates a Compute Block.
+    Make Sure to pass a transactional Session into this function (param: db)
+    """
     logging.info(f"Creating compute block: {name}")
-    db: Session = next(get_database())
 
     try:
-        with db.begin():
-            # (1) Create Entrypoint
-            entry = Entrypoint(
-                name=entry_name,
-                description=entry_description,
-                envs=envs,
-            )
-            db.add(entry)
+        # (1) Create Entrypoint
+        entry = Entrypoint(
+            name=entry_name,
+            description=entry_description,
+            envs=envs,
+        )
+        db.add(entry)
+        db.flush()
+
+        # (2) Create Input/Outputs
+        input_outputs = inputs + outputs
+
+        for o in input_outputs:
+            o.entrypoint_uuid = entry.uuid
+
+        if input_outputs:
+            db.bulk_save_objects(input_outputs)
             db.flush()
 
-            # (2) Create Input/Outputs
-            input_outputs = inputs + outputs
+        # (3) Create Block
+        cb = Block(
+            name=name,
+            project_uuid=project_id,
+            custom_name=custom_name,
+            description=description,
+            author=author,
+            docker_image=docker_image,
+            cbc_url=repo_url,
+            x_pos=x_pos,
+            y_pos=y_pos,
+            selected_entrypoint_uuid=entry.uuid
+        )
+        db.add(cb)
+        db.flush()
 
-            for o in input_outputs:
-                o.entrypoint_uuid = entry.uuid
-
-            if input_outputs:
-                db.bulk_save_objects(input_outputs)
-                db.flush()
-
-            # (3) Create Block
-            cb = Block(
-                name=name,
-                project_uuid=project_id,
-                custom_name=custom_name,
-                description=description,
-                author=author,
-                docker_image=docker_image,
-                cbc_url=repo_url,
-                x_pos=x_pos,
-                y_pos=y_pos,
-                selected_entrypoint_uuid=entry.uuid
-            )
-            db.add(cb)
-            db.flush()
-
-            db.refresh(entry)
+        db.refresh(entry)
         logging.info(f"Compute block created succesfully: {cb.uuid}")
         return cb
     except Exception as e:
@@ -323,15 +564,14 @@ def get_block_dependencies_for_blocks(
     return db.execute(query).fetchall()
 
 
-def _check_config_keys_mismatch(
+def do_config_keys_match(
     config_type: Literal["envs", "io"],
     original_config: ConfigType,
     update_config: ConfigType,
-    entity_id: UUID,
-):
+) -> bool:
     """
     Check if the keys in the original config and update config are the same.
-    If not, raise an Exception.
+    If not, returns False.
     """
     original_keys = set(original_config.keys())
     update_keys = set(update_config.keys())
@@ -340,16 +580,12 @@ def _check_config_keys_mismatch(
     invalid_keys = update_keys - original_keys
     if invalid_keys:
         logging.debug(f"Invalid keys found for {
-                      config_type} in entity {entity_id}:")
+                      config_type}:")
         logging.debug(f"Original {config_type} keys: {original_keys}")
         logging.debug(f"Updated {config_type} keys: {update_keys}")
         logging.debug(f"Invalid keys: {invalid_keys}")
-        raise HTTPException(
-            status_code=422,
-            detail=f"Updated {config_type} contains invalid keys: {
-                ', '.join(map(str, invalid_keys))} for {config_type} with id {
-                    entity_id}"
-        )
+        return False
+    return True
 
 
 def _update_io(
@@ -362,8 +598,13 @@ def _update_io(
     """
     logging.debug(f"Updating IO with id: {io.uuid}")
 
-    _check_config_keys_mismatch("io", io.config, new_config, io.uuid)
-    io.config = {**io.config, **new_config}
+    if do_config_keys_match("io", io.config, new_config):
+        io.config = {**io.config, **new_config}
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Config Keys of io with id {io.uuid} do not match."
+        )
 
     # Only Update Outputs of type File & PgTable
     if (
@@ -446,10 +687,18 @@ def update_block(
         block.custom_name = custom_name
 
     if envs:
-        _check_config_keys_mismatch(
-            "envs", block.selected_entrypoint.envs, envs, block.uuid)
-        block.selected_entrypoint.envs = {
-            **block.selected_entrypoint.envs, **envs}
+        if do_config_keys_match(
+            "envs",
+            block.selected_entrypoint.envs,
+            envs
+        ):
+            block.selected_entrypoint.envs = {
+                **block.selected_entrypoint.envs, **envs}
+        else:
+            raise HTTPException(
+                status_code=422,
+                detail="Env-Keys do not match."
+            )
 
     if x_pos is not None:
         block.x_pos = x_pos
