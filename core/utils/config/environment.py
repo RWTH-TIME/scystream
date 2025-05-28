@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     DATABASE_PORT: int = 5432
     EMAIL_DOMAIN_WHITELIST: list[str] = ["time.rwth-aachen.de"]
 
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: str = "DEBUG"
 
     JWT_ALGORITHM: str = "HS256"
     JWT_SECRET: str = "secret"
@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     AIRFLOW_USER: str = "airflow"
     AIRFLOW_PASS: str = "airflow"
     AIRFLOW_DAG_DIR: str = "../airflow-dags"
+
+    WORKFLOW_TEMPLATE_REPO: str = \
+        "git@git.rwth-aachen.de:tim-institute/pipeline-templates.git"
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8", case_sensitive=True

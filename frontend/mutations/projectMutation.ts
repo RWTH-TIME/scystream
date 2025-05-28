@@ -10,6 +10,7 @@ const GET_PROJECTS_ENDPOINT = "project/read_all"
 const CREATE_PROJECT_ENDPOINT = "project"
 const DELETE_PROJECT_ENDPOINT = "project/"
 const UPDATE_PROJECT_ENDPOINT = "project/"
+const CREATE_PROJECT_FROM_TEMPLATE_ENDPOINT = "project/from_template"
 
 type ProjectDTO = {
   name: string,
@@ -27,7 +28,8 @@ function useProjectsQuery() {
       const response = await api.get(GET_PROJECTS_ENDPOINT)
       return response.data.projects
     },
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 3
   })
 }
 
@@ -49,6 +51,42 @@ function useCreateProjectMutation(setAlert: SetAlertType) {
         uuid: new_id,
       }
 
+      queryClient.setQueryData([QueryKeys.projects], (oldData: Project[] | undefined) => {
+        if (oldData) {
+          return [...oldData, fullProject]
+        }
+        return [fullProject]
+      })
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+      console.error(`Creating Project failed: ${error}`)
+    }
+  })
+}
+
+type CreateProjectFromTemplateDTO = {
+  name: string,
+  template_identifier: string,
+}
+
+function useCreateProjectFromTemplateMutation(setAlert: SetAlertType) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function createProjectFromTemplate(project_from_template: CreateProjectFromTemplateDTO) {
+      const response = await api.post(CREATE_PROJECT_FROM_TEMPLATE_ENDPOINT, JSON.stringify(project_from_template))
+      return {
+        data: project_from_template,
+        new_id: response.data.project_uuid
+      }
+    },
+    onSuccess: ({ data, new_id }) => {
+      const fullProject = {
+        created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
+        ...data,
+        uuid: new_id,
+      }
       queryClient.setQueryData([QueryKeys.projects], (oldData: Project[] | undefined) => {
         if (oldData) {
           return [...oldData, fullProject]
@@ -107,4 +145,5 @@ export {
   useCreateProjectMutation,
   useUpdateProjectMutation,
   useDeleteProjectMutation,
+  useCreateProjectFromTemplateMutation
 }
