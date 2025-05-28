@@ -30,7 +30,7 @@ from services.workflow_service.schemas.workflow import (
     WorkflowTemplate,
     Block as BlockTemplate,
     Input as InputTemplate,
-    Output as OutputTemplate
+    Output as OutputTemplate,
 )
 from scystream.sdk.config import load_config
 from scystream.sdk.config.models import (
@@ -137,23 +137,6 @@ def updated_configs_with_values(
     return new_config
 
 
-def _extract_block_urls_from_template(template: WorkflowTemplate) -> list[str]:
-    """
-    Extracts the urls of all blocks used in the template.
-    Makes sure that there are no duplicates in the returned list.
-    """
-    seen = set()
-    urls = []
-
-    for template_block in template.blocks:
-        url = template_block.repo_url
-        if url not in seen:
-            seen.add(url)
-            urls.append(url)
-
-    return urls
-
-
 def _upload_file_to_bucket(
     file_b64: str,
     file_ext: str
@@ -198,7 +181,7 @@ def bulk_upload_files(
     return data
 
 
-def _bulk_query_blocks(repo_urls: list[str]) -> dict[str, ComputeBlock]:
+def bulk_query_blocks(repo_urls: list[str]) -> dict[str, ComputeBlock]:
     """
     Returns a mapping of repo_url to a ComputeBlock instance
     """
@@ -209,216 +192,6 @@ def _bulk_query_blocks(repo_urls: list[str]) -> dict[str, ComputeBlock]:
         blocks[repo_url] = _get_cb_info_from_repo(repo_url)
 
     return blocks
-
-
-def _build_io(
-    identifier: str,
-    io_type: InputOutputType,
-    data_type: DataType,
-    description: str,
-    config: dict,
-    template_settings: dict | None = None
-) -> InputOutput:
-    """
-    Constructs an InputOutput object, applying default values for outputs
-    and merging template settings if provided.
-    """
-    io = InputOutput(
-        type=io_type,
-        name=identifier,
-        data_type=data_type,
-        description=description,
-        config=config
-    )
-
-    if io_type is InputOutputType.OUTPUT:
-        default_values = (
-            get_file_cfg_defaults_dict(identifier)
-            if data_type is DataType.FILE
-            else get_pg_cfg_defaults_dict(identifier)
-        )
-        io.config = updated_configs_with_values(io, default_values, data_type)
-
-    if template_settings:
-        io.config = {**io.config, **template_settings}
-
-    return io
-
-
-def _configure_io_items(
-    template_ios: list[InputTemplate] | list[OutputTemplate],
-    unconfigured_ios: dict[str, InputOutputModel],
-    io_type: InputOutputType
-) -> list[InputOutput]:
-    """
-    Iterates over the compute blocks ios.
-    If the template provides configs to overwrite the compute blocks configs,
-    this will be configured.
-    If not, default values will be used where appropriate.
-    """
-
-    configured: list[InputOutput] = []
-    template_map = {t.identifier: t for t in template_ios}
-
-    for identifier, unconfigured_io in unconfigured_ios.items():
-        template = template_map.get(identifier)
-        data_type = DataType(unconfigured_io.type)
-
-        if template:
-            if not do_config_keys_match(
-                config_type="io",
-                original_config=unconfigured_io.config,
-                update_config=template.settings or {},
-            ):
-                logging.error(f"""
-                    Keys used in template to configure {template.identifier}
-                    do not match the compute block IO definition.
-                """)
-                raise HTTPException(
-                    status_code=422,
-                    detail=(
-                        f"The keys used in the template to configure IO '{
-                            template.identifier}' "
-                        f"do not match those in the compute block definition."
-                    )
-                )
-
-            configured.append(
-                _build_io(
-                    identifier=template.identifier,
-                    io_type=io_type,
-                    data_type=data_type,
-                    description=unconfigured_io.description,
-                    config=unconfigured_io.config,
-                    template_settings=template.settings
-                )
-            )
-        else:
-            configured.append(
-                _build_io(
-                    identifier=identifier,
-                    io_type=io_type,
-                    data_type=data_type,
-                    description=unconfigured_io.description,
-                    config=unconfigured_io.config
-                )
-            )
-
-    return configured
-
-
-def _configure_block(
-    block_template: BlockTemplate,
-    unconfigured_entry: SDKEntrypoint
-) -> (
-    ConfigType,
-    list[InputOutput],
-    list[InputOutput]
-):
-    """
-    This method returns:
-        :dict: the configuration from the template applied to the configuration
-            of the compute block
-        :list[InputOutput]: All Inputs with the configurations from the
-            template applied
-        :list[InputOutput]: All Outputs with the configurations from the
-            template applied
-    """
-    envs = unconfigured_entry.envs
-    envs_from_template = block_template.settings
-
-    if do_config_keys_match(
-        config_type="envs",
-        original_config=envs,
-        update_config=envs_from_template or {},
-    ):
-        # TODO: Test what happens if envs from template are None
-        configured_envs = {**envs, **(envs_from_template or {})}
-    else:
-        raise HTTPException(
-            status_code=422,
-            detail=f"""
-                The Config-Keys provided by the template
-                do not match with the configs that the block
-                {block_template.name} offers.
-                """
-        )
-
-    configured_inputs: list[InputOutput] = _configure_io_items(
-        block_template.inputs or [],
-        unconfigured_entry.inputs or {},
-        InputOutputType.INPUT
-    )
-
-    configured_outputs: list[InputOutput] = _configure_io_items(
-        block_template.outputs or [],
-        unconfigured_entry.outputs or {},
-        InputOutputType.OUTPUT
-    )
-
-    return (configured_envs, configured_inputs, configured_outputs)
-
-
-def create_compute_blocks_from_template(
-    db: Session,
-    workflow_template: WorkflowTemplate,
-    project_id: UUID
-) -> list[Block]:
-    """
-    Creates and configures all compute blocks as defined in the template.
-    Make sure to pass a db session with transaction activated
-    """
-    required_blocks = _extract_block_urls_from_template(workflow_template)
-    unconfigured_blocks = _bulk_query_blocks(required_blocks)
-
-    try:
-        for block_template in workflow_template.blocks:
-            unconfigured_block: ComputeBlock = \
-                unconfigured_blocks.get(
-                    block_template.repo_url
-                )
-            unconfigured_entrypoint: SDKEntrypoint = \
-                unconfigured_block.entrypoints.get(
-                    block_template.entrypoint
-                )
-
-            if unconfigured_entrypoint is None:
-                logging.error(f"""
-                              Template definition of block
-                              {block_template.name} is invalid,
-                              given entrypoint {block_template.entrypoint}
-                              does not exist on Compute Block!
-                              """)
-                raise HTTPException(
-                    status_code=422,
-                    detail="Template definition is invalid!"
-                )
-
-            configured_env, configured_entry_inputs, \
-                configured_entry_outputs = _configure_block(
-                    block_template,
-                    unconfigured_entrypoint,
-                )
-            create_compute_block(
-                db,
-                unconfigured_block.name,
-                unconfigured_block.description,
-                unconfigured_block.author,
-                unconfigured_block.docker_image,
-                block_template.repo_url,
-                block_template.name,
-                1000,
-                1000,
-                entry_name=block_template.entrypoint,
-                entry_description=unconfigured_block.description,
-                envs=configured_env,
-                inputs=configured_entry_inputs,
-                outputs=configured_entry_outputs,
-                project_id=project_id
-            )
-    except Exception as e:
-        logging.exception(f"Error compute blocks from template: {e}")
-        raise e
 
 
 def create_compute_block(
@@ -729,6 +502,7 @@ def delete_block(
 
 
 def create_stream_and_update_target_cfg(
+    db: Session,
     from_block_uuid: UUID,
     from_output_uuid: UUID,
     to_block_uuid: UUID,
@@ -739,50 +513,48 @@ def create_stream_and_update_target_cfg(
                   {from_output_uuid} to block {to_block_uuid} input
                   {to_input_uuid}
                   """)
-    db: Session = next(get_database())
 
-    with db.begin():
-        dependency = {
-            "upstream_block_uuid": from_block_uuid,
-            "upstream_output_uuid": from_output_uuid,
-            "downstream_block_uuid": to_block_uuid,
-            "downstream_input_uuid": to_input_uuid,
-        }
+    dependency = {
+        "upstream_block_uuid": from_block_uuid,
+        "upstream_output_uuid": from_output_uuid,
+        "downstream_block_uuid": to_block_uuid,
+        "downstream_input_uuid": to_input_uuid,
+    }
 
-        db.execute(block_dependencies.insert().values(dependency))
+    db.execute(block_dependencies.insert().values(dependency))
 
-        # Compare the cfgs, overwrite the cfgs
-        target_io = db.query(InputOutput).filter_by(
-            uuid=to_input_uuid).one_or_none()
-        source_io = db.query(InputOutput).filter_by(
-            uuid=from_output_uuid).one_or_none()
+    # Compare the cfgs, overwrite the cfgs
+    target_io = db.query(InputOutput).filter_by(
+        uuid=to_input_uuid).one_or_none()
+    source_io = db.query(InputOutput).filter_by(
+        uuid=from_output_uuid).one_or_none()
 
-        if target_io.data_type != source_io.data_type:
-            # Data types do not match, dont allow connection
-            logging.error(f"Input datatype {
-                target_io.data_type} does not match with \
-                                     output type {target_io.data_type}")
-            raise HTTPException(
-                status_code=400,
-                detail="Source & Target types do not match"
-            )
-
-        # Custom inputs are not overwritten
-        if (
-                (target_io.data_type != source_io.data_type) or
-                (target_io.data_type is DataType.CUSTOM)
-        ):
-            logging.info("Edge from custom output to input created.")
-            return target_io.uuid
-
-        logging.debug(f"Updating Input {to_input_uuid} configs.")
-        extracted_defaults = extract_default_keys_from_io(
-            source_io
+    if target_io.data_type != source_io.data_type:
+        # Data types do not match, dont allow connection
+        logging.error(f"Input datatype {
+            target_io.data_type} does not match with \
+                                 output type {target_io.data_type}")
+        raise HTTPException(
+            status_code=400,
+            detail="Source & Target types do not match"
         )
-        target_io.config = updated_configs_with_values(
-            target_io, extracted_defaults, target_io.data_type)
 
-        return target_io.entrypoint_uuid
+    # Custom inputs are not overwritten
+    if (
+            (target_io.data_type != source_io.data_type) or
+            (target_io.data_type is DataType.CUSTOM)
+    ):
+        logging.info("Edge from custom output to input created.")
+        return target_io.uuid
+
+    logging.debug(f"Updating Input {to_input_uuid} configs.")
+    extracted_defaults = extract_default_keys_from_io(
+        source_io
+    )
+    target_io.config = updated_configs_with_values(
+        target_io, extracted_defaults, target_io.data_type)
+
+    return target_io.entrypoint_uuid
 
 
 def delete_edge(

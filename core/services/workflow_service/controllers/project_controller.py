@@ -7,11 +7,15 @@ import logging
 from utils.database.session_injector import get_database
 from services.workflow_service.models.project import Project
 from services.user_service.models.user import User
-from services.workflow_service.controllers.compute_block_controller import (
-    create_compute_blocks_from_template
-)
 import services.workflow_service.controllers.workflow_controller as \
     workflow_controller
+import services.workflow_service.controllers.compute_block_controller as \
+    compute_block_controller
+import services.workflow_service.controllers.template_controller as \
+    template_controller
+from services.workflow_service.schemas.workflow import (
+    WorkflowTemplate
+)
 
 
 def create_project(db: Session, name: str, current_user_uuid: UUID) -> UUID:
@@ -48,20 +52,36 @@ def create_project_from_template(
     """
     db: Session = next(get_database())
 
-    template = workflow_controller.get_workflow_template_by_identifier(
-        template_identifier
+    template: WorkflowTemplate =\
+        workflow_controller.get_workflow_template_by_identifier(
+            template_identifier
+        )
+    required_blocks = template_controller.extract_block_urls_from_template(
+        template
     )
+    unconfigured_blocks = compute_block_controller.bulk_query_blocks(
+        required_blocks
+    )
+
+    G = template_controller.build_workflow_graph(template)
 
     # TODO:
     # - Test if Template overwrites io configs correctly.
-    # - Coordinates
-    # - Create Edges
     # - Test!!
     try:
         with db.begin():
             project_id = create_project(db, name, current_user_uuid)
-            create_compute_blocks_from_template(db, template, project_id)
-
+            block_name_to_model, block_outputs_by_name, block_inputs_by_name =\
+                template_controller.configure_and_create_blocks(
+                    G, db, unconfigured_blocks, project_id
+                )
+            template_controller.create_edges_from_template(
+                G,
+                db,
+                block_name_to_model,
+                block_outputs_by_name,
+                block_inputs_by_name
+            )
     except Exception as e:
         logging.exception(f"Error creating project from template: {e}")
         raise e

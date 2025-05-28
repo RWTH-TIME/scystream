@@ -56,7 +56,7 @@ async def create_project_from_template(
         project_controller.create_project_from_template(
             data.name,
             data.template_identifier,
-            "bda1216d-a6a4-4c87-88c9-b049e67bb5ba"
+            "a654459c-c021-4f3d-80ad-8bb5b51a0d20"
         )
     except Exception as e:
         logging.error(f"Error creating project from template: {e}")
