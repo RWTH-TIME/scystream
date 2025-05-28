@@ -82,6 +82,7 @@ def create_project_from_template(
                 block_outputs_by_name,
                 block_inputs_by_name
             )
+        return project_id
     except Exception as e:
         logging.exception(f"Error creating project from template: {e}")
         raise e

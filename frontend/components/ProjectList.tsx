@@ -8,6 +8,8 @@ import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import { ProjectStatusIndicator } from "./ProjectStatusIndicator"
 import { useProjectsQuery } from "@/mutations/projectMutation"
 import { useRouter } from "next/navigation"
+import { useAlert } from "@/hooks/useAlert"
+import { useCreateProjectMutation } from "@/mutations/projectMutation"
 
 export enum ProjectListVariant {
   LIST,
@@ -21,6 +23,7 @@ type ProjectListProps = {
 export default function ProjectList({
   variant
 }: ProjectListProps) {
+  const { setAlert } = useAlert()
   const router = useRouter()
 
   const [createProjectOpen, setCreateProjectOpen] = useState<boolean>(false)
@@ -28,6 +31,7 @@ export default function ProjectList({
   const { setSelectedComputeBlock } = useSelectedComputeBlock()
 
   const { data: projects, isLoading, isError } = useProjectsQuery()
+  const { mutate: createProjectMutate, isPending: loading } = useCreateProjectMutation(setAlert)
 
   if (variant === ProjectListVariant.LIST) {
     return (
@@ -66,8 +70,10 @@ export default function ProjectList({
         <CreateProjectModal
           isOpen={createProjectOpen}
           onClose={() => setCreateProjectOpen(false)}
-        >
-        </CreateProjectModal>
+          title="Create Project"
+          loading={loading}
+          onSubmit={(name) => createProjectMutate({ name })}
+        />
       </LoadingAndError >
     )
   }
@@ -109,8 +115,10 @@ export default function ProjectList({
         <CreateProjectModal
           isOpen={createProjectOpen}
           onClose={() => setCreateProjectOpen(false)}
-        >
-        </CreateProjectModal>
+          title="Create Project"
+          loading={loading}
+          onSubmit={(name) => createProjectMutate({ name })}
+        />
       </LoadingAndError>
     )
   }

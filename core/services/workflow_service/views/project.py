@@ -53,11 +53,12 @@ async def create_project_from_template(
     # token_data: dict = Depends(authenticate_token)
 ):
     try:
-        project_controller.create_project_from_template(
+        id = project_controller.create_project_from_template(
             data.name,
             data.template_identifier,
             "a654459c-c021-4f3d-80ad-8bb5b51a0d20"
         )
+        return CreateProjectResponse(project_uuid=id)
     except Exception as e:
         logging.error(f"Error creating project from template: {e}")
         raise handle_error(e)
