@@ -26,24 +26,16 @@ from services.workflow_service.schemas.compute_block import (
     ConfigType,
     InputOutputDTO,
 )
-from services.workflow_service.schemas.workflow import (
-    WorkflowTemplate,
-    Block as BlockTemplate,
-    Input as InputTemplate,
-    Output as OutputTemplate,
-)
 from scystream.sdk.config import load_config
 from scystream.sdk.config.models import (
-    ComputeBlock,
-    Entrypoint as SDKEntrypoint,
-    InputOutputModel
+    ComputeBlock as SDKComputeBlock,
 )
 
 
 CBC_FILE_IDENTIFIER = "cbc.yaml"
 
 
-def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
+def _get_cb_info_from_repo(repo_url: str) -> SDKComputeBlock:
     logging.debug(f"Cloning ComputeBlock Repo from: {repo_url}")
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -78,7 +70,7 @@ def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
             raise e
 
 
-def request_cb_info(repo_url: str) -> ComputeBlock:
+def request_cb_info(repo_url: str) -> SDKComputeBlock:
     logging.debug(f"Requesting ComputeBlock info for: {repo_url}")
     cb = _get_cb_info_from_repo(repo_url)
 
@@ -181,7 +173,7 @@ def bulk_upload_files(
     return data
 
 
-def bulk_query_blocks(repo_urls: list[str]) -> dict[str, ComputeBlock]:
+def bulk_query_blocks(repo_urls: list[str]) -> dict[str, SDKComputeBlock]:
     """
     Returns a mapping of repo_url to a ComputeBlock instance
     """
