@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 from utils.errors.error import handle_error
 import logging
@@ -64,12 +64,25 @@ async def create_project_from_template(
         raise handle_error(e)
 
 
-@router.get("/", response_model=Project)
+@router.get("/read_all", response_model=ReadAllResponse)
+async def read_all_projects():
+    try:
+        projects = project_controller.read_all_projects()
+        return ReadAllResponse(projects=projects)
+    except Exception as e:
+        logging.error(f"Error reading all projects: {e}")
+        raise handle_error(e)
+
+
+@router.get("/{project_id}", response_model=Project)
 async def read_project(
-        data: ReadProjectRequest,
+        project_id: UUID | None = None,
 ):
     try:
-        project = project_controller.read_project(data.project_uuid)
+        if project_id is None:
+            raise HTTPException(status=422, detail="Project ID is required")
+
+        project = project_controller.read_project(project_id)
         return project
     except Exception as e:
         logging.error(f"Error reading project: {e}")
@@ -82,16 +95,6 @@ async def read_projects_by_user(user_uuid: UUID):
         return project_controller.read_projects_by_user_uuid(user_uuid)
     except Exception as e:
         logging.error(f"Error reading project by user: {e}")
-        raise handle_error(e)
-
-
-@router.get("/read_all", response_model=ReadAllResponse)
-async def read_all_projects():
-    try:
-        projects = project_controller.read_all_projects()
-        return ReadAllResponse(projects=projects)
-    except Exception as e:
-        logging.error(f"Error reading all projects: {e}")
         raise handle_error(e)
 
 

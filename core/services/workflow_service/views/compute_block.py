@@ -24,7 +24,7 @@ from services.workflow_service.controllers.compute_block_controller import (
     delete_block, create_stream_and_update_target_cfg,
     get_block_dependencies_for_blocks, delete_edge, get_envs_for_entrypoint,
     get_io_for_entrypoint, update_ios, update_block, bulk_upload_files,
-    get_ios_by_ids,
+    get_ios_by_ids
 )
 import services.workflow_service.controllers.workflow_controller as \
     workflow_controller
@@ -175,7 +175,7 @@ async def get_io(
         return [InputOutputDTO.from_input_output(
             io.name,
             io,
-            presigned_urls.get(str(io.uuid), None)) for io in ios
+            presigned_urls.get(io.uuid, None)) for io in ios
         ]
     except Exception as e:
         logging.exception(f"Error getting {
@@ -210,7 +210,7 @@ async def update_io(data: list[BaseInputOutputDTO]):
         return [
             UpdateInputOutuputResponseDTO.from_input_output(
                 io,
-                presigneds.get(str(io.uuid))
+                presigneds.get(io.uuid)
             )
             for io in updated
         ]
@@ -242,13 +242,17 @@ async def delete_compute_block(
 def create_io_stream_and_update_io_cfg(
     data: EdgeDTO
 ):
+    db = next(get_database())
+
     try:
-        id = create_stream_and_update_target_cfg(
-            data.source,
-            data.sourceHandle,
-            data.target,
-            data.targetHandle
-        )
+        with db.begin():
+            id = create_stream_and_update_target_cfg(
+                db,
+                data.source,
+                data.sourceHandle,
+                data.target,
+                data.targetHandle
+            )
         return IDResponse(id=id)
     except Exception as e:
         logging.error(f"Error creating an edge and configuring input: {e}")

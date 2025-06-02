@@ -1,6 +1,6 @@
 import { useWorkflowTemplatesQuery } from "@/mutations/workflowMutations"
 import Button, { ButtonSentiment } from "./Button"
-import ProjectList, { ProjectListVariant } from "./ProjectList"
+import ProjectList from "./ProjectList"
 import LoadingAndError from "./LoadingAndError"
 import CreateProjectModal from "./CreateProjectModal"
 import { useState } from "react"
@@ -37,7 +37,7 @@ export default function Home() {
             {templates?.map((template: { file_identifier: string, name: string, description: string }) => (
               <div
                 key={template.file_identifier}
-                className="rounded-2xl border border-gray-200 shadow-sm p-4 bg-white flex flex-col justify-between"
+                className="rounded-sm border border-gray-200 p-4 bg-white flex flex-col justify-between"
               >
                 <div>
                   <h3 className="text-lg font-bold">{template.name}</h3>
@@ -62,7 +62,7 @@ export default function Home() {
       </div>
       <div className="flex flex-col flex-1 overflow-hidden">
         <h2 className="text-xl font-semibold mb-2">Your Projects</h2>
-        <ProjectList variant={ProjectListVariant.CARD} />
+        <ProjectList />
       </div>
     </div>
   )

@@ -1,7 +1,7 @@
 "use client"
 
-import React, { createContext, useContext, useState, type PropsWithChildren } from "react"
 import type { Project } from "@/utils/types"
+import React, { createContext, useContext, useState, type PropsWithChildren } from "react"
 
 type SelectedProjectContextType = {
   selectedProject: Project | undefined,

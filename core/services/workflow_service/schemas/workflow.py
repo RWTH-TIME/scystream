@@ -1,7 +1,11 @@
+from uuid import UUID
 from pydantic import BaseModel
 from enum import Enum
 
-from services.workflow_service.schemas.compute_block import ConfigType
+from services.workflow_service.schemas.compute_block import (
+    ConfigType,
+    InputOutputDTO
+)
 
 
 class WorkflowStatus(Enum):
@@ -25,8 +29,15 @@ class WorfklowValidationError(BaseModel):
     missing_configs: dict[str, list[str]]
 
 
-# Worklow Templates:
+# Workflow Configuration
+class GetWorkflowConfigurationResponse(BaseModel):
+    envs: dict[UUID, ConfigType]
+    workflow_inputs: list[InputOutputDTO]
+    workflow_intermediates: list[InputOutputDTO]
+    workflow_outputs: list[InputOutputDTO]
 
+
+# Worklow Templates:
 class WorkflowTemplateMetaData(BaseModel):
     file_identifier: str
     name: str

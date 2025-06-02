@@ -9,10 +9,14 @@ import time
 import yaml
 import subprocess
 import tempfile
+from sqlalchemy.orm import Session
 
+from collections import defaultdict
+from utils.database.session_injector import get_database
 from pydantic import ValidationError
 from git import Repo
 from utils.config.environment import ENV
+from utils.data.file_handling import bulk_presigned_urls_from_ios
 from services.workflow_service.controllers.project_controller \
     import read_project
 from services.workflow_service.controllers import compute_block_controller
@@ -20,7 +24,19 @@ from services.workflow_service.schemas.workflow import (
     WorfklowValidationError,
     WorkflowTemplate
 )
-from services.workflow_service.schemas.compute_block import BlockStatus
+from services.workflow_service.models.block import (
+    Block,
+    block_dependencies
+)
+from services.workflow_service.models.input_output import (
+    InputOutput,
+    InputOutputType
+)
+from services.workflow_service.schemas.compute_block import (
+    BlockStatus,
+    ConfigType
+)
+
 from airflow_client.client import ApiClient, Configuration, ApiException
 from airflow_client.client.api.dag_run_api import DAGRunApi
 from airflow_client.client.model.list_dag_runs_form import ListDagRunsForm
@@ -148,6 +164,119 @@ def _get_workflow_templates_from_repo(repo_url: str) -> list[WorkflowTemplate]:
             raise e
 
     return templates
+
+
+def _group_ios_by_block(
+    ios: list[InputOutput],
+    block_by_entry_id: dict[UUID, Block]
+) -> dict[UUID, list[InputOutput]]:
+    io_map = defaultdict(list)
+    for io in ios:
+        block = block_by_entry_id.get(io.entrypoint_uuid)
+        if block:
+            io_map[block.uuid].append(io)
+    return io_map
+
+
+def _filter_unconfigured(config: dict | None) -> dict | None:
+    return {k: v for k, v in (config or {}).items() if v in (None, "", [], {})} or None
+
+
+def _get_unconfigured_envs(block: Block) -> ConfigType | None:
+    return _filter_unconfigured(block.selected_entrypoint.envs)
+
+
+def _get_unconfigured_ios(ios: list[InputOutput]) -> list[InputOutput]:
+    result = []
+
+    for io in ios:
+        unconfigured_fields = _filter_unconfigured(io.config)
+        result.append(InputOutput(
+            uuid=io.uuid,
+            type=io.type,
+            name=io.name,
+            data_type=io.data_type,
+            description=io.description,
+            config=unconfigured_fields
+        ))
+
+    return result
+
+
+def get_workflow_configurations(project_id: UUID) -> tuple[
+    dict[UUID, ConfigType],  # Block_UUID -> Missing Envs
+    list[InputOutput],  # Workflow Inputs
+    list[InputOutput],  # Intermediate IOs
+    list[InputOutput]  # Workflow Outputs
+]:
+    """
+    Returns the Configurations for the Workflow.
+
+    Returns:
+        dict[UUID, ConfigType]: All ENVs WITH MISSING configs of the Blocks
+        list[InputOutput]: Inputs of the Workflow with unset configs if there
+            are any -> All inputs of blocks that dont have an
+            Upstream Block
+        list[InputOutput]: Inputs & Outputs of Blocks WITH MISSING
+            configurations (set configurations are not returned)
+        list[InputOutput]: Outputs of the Workflow -> All outputs of
+            blocks that dont have an Downstream Block with unset configs if
+            there are any.
+    """
+    db: Session = next(get_database())
+
+    blocks: list[Block] = compute_block_controller.\
+        get_compute_blocks_by_project(
+            project_id
+    )
+    block_by_entry_id = {
+        b.selected_entrypoint_uuid: b for b in blocks
+    }
+
+    entry_ids = list(block_by_entry_id.keys())
+    ios: list[InputOutput] = db.query(InputOutput).filter(
+        InputOutput.entrypoint_uuid.in_(entry_ids)
+    ).all()
+    presigned_urls = bulk_presigned_urls_from_ios(ios)
+    print(presigned_urls)
+
+    io_map = _group_ios_by_block(ios, block_by_entry_id)
+    deps = db.execute(block_dependencies.select()).fetchall()
+    has_upstream = {
+        dep.downstream_block_uuid for dep in deps
+    }
+    has_downstream = {
+        dep.upstream_block_uuid for dep in deps
+    }
+
+    unconfigured_envs = {}
+    inputs = []
+    outputs = []
+    intermediates = []
+
+    for block in blocks:
+        if (block_envs := _get_unconfigured_envs(block)) is not None:
+            unconfigured_envs[block.uuid] = block_envs
+
+        unconfigured_ios = _get_unconfigured_ios(
+            io_map.get(block.uuid, [])
+        )
+
+        # Workflow Inputs
+        if block.uuid not in has_upstream:
+            inputs += [io for io in unconfigured_ios if io.type ==
+                       InputOutputType.INPUT]
+
+        # Workflow Outputs
+        if block.uuid not in has_downstream:
+            outputs += [io for io in unconfigured_ios if io.type ==
+                        InputOutputType.OUTPUT]
+
+        # Intermediates
+        if block.uuid in has_upstream and block.uuid in has_downstream:
+            intermediates += unconfigured_ios
+
+    return (unconfigured_envs, inputs, intermediates, outputs, presigned_urls)
 
 
 def get_workflow_templates() -> list[WorkflowTemplate]:

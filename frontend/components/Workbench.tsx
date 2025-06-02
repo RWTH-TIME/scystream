@@ -19,7 +19,6 @@ import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
 import type { InputOutput } from "@/components/CreateComputeBlockModal"
 import CreateComputeBlockModal from "./CreateComputeBlockModal"
 import { useDeleteProjectMutation } from "@/mutations/projectMutation"
-import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import type { EdgeDTO } from "@/mutations/computeBlockMutation"
 import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMutation, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation"
@@ -27,6 +26,7 @@ import { AlertType, useAlert } from "@/hooks/useAlert"
 import DeleteModal from "./DeleteModal"
 import { useComputeBlockStatusWS, useTriggerWorkflowMutation } from "@/mutations/workflowMutations"
 import { CircularProgress } from "@mui/material"
+import { useSelectedProject } from "@/hooks/useSelectedProject"
 
 
 export function useGraphData(selectedProjectUUID: string | undefined) {
@@ -108,6 +108,7 @@ function ActionButtons({ onPlayClick, onDeleteClick, isTriggerLoading }: ActionB
 
 export function Workbench() {
   const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
+
   const { selectedProject, setSelectedProject } = useSelectedProject()
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
 
@@ -131,7 +132,7 @@ export function Workbench() {
     setTimeout(() => {
       fitView()
     }, 50)
-  }, [fitView, selectedProject])
+  }, [fitView, selectedProject?.uuid])
 
   useEffect(() => {
     const onDeleteEdge = () => {
@@ -154,11 +155,9 @@ export function Workbench() {
 
 
   function onProjectDelete() {
-    if (selectedProject) {
-      deleteMutate(selectedProject.uuid)
-      setDeleteApproveOpen(false)
-      setSelectedProject(undefined)
-    }
+    deleteMutate(selectedProject!.uuid)
+    setDeleteApproveOpen(false)
+    setSelectedProject(undefined)
   }
 
   const onDragStart = (event: React.DragEvent<HTMLButtonElement>) => {
@@ -239,12 +238,7 @@ export function Workbench() {
   )
 
   function onPlayClicked() {
-    if (!selectedProject) return
-    triggerWorkflow(selectedProject.uuid)
-  }
-
-  if (!selectedProject) {
-    return <div>Select a Project!</div>
+    triggerWorkflow(selectedProject!.uuid)
   }
 
   return (
@@ -255,7 +249,7 @@ export function Workbench() {
         onDelete={onProjectDelete}
         loading={deleteLoading}
         header="Delete Project"
-        desc={`Are you sure you want to delete the project: ${selectedProject?.name}`}
+        desc="Are you sure you want to delete the project?"
       />
 
       <CreateComputeBlockModal

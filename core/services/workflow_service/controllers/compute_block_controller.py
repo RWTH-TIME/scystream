@@ -1,3 +1,6 @@
+from utils.database.session_injector import get_database
+from uuid import UUID, uuid4
+from sqlalchemy.orm import Session, contains_eager
 from fastapi import HTTPException
 import os
 import tempfile
@@ -7,10 +10,7 @@ import base64
 
 from git import Repo
 from typing import Literal
-from uuid import UUID, uuid4
 from sqlalchemy import select, case, asc, delete
-from sqlalchemy.orm import Session, contains_eager
-from utils.database.session_injector import get_database
 from utils.config.defaults import (
     get_file_cfg_defaults_dict,
     get_pg_cfg_defaults_dict,
@@ -20,7 +20,9 @@ import utils.data.file_handling as fh
 from services.workflow_service.models.block import Block, block_dependencies
 from services.workflow_service.models.entrypoint import Entrypoint
 from services.workflow_service.models.input_output import (
-    InputOutput, InputOutputType, DataType
+    DataType,
+    InputOutput,
+    InputOutputType
 )
 from services.workflow_service.schemas.compute_block import (
     ConfigType,

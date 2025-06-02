@@ -4,5 +4,6 @@ export const QueryKeys = {
   cbByProject: "cbByProject",
   cbEnvs: "cbEnvs",
   cbInputs: "cbInputs",
-  cbOutputs: "cbOutputs"
+  cbOutputs: "cbOutputs",
+  cbConfigsByProject: "cbConfigsByProject"
 }

@@ -6,10 +6,59 @@ import logging
 
 from services.workflow_service.controllers import workflow_controller
 from services.workflow_service.schemas.workflow import (
-    WorkflowStatus, WorkflowTemplateMetaData
+    WorkflowStatus, WorkflowTemplateMetaData, GetWorkflowConfigurationResponse
+)
+from services.workflow_service.schemas.compute_block import (
+    InputOutputDTO
 )
 
 router = APIRouter(prefix="/workflow", tags=["workflow"])
+
+
+@router.get("/configurations/{project_id}", response_model=GetWorkflowConfigurationResponse)
+def get_workflow_configurations(
+        project_id: UUID | None = None
+):
+    if not project_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Project ID missing"
+        )
+
+    try:
+        envs, inputs, inter, outputs, presigned = \
+            workflow_controller.get_workflow_configurations(
+                project_id
+            )
+
+        return GetWorkflowConfigurationResponse(
+            envs=envs,
+            workflow_inputs=[
+                InputOutputDTO.from_input_output(
+                    i.name,
+                    i,
+                    presigned.get(i.uuid, None),
+                ) for i in inputs
+            ],
+            workflow_intermediates=[
+                InputOutputDTO.from_input_output(
+                    i.name,
+                    i,
+                    presigned.get(i.uuid, None),
+                ) for i in inter
+            ],
+            workflow_outputs=[
+                InputOutputDTO.from_input_output(
+                    o.name,
+                    o,
+                    presigned.get(o.uuid, None),
+                ) for o in outputs
+            ]
+        )
+    except Exception as e:
+        logging.exception(
+            f"Exception when getting workflow configurations: {e}")
+        raise handle_error(e)
 
 
 @router.post("/{project_id}", status_code=200)

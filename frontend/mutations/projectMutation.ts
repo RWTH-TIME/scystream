@@ -7,6 +7,7 @@ import displayStandardAxiosErrors from "@/utils/errors"
 import type { Project } from "@/utils/types"
 
 const GET_PROJECTS_ENDPOINT = "project/read_all"
+const GET_PROJECT_ENDPOINT = "project/"
 const CREATE_PROJECT_ENDPOINT = "project"
 const DELETE_PROJECT_ENDPOINT = "project/"
 const UPDATE_PROJECT_ENDPOINT = "project/"
@@ -19,6 +20,17 @@ type ProjectDTO = {
 type UpdateProjectDTO = {
   project_uuid: string,
   new_name: string,
+}
+
+function useProjectQuery(project_id: string) {
+  return useQuery({
+    queryKey: [project_id],
+    queryFn: async function getProject() {
+      const response = await api.get(GET_PROJECT_ENDPOINT + project_id)
+      return response.data as Project
+    },
+    refetchOnWindowFocus: false
+  })
 }
 
 function useProjectsQuery() {
@@ -141,6 +153,7 @@ function useDeleteProjectMutation(setAlert: SetAlertType) {
 }
 
 export {
+  useProjectQuery,
   useProjectsQuery,
   useCreateProjectMutation,
   useUpdateProjectMutation,
