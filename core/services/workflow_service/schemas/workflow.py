@@ -1,5 +1,11 @@
+from uuid import UUID
 from pydantic import BaseModel
 from enum import Enum
+
+from services.workflow_service.schemas.compute_block import (
+    ConfigType,
+    InputOutputDTO
+)
 
 
 class WorkflowStatus(Enum):
@@ -18,27 +24,57 @@ class WorkflowStatus(Enum):
         return state_mapping.get(airflow_state.lower(), cls.IDLE)
 
 
-class BlockStatus(Enum):
-    SUCCESS = "SUCCESS"
-    RUNNING = "RUNNING"
-    FAILED = "FAILED"
-    SCHEDULED = "SCHEDULED"
-    IDLE = "IDLE"
-
-    @classmethod
-    def from_airflow_state(cls, airflow_state: str | None) -> "BlockStatus":
-        if airflow_state is None:
-            return cls.IDLE
-        state_mapping = {
-            "success": cls.SUCCESS,
-            "running": cls.RUNNING,
-            "failed": cls.FAILED,
-            "scheduled": cls.SCHEDULED,
-        }
-
-        return state_mapping.get(airflow_state.lower(), cls.IDLE)
-
-
 class WorfklowValidationError(BaseModel):
     project_id: str
     missing_configs: dict[str, list[str]]
+
+
+# Workflow Configuration
+class GetWorkflowConfigurationResponse(BaseModel):
+    envs: dict[UUID, ConfigType]
+    workflow_inputs: list[InputOutputDTO]
+    workflow_intermediates: list[InputOutputDTO]
+    workflow_outputs: list[InputOutputDTO]
+
+
+# Worklow Templates:
+class WorkflowTemplateMetaData(BaseModel):
+    file_identifier: str
+    name: str
+    description: str
+
+
+class DependsOn(BaseModel):
+    block: str
+    output: str
+
+
+class Input(BaseModel):
+    identifier: str
+    settings: ConfigType | None = None
+    depends_on: DependsOn | None = None
+
+
+class Output(BaseModel):
+    identifier: str
+    settings: ConfigType | None = None
+
+
+class Block(BaseModel):
+    name: str
+    repo_url: str
+    entrypoint: str
+    settings: ConfigType | None = None
+    inputs: list[Input] | None = None
+    outputs: list[Output] | None = None
+
+
+class PipelineMetadata(BaseModel):
+    name: str
+    description: str
+
+
+class WorkflowTemplate(BaseModel):
+    file_identifier: str
+    pipeline: PipelineMetadata
+    blocks: list[Block]

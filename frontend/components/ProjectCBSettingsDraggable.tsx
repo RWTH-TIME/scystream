@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from "react"
 import { useState } from "react"
+import Tabs from "./Tabs"
 
 type ProjectCBSettingsDraggableProps = PropsWithChildren<{
   tabs: { key: string, label: string }[],
@@ -31,7 +32,7 @@ export default function ProjectCBSettingsDraggable({ children, tabs, activeTab, 
 
   return (
     <div
-      className="fixed bottom-0 w-3/4 bg-white rounded-t-2xl shadow-lg border border-gray-200 z-30 overflow-auto"
+      className="fixed bottom-0 w-full bg-white rounded-t-2xl shadow-lg border border-gray-200 z-30 overflow-auto"
       style={{ height: `${height}px` }}
     >
       <div
@@ -41,20 +42,7 @@ export default function ProjectCBSettingsDraggable({ children, tabs, activeTab, 
         <div className="w-10 h-1 bg-gray-400 rounded-full"></div>
       </div>
 
-      <div className="flex items-center border-b sticky top-4 bg-white z-10">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            className={`px-4 py-3 font-medium text-sm ${activeTab === tab.key
-              ? "border-b-2 border-blue-600 text-blue-600"
-              : "text-gray-600 hover:text-blue-600"
-              }`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Content Passed from Parent */}
       <div className="p-4">{children}</div>
