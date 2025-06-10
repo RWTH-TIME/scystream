@@ -30,8 +30,14 @@ class WorfklowValidationError(BaseModel):
 
 
 # Workflow Configuration
+class WorkflowEnvsWithBlockInfo(BaseModel):
+    block_uuid: UUID
+    block_custom_name: str
+    envs: ConfigType
+
+
 class GetWorkflowConfigurationResponse(BaseModel):
-    envs: dict[UUID, ConfigType]
+    envs: list[WorkflowEnvsWithBlockInfo]
     workflow_inputs: list[InputOutputDTO]
     workflow_intermediates: list[InputOutputDTO]
     workflow_outputs: list[InputOutputDTO]

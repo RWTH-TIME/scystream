@@ -22,7 +22,8 @@ from services.workflow_service.controllers.project_controller \
 from services.workflow_service.controllers import compute_block_controller
 from services.workflow_service.schemas.workflow import (
     WorfklowValidationError,
-    WorkflowTemplate
+    WorkflowTemplate,
+    WorkflowEnvsWithBlockInfo
 )
 from services.workflow_service.models.block import (
     Block,
@@ -179,7 +180,10 @@ def _group_ios_by_block(
 
 
 def _filter_unconfigured(config: dict | None) -> dict | None:
-    return {k: v for k, v in (config or {}).items() if v in (None, "", [], {})} or None
+    return {
+        k: v for k, v in (config or {}).items()
+        if v in (None, "", [], {})
+    } or None
 
 
 def _get_unconfigured_envs(block: Block) -> ConfigType | None:
@@ -238,7 +242,6 @@ def get_workflow_configurations(project_id: UUID) -> tuple[
         InputOutput.entrypoint_uuid.in_(entry_ids)
     ).all()
     presigned_urls = bulk_presigned_urls_from_ios(ios)
-    print(presigned_urls)
 
     io_map = _group_ios_by_block(ios, block_by_entry_id)
     deps = db.execute(block_dependencies.select()).fetchall()
@@ -249,14 +252,20 @@ def get_workflow_configurations(project_id: UUID) -> tuple[
         dep.upstream_block_uuid for dep in deps
     }
 
-    unconfigured_envs = {}
+    unconfigured_envs = []
     inputs = []
     outputs = []
     intermediates = []
 
     for block in blocks:
+        # TODO unconfigured_envs should be a list
         if (block_envs := _get_unconfigured_envs(block)) is not None:
-            unconfigured_envs[block.uuid] = block_envs
+            unconfigured_envs.append(WorkflowEnvsWithBlockInfo(
+                block_uuid=block.uuid,
+                block_custom_name=block.custom_name,
+                envs=block_envs
+            )
+            )
 
         unconfigured_ios = _get_unconfigured_ios(
             io_map.get(block.uuid, [])
@@ -276,7 +285,13 @@ def get_workflow_configurations(project_id: UUID) -> tuple[
         if block.uuid in has_upstream and block.uuid in has_downstream:
             intermediates += unconfigured_ios
 
-    return (unconfigured_envs, inputs, intermediates, outputs, presigned_urls)
+    return (
+        unconfigured_envs,
+        inputs,
+        intermediates,
+        outputs,
+        presigned_urls
+    )
 
 
 def get_workflow_templates() -> list[WorkflowTemplate]:

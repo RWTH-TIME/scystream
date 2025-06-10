@@ -9,6 +9,7 @@ import { useProjectsQuery } from "@/mutations/projectMutation"
 import { useRouter } from "next/navigation"
 import { useAlert } from "@/hooks/useAlert"
 import { useCreateProjectMutation } from "@/mutations/projectMutation"
+import { useSelectedProject } from "@/hooks/useSelectedProject"
 
 export default function ProjectList() {
   const { setAlert } = useAlert()
@@ -16,6 +17,7 @@ export default function ProjectList() {
 
   const [createProjectOpen, setCreateProjectOpen] = useState<boolean>(false)
   const { setSelectedComputeBlock } = useSelectedComputeBlock()
+  const { setSelectedProject } = useSelectedProject()
 
   const { data: projects, isLoading, isError } = useProjectsQuery()
   const { mutate: createProjectMutate, isPending: loading } = useCreateProjectMutation(setAlert)
@@ -36,6 +38,7 @@ export default function ProjectList() {
               key={project.uuid}
               onClick={() => {
                 setSelectedComputeBlock(undefined)
+                setSelectedProject(project)
                 router.push(`/dashboard/project/${project.uuid}`)
               }}
               className="rounded-sm border border-gray-200  p-4 bg-white flex justify-between items-center transition-colors duration-200 hover:bg-gray-50 cursor-pointer"

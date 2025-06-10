@@ -16,6 +16,7 @@ const PROJECT_STATUS_WS = "workflow/ws/project_status"
 const CB_STATUS_WS = "workflow/ws/workflow_status/"
 const TRIGGER_WORKFLOW = "workflow/"
 const GET_WORKFLOW_TEMPLATES = "workflow/workflow_templates"
+const GET_CONFIGS_BY_PROJECT = "workflow/configurations/{project_id}"
 
 type ProjectStatusEvent = Record<string, string>
 
@@ -60,6 +61,18 @@ export function useTriggerWorkflowMutation(setAlert: SetAlertType) {
   })
 }
 
+export function useGetComputeBlocksConfigurationByProjectQuery(id: string | undefined) {
+  return useQuery({
+    queryKey: [QueryKeys.cbConfigsByProject, id],
+    queryFn: async function getConfigurationsByProject() {
+      if (!id) return
+      const response = await api.get(GET_CONFIGS_BY_PROJECT.replace("{project_id}", id))
+      return response.data
+    },
+    refetchOnWindowFocus: false,
+    enabled: !!id,
+  })
+}
 
 
 export function useProjectStatusWS(setAlert: SetAlertType) {

@@ -11,12 +11,18 @@ import { useGraphData } from "./Workbench"
 import { useState } from "react"
 import FileInput from "./inputs/FileInput"
 
+export enum ConfigBoxVariant {
+  COMPLEX = 0,
+  SIMPLE = 1
+}
+
 type ConfigBoxProps = {
   config: InputOutput[] | Record<string, RecordValueType>,
   headline: string,
   description: string,
-  updateConfig: (key: string, newValue: RecordValueType) => void,
+  updateConfig: (key: string, newValue: RecordValueType, io_id?: string) => void,
   updateSelectedFile?: (name: string, file: File | undefined) => void,
+  variant?: ConfigBoxVariant,
 };
 
 export default function ConfigBox({
@@ -24,7 +30,8 @@ export default function ConfigBox({
   headline,
   description,
   updateConfig,
-  updateSelectedFile
+  updateSelectedFile,
+  variant = ConfigBoxVariant.COMPLEX
 }: ConfigBoxProps) {
   const [selectedFiles, setSelectedFiles] = useState<{
     [key: string]: { selectedFile: File },
@@ -57,7 +64,7 @@ export default function ConfigBox({
       {Array.isArray(config) ? (
         config.map((o: InputOutput) => {
           return (
-            <div className="p-4 border rounded mt-5" key={o.name}>
+            <div className="p-4 border rounded mt-5" key={o.id}>
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <h3 className="text-md font-semibold">{o.name}</h3>
@@ -104,14 +111,24 @@ export default function ConfigBox({
                   )}
                 </div>
               </div>
-              {!selectedFiles[o.name] && (
-                <ConfigEnvsInputs pairs={o.config} onUpdate={updateConfig} />
-              )}
+              {variant === ConfigBoxVariant.COMPLEX || (variant === ConfigBoxVariant.SIMPLE && o.data_type !== InputOutputType.FILE) ? (
+                Object.keys(o.config).length > 0 && (
+                  <ConfigEnvsInputs
+                    pairs={o.config}
+                    onUpdate={(key, value) => { updateConfig(key, value, o.id) }}
+                    configVariant={variant}
+                  />
+                )
+              ) : null}
             </div>
           )
         })
       ) : (
-        <ConfigEnvsInputs pairs={config} onUpdate={updateConfig} />
+        <ConfigEnvsInputs
+          pairs={config}
+          onUpdate={updateConfig}
+          configVariant={variant}
+        />
       )}
     </div>
   )

@@ -15,7 +15,10 @@ from services.workflow_service.schemas.compute_block import (
 router = APIRouter(prefix="/workflow", tags=["workflow"])
 
 
-@router.get("/configurations/{project_id}", response_model=GetWorkflowConfigurationResponse)
+@router.get(
+    "/configurations/{project_id}",
+    response_model=GetWorkflowConfigurationResponse
+)
 def get_workflow_configurations(
         project_id: UUID | None = None
 ):

@@ -4,11 +4,15 @@ import PageWithHeader from "@/components/layout/PageWithHeader"
 import useAuth from "@/hooks/useAuth"
 import LoadingAndError from "@/components/LoadingAndError"
 import { use, useEffect, useState } from "react"
-import Editor from "@/components/Editor"
 import Tabs from "@/components/Tabs"
 import ProjectDetail from "@/components/ProjectDetail"
-import { useProjectQuery } from "@/mutations/projectMutation"
+import { useDeleteProjectMutation, useProjectQuery } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
+import { useAlert } from "@/hooks/useAlert"
+import { useTriggerWorkflowMutation } from "@/mutations/workflowMutations"
+import { ReactFlowProvider } from "@xyflow/react"
+import { Workbench } from "@/components/Workbench"
+import { useRouter } from "next/navigation"
 
 type ProjectPageParams = {
   projectId: string,
@@ -26,9 +30,20 @@ const TABS = [
 export default function ProjectPage({ params }: ProjectPageProps) {
   const { projectId } = use(params)
   const { loading } = useAuth()
+  const { setAlert } = useAlert()
+  const router = useRouter()
 
   const { selectedProject, setSelectedProject } = useSelectedProject()
   const { data: project, isLoading: projectLoading, isError: projectError } = useProjectQuery(projectId)
+
+  const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
+  const { mutateAsync: triggerWorkflow, isPending: triggerLoading } = useTriggerWorkflowMutation(setAlert)
+  // TODO: Status Websocket
+
+  function deleteProject(project_id: string) {
+    router.push("/dashboard")
+    deleteMutate(project_id)
+  }
 
   useEffect(() => {
     if (project) {
@@ -48,8 +63,29 @@ export default function ProjectPage({ params }: ProjectPageProps) {
       ]}>
         <div className="flex flex-col h-full">
           <Tabs activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
-          {activeTab === "project" && <ProjectDetail />}
-          {activeTab === "editor" && <Editor />}
+          {activeTab === "project" && selectedProject !== undefined && (
+            <ProjectDetail
+              deleteProject={deleteProject}
+              isProjectDeleteLoading={deleteLoading}
+              triggerWorkflow={triggerWorkflow}
+              isTriggerWorkflowLoading={triggerLoading}
+            />
+          )}
+          {activeTab === "editor" && selectedProject != undefined && (
+            <div className="flex h-full">
+              <div className="flex-grow h-full">
+                <ReactFlowProvider>
+                  <Workbench
+                    deleteProject={deleteProject}
+                    isProjectDeleteLoading={deleteLoading}
+                    triggerWorkflow={triggerWorkflow}
+                    isTriggerWorkflowLoading={triggerLoading}
+                  />
+                </ReactFlowProvider>
+              </div>
+            </div>
+          )
+          }
         </div>
       </PageWithHeader>
     </LoadingAndError>

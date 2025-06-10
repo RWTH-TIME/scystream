@@ -12,7 +12,6 @@ const GET_COMPUTE_BLOCK_INFO = "compute_block/information"
 const CREATE_COMPUTE_BLOCK = "compute_block/"
 const UPDATE_COMPUTE_BLOCK = "compute_block/"
 const GET_COMPUTE_BLOCK_BY_PROJECT = "compute_block/by_project/"
-const GET_CONFIGS_BY_PROJECT = "compute_block/configurations/by_project/{project_id}"
 const GET_ENVS = "compute_block/entrypoint/{entry_id}/envs"
 const GET_IOS = "compute_block/entrypoint/{entry_id}/io/?io_type={io_type}"
 const UPDATE_IOS = "compute_block/entrypoint/io/"
@@ -84,18 +83,8 @@ export function useComputeBlocksByProjectQuery(id: string | undefined) {
   })
 }
 
-export function useGetComputeBlocksConfigurationByProjectQuery(id: string | undefined) {
-  return useQuery({
-    queryKey: [QueryKeys.cbConfigsByProject, id],
-    queryFn: async function getConfigurationsByProject() {
-      if (!id) return
-      const response = await api.get(GET_CONFIGS_BY_PROJECT.replace("{project_id}", id))
-      return response.data
-    },
-    refetchOnWindowFocus: false,
-    enabled: !!id,
-  })
-}
+
+
 
 export function useComputeBlockEnvsQuery(entrypointId: string | undefined) {
   return useQuery({
