@@ -55,7 +55,7 @@ def _get_io_data_type(type: str) -> str:
     return data_type_map.get(type, DataType.CUSTOM.value)
 
 
-def _replace_minio_host(url: str | None) -> str | None:
+def replace_minio_host(url: str | None) -> str | None:
     if url:
         defaults = get_file_cfg_defaults_dict("placeholder")
         default_minio_url = f"{defaults.get("S3_HOST")}:{
@@ -117,7 +117,7 @@ class InputOutputDTO(BaseIODTO):
             data_type=(input_output.data_type),
             description=input_output.description or "",
             config=input_output.config or {},
-            presigned_url=_replace_minio_host(url=presigned_url)
+            presigned_url=replace_minio_host(url=presigned_url),
         )
 
     @classmethod
@@ -408,7 +408,7 @@ class UpdateInputOutuputResponseDTO(BaseInputOutputDTO):
             type=input_output.type,
             entrypoint_id=input_output.entrypoint_uuid,
             config=input_output.config or {},
-            presigned_url=_replace_minio_host(url=presigned_url)
+            presigned_url=replace_minio_host(url=presigned_url)
         )
 
 

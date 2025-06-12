@@ -36,6 +36,8 @@ export type InputOutput = {
   config: Record<string, RecordValueType>,
   presigned_url: string,
   selected_file?: File,
+  block_uuid?: string,
+  block_custom_name?: string,
 }
 
 export type Entrypoint = {

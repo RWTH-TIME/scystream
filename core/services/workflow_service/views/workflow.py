@@ -8,8 +8,8 @@ from services.workflow_service.controllers import workflow_controller
 from services.workflow_service.schemas.workflow import (
     WorkflowStatus, WorkflowTemplateMetaData, GetWorkflowConfigurationResponse
 )
-from services.workflow_service.schemas.compute_block import (
-    InputOutputDTO
+from services.workflow_service.schemas.workflow import (
+    InputOutputWithBlockInfo
 )
 
 router = APIRouter(prefix="/workflow", tags=["workflow"])
@@ -29,7 +29,7 @@ def get_workflow_configurations(
         )
 
     try:
-        envs, inputs, inter, outputs, presigned = \
+        envs, inputs, inter, outputs, presigned, block_by_entry_id = \
             workflow_controller.get_workflow_configurations(
                 project_id
             )
@@ -37,23 +37,29 @@ def get_workflow_configurations(
         return GetWorkflowConfigurationResponse(
             envs=envs,
             workflow_inputs=[
-                InputOutputDTO.from_input_output(
+                InputOutputWithBlockInfo.from_input_output(
                     i.name,
                     i,
+                    block_by_entry_id.get(i.entrypoint_uuid).uuid,
+                    block_by_entry_id.get(i.entrypoint_uuid).custom_name,
                     presigned.get(i.uuid, None),
                 ) for i in inputs
             ],
             workflow_intermediates=[
-                InputOutputDTO.from_input_output(
+                InputOutputWithBlockInfo.from_input_output(
                     i.name,
                     i,
+                    block_by_entry_id.get(i.entrypoint_uuid).uuid,
+                    block_by_entry_id.get(i.entrypoint_uuid).custom_name,
                     presigned.get(i.uuid, None),
                 ) for i in inter
             ],
             workflow_outputs=[
-                InputOutputDTO.from_input_output(
+                InputOutputWithBlockInfo.from_input_output(
                     o.name,
                     o,
+                    block_by_entry_id.get(o.entrypoint_uuid).uuid,
+                    block_by_entry_id.get(o.entrypoint_uuid).custom_name,
                     presigned.get(o.uuid, None),
                 ) for o in outputs
             ]

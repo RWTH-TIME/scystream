@@ -67,7 +67,13 @@ export default function ConfigBox({
             <div className="p-4 border rounded mt-5" key={o.id}>
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h3 className="text-md font-semibold">{o.name}</h3>
+                  <h3 className="text-md font-semibold flex items-center gap-1">
+                    {variant === ConfigBoxVariant.SIMPLE && (
+                      <span className="text-gray-600">{o.block_custom_name}</span>
+                    )}
+                    {variant === ConfigBoxVariant.SIMPLE && <span>|</span>}
+                    <span>{o.name}</span>
+                  </h3>
                   <p className="text-gray-700">{o.description}</p>
                 </div>
                 <div className="flex flex-col space-y-2 items-end">

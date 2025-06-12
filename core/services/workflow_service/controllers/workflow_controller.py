@@ -23,7 +23,7 @@ from services.workflow_service.controllers import compute_block_controller
 from services.workflow_service.schemas.workflow import (
     WorfklowValidationError,
     WorkflowTemplate,
-    WorkflowEnvsWithBlockInfo
+    WorkflowEnvsWithBlockInfo,
 )
 from services.workflow_service.models.block import (
     Block,
@@ -201,17 +201,19 @@ def _get_unconfigured_ios(ios: list[InputOutput]) -> list[InputOutput]:
             name=io.name,
             data_type=io.data_type,
             description=io.description,
-            config=unconfigured_fields
+            config=unconfigured_fields,
+            entrypoint_uuid=io.entrypoint_uuid
         ))
 
     return result
 
 
 def get_workflow_configurations(project_id: UUID) -> tuple[
-    dict[UUID, ConfigType],  # Block_UUID -> Missing Envs
+    list[WorkflowEnvsWithBlockInfo],  # Missing envs for block
     list[InputOutput],  # Workflow Inputs
     list[InputOutput],  # Intermediate IOs
-    list[InputOutput]  # Workflow Outputs
+    list[InputOutput],  # Workflow Outputs
+    dict[UUID, Block]  # Block by Entrypoint
 ]:
     """
     Returns the Configurations for the Workflow.
@@ -226,6 +228,7 @@ def get_workflow_configurations(project_id: UUID) -> tuple[
         list[InputOutput]: Outputs of the Workflow -> All outputs of
             blocks that dont have an Downstream Block with unset configs if
             there are any.
+        dict[UUID, Block]: dict mapping EntryID to Block
     """
     db: Session = next(get_database())
 
@@ -258,7 +261,6 @@ def get_workflow_configurations(project_id: UUID) -> tuple[
     intermediates = []
 
     for block in blocks:
-        # TODO unconfigured_envs should be a list
         if (block_envs := _get_unconfigured_envs(block)) is not None:
             unconfigured_envs.append(WorkflowEnvsWithBlockInfo(
                 block_uuid=block.uuid,
@@ -290,7 +292,8 @@ def get_workflow_configurations(project_id: UUID) -> tuple[
         inputs,
         intermediates,
         outputs,
-        presigned_urls
+        presigned_urls,
+        block_by_entry_id
     )
 
 

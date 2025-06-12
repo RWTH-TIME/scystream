@@ -101,7 +101,6 @@ export default function ProjectDetail({
   // Implement Endpoint for mutation
   // Fix Intermediate UI (Show configs/Uploads/Downloads)
   // Fix Upload/Download File UI
-  // Display Block Name In front of io
 
 
   useEffect(() => {

@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     DATABASE_PORT: int = 5432
     EMAIL_DOMAIN_WHITELIST: list[str] = ["time.rwth-aachen.de"]
 
-    LOG_LEVEL: str = "DEBUG"
+    LOG_LEVEL: str = "INFO"
 
     JWT_ALGORITHM: str = "HS256"
     JWT_SECRET: str = "secret"

@@ -4,7 +4,8 @@ from enum import Enum
 
 from services.workflow_service.schemas.compute_block import (
     ConfigType,
-    InputOutputDTO
+    InputOutputDTO,
+    replace_minio_host
 )
 
 
@@ -36,11 +37,37 @@ class WorkflowEnvsWithBlockInfo(BaseModel):
     envs: ConfigType
 
 
+class InputOutputWithBlockInfo(InputOutputDTO):
+    block_uuid: UUID
+    block_custom_name: str
+
+    @classmethod
+    def from_input_output(
+        cls,
+        name: str,
+        input_output,
+        block_id: UUID,
+        block_name: str,
+        presigned_url: str | None = None,
+    ):
+        return cls(
+            id=getattr(input_output, "uuid", None),
+            name=name,
+            type=input_output.type,
+            data_type=input_output.data_type,
+            description=input_output.description or "",
+            config=input_output.config or {},
+            presigned_url=replace_minio_host(url=presigned_url),
+            block_uuid=block_id,
+            block_custom_name=block_name,
+        )
+
+
 class GetWorkflowConfigurationResponse(BaseModel):
     envs: list[WorkflowEnvsWithBlockInfo]
-    workflow_inputs: list[InputOutputDTO]
-    workflow_intermediates: list[InputOutputDTO]
-    workflow_outputs: list[InputOutputDTO]
+    workflow_inputs: list[InputOutputWithBlockInfo]
+    workflow_intermediates: list[InputOutputWithBlockInfo]
+    workflow_outputs: list[InputOutputWithBlockInfo]
 
 
 # Worklow Templates:
