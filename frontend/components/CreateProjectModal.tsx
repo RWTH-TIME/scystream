@@ -2,30 +2,33 @@ import { useState } from "react"
 import Input from "./inputs/Input"
 import Modal, { type ModalProps } from "./Modal"
 import LoadingAndError from "./LoadingAndError"
-import { useCreateProjectMutation } from "@/mutations/projectMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import Button, { ButtonSentiment } from "./Button"
 
-type CreateProjectModalProps = Omit<ModalProps, "children">;
+type CreateProjectModalProps = Omit<ModalProps, "children"> & {
+  onSubmit: (name: string) => void,
+  title?: string,
+  loading?: boolean,
+}
+
 export const MIN_LEN_PROJECT_NAME = 2
 
 export default function CreateProjectModal({
   isOpen,
   onClose,
   className = "",
+  onSubmit,
+  title = "Project",
+  loading = false,
 }: CreateProjectModalProps) {
   const { setAlert } = useAlert()
   const [projectName, setProjectName] = useState<string>("")
 
-  const { mutate, isPending: loading } = useCreateProjectMutation(setAlert)
-
-  function createProject(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
 
-    // TODO: Currently this validation is fine, as we are only using one field.
-    // However, think about a better way to validate the fields
     if (projectName.length >= MIN_LEN_PROJECT_NAME) {
-      mutate({ name: projectName })
+      onSubmit(projectName)
       onClose()
     } else {
       setAlert("Project Name must be set.", AlertType.ERROR)
@@ -34,8 +37,8 @@ export default function CreateProjectModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className={className}>
-      <h2 className="text-xl font-bold">Project</h2>
-      <form onSubmit={(e) => createProject(e)} className="mt-4 space-y-4 text-sm">
+      <h2 className="text-xl font-bold">{title}</h2>
+      <form onSubmit={handleSubmit} className="mt-4 space-y-4 text-sm">
         <div>
           <Input
             type="text"

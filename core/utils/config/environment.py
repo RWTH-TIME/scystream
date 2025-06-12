@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     AIRFLOW_PASS: str = "airflow"
     AIRFLOW_DAG_DIR: str = "../airflow-dags"
 
+    WORKFLOW_TEMPLATE_REPO: str = \
+        "git@git.rwth-aachen.de:tim-institute/pipeline-templates.git"
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8", case_sensitive=True
     )

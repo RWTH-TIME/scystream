@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 from utils.errors.error import handle_error
 import logging
@@ -14,11 +14,14 @@ from services.workflow_service.schemas.project import (
     ReadProjectRequest,
     ReadByUserResponse,
     ReadAllResponse,
-    RenameProjectRequest
+    RenameProjectRequest,
+    CreateProjectFromTemplateResponse,
+    CreateProjectFromTemplateRequest
 )
 from services.user_service.middleware.authenticate_token import (
     authenticate_token,
 )
+from utils.database.session_injector import get_database
 
 
 router = APIRouter(prefix="/project", tags=["project"])
@@ -29,22 +32,57 @@ async def create_project(
     data: CreateProjectRequest,
     token_data: dict = Depends(authenticate_token)
 ):
+    db = next(get_database())
     try:
-        project_uuid = project_controller.create_project(
-            data.name, token_data["uuid"]
-        )
+        with db.begin():
+            project_uuid = project_controller.create_project(
+                db, data.name, token_data["uuid"]
+            )
         return CreateProjectResponse(project_uuid=project_uuid)
     except Exception as e:
         logging.error(f"Error creating project: {e}")
         raise handle_error(e)
 
 
-@router.get("/", response_model=Project)
-async def read_project(
-        data: ReadProjectRequest,
+@router.post(
+    "/from_template",
+    response_model=CreateProjectFromTemplateResponse
+)
+async def create_project_from_template(
+    data: CreateProjectFromTemplateRequest,
+    # token_data: dict = Depends(authenticate_token)
 ):
     try:
-        project = project_controller.read_project(data.project_uuid)
+        id = project_controller.create_project_from_template(
+            data.name,
+            data.template_identifier,
+            "a654459c-c021-4f3d-80ad-8bb5b51a0d20"
+        )
+        return CreateProjectResponse(project_uuid=id)
+    except Exception as e:
+        logging.error(f"Error creating project from template: {e}")
+        raise handle_error(e)
+
+
+@router.get("/read_all", response_model=ReadAllResponse)
+async def read_all_projects():
+    try:
+        projects = project_controller.read_all_projects()
+        return ReadAllResponse(projects=projects)
+    except Exception as e:
+        logging.error(f"Error reading all projects: {e}")
+        raise handle_error(e)
+
+
+@router.get("/{project_id}", response_model=Project)
+async def read_project(
+        project_id: UUID | None = None,
+):
+    try:
+        if project_id is None:
+            raise HTTPException(status=422, detail="Project ID is required")
+
+        project = project_controller.read_project(project_id)
         return project
     except Exception as e:
         logging.error(f"Error reading project: {e}")
@@ -57,16 +95,6 @@ async def read_projects_by_user(user_uuid: UUID):
         return project_controller.read_projects_by_user_uuid(user_uuid)
     except Exception as e:
         logging.error(f"Error reading project by user: {e}")
-        raise handle_error(e)
-
-
-@router.get("/read_all", response_model=ReadAllResponse)
-async def read_all_projects():
-    try:
-        projects = project_controller.read_all_projects()
-        return ReadAllResponse(projects=projects)
-    except Exception as e:
-        logging.error(f"Error reading all projects: {e}")
         raise handle_error(e)
 
 

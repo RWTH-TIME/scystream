@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 import logging
 
+from utils.database.session_injector import get_database
 from utils.errors.error import handle_error
 from utils.data.file_handling import bulk_presigned_urls_from_ios
 from services.workflow_service.models.input_output import (
@@ -23,7 +24,7 @@ from services.workflow_service.controllers.compute_block_controller import (
     delete_block, create_stream_and_update_target_cfg,
     get_block_dependencies_for_blocks, delete_edge, get_envs_for_entrypoint,
     get_io_for_entrypoint, update_ios, update_block, bulk_upload_files,
-    get_ios_by_ids,
+    get_ios_by_ids
 )
 import services.workflow_service.controllers.workflow_controller as \
     workflow_controller
@@ -51,6 +52,8 @@ async def create(
     data: CreateComputeBlockRequest,
     _: dict = Depends(authenticate_token)
 ):
+    db = next(get_database())
+
     try:
         """
         Upload the files to the default bucket and update the configs
@@ -60,24 +63,26 @@ async def create(
             data.selected_entrypoint.inputs
         )
 
-        cb = create_compute_block(
-            data.name,
-            data.description,
-            data.author,
-            data.image,
-            data.cbc_url,
-            data.custom_name,
-            data.x_pos,
-            data.y_pos,
-            data.selected_entrypoint.name,
-            data.selected_entrypoint.description,
-            data.selected_entrypoint.envs,
-            [input.to_input_output(input, "Input")
-             for input in updated_is],
-            [output.to_input_output(output, "Output")
-             for output in data.selected_entrypoint.outputs],
-            data.project_id
-        )
+        with db.begin():
+            cb = create_compute_block(
+                db,
+                data.name,
+                data.description,
+                data.author,
+                data.image,
+                data.cbc_url,
+                data.custom_name,
+                data.x_pos,
+                data.y_pos,
+                data.selected_entrypoint.name,
+                data.selected_entrypoint.description,
+                data.selected_entrypoint.envs,
+                [input.to_input_output(input, "Input")
+                 for input in updated_is],
+                [output.to_input_output(output, "Output")
+                 for output in data.selected_entrypoint.outputs],
+                data.project_id,
+            )
         return SimpleNodeDTO.from_compute_block(cb)
     except Exception as e:
         logging.error(f"Error creating compute block: {e}")
@@ -170,7 +175,7 @@ async def get_io(
         return [InputOutputDTO.from_input_output(
             io.name,
             io,
-            presigned_urls.get(str(io.uuid), None)) for io in ios
+            presigned_urls.get(io.uuid, None)) for io in ios
         ]
     except Exception as e:
         logging.exception(f"Error getting {
@@ -205,7 +210,7 @@ async def update_io(data: list[BaseInputOutputDTO]):
         return [
             UpdateInputOutuputResponseDTO.from_input_output(
                 io,
-                presigneds.get(str(io.uuid))
+                presigneds.get(io.uuid)
             )
             for io in updated
         ]
@@ -237,13 +242,17 @@ async def delete_compute_block(
 def create_io_stream_and_update_io_cfg(
     data: EdgeDTO
 ):
+    db = next(get_database())
+
     try:
-        id = create_stream_and_update_target_cfg(
-            data.source,
-            data.sourceHandle,
-            data.target,
-            data.targetHandle
-        )
+        with db.begin():
+            id = create_stream_and_update_target_cfg(
+                db,
+                data.source,
+                data.sourceHandle,
+                data.target,
+                data.targetHandle
+            )
         return IDResponse(id=id)
     except Exception as e:
         logging.error(f"Error creating an edge and configuring input: {e}")

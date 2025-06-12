@@ -5,9 +5,69 @@ import asyncio
 import logging
 
 from services.workflow_service.controllers import workflow_controller
-from services.workflow_service.schemas.workflow import WorkflowStatus
+from services.workflow_service.schemas.workflow import (
+    WorkflowStatus, WorkflowTemplateMetaData, GetWorkflowConfigurationResponse
+)
+from services.workflow_service.schemas.workflow import (
+    InputOutputWithBlockInfo
+)
 
 router = APIRouter(prefix="/workflow", tags=["workflow"])
+
+
+@router.get(
+    "/configurations/{project_id}",
+    response_model=GetWorkflowConfigurationResponse
+)
+def get_workflow_configurations(
+        project_id: UUID | None = None
+):
+    if not project_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Project ID missing"
+        )
+
+    try:
+        envs, inputs, inter, outputs, presigned, block_by_entry_id = \
+            workflow_controller.get_workflow_configurations(
+                project_id
+            )
+
+        return GetWorkflowConfigurationResponse(
+            envs=envs,
+            workflow_inputs=[
+                InputOutputWithBlockInfo.from_input_output(
+                    i.name,
+                    i,
+                    block_by_entry_id.get(i.entrypoint_uuid).uuid,
+                    block_by_entry_id.get(i.entrypoint_uuid).custom_name,
+                    presigned.get(i.uuid, None),
+                ) for i in inputs
+            ],
+            workflow_intermediates=[
+                InputOutputWithBlockInfo.from_input_output(
+                    i.name,
+                    i,
+                    block_by_entry_id.get(i.entrypoint_uuid).uuid,
+                    block_by_entry_id.get(i.entrypoint_uuid).custom_name,
+                    presigned.get(i.uuid, None),
+                ) for i in inter
+            ],
+            workflow_outputs=[
+                InputOutputWithBlockInfo.from_input_output(
+                    o.name,
+                    o,
+                    block_by_entry_id.get(o.entrypoint_uuid).uuid,
+                    block_by_entry_id.get(o.entrypoint_uuid).custom_name,
+                    presigned.get(o.uuid, None),
+                ) for o in outputs
+            ]
+        )
+    except Exception as e:
+        logging.exception(
+            f"Exception when getting workflow configurations: {e}")
+        raise handle_error(e)
 
 
 @router.post("/{project_id}", status_code=200)
@@ -42,6 +102,25 @@ def pause_dag(
 
     try:
         workflow_controller.unpause_dag(dag_id, True)
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.get(
+    "/workflow_templates",
+    response_model=list[WorkflowTemplateMetaData]
+)
+async def workflow_templates():
+    try:
+        templates = workflow_controller.get_workflow_templates()
+        return [
+            WorkflowTemplateMetaData(
+                file_identifier=tpl.file_identifier,
+                name=tpl.pipeline.name,
+                description=tpl.pipeline.description,
+            )
+            for tpl in templates
+        ]
     except Exception as e:
         raise handle_error(e)
 
