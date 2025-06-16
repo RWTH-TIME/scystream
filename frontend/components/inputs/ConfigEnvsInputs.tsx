@@ -10,6 +10,7 @@ type ConfigEnvsInputsProps = {
   onUpdate: (key: string, value: RecordValueType) => void,
   configVariant?: ConfigBoxVariant,
   borderEnabled?: boolean,
+  disabled?: boolean,
 };
 
 export default function ConfigEnvsInputs({
@@ -17,6 +18,7 @@ export default function ConfigEnvsInputs({
   onUpdate,
   configVariant = ConfigBoxVariant.COMPLEX,
   borderEnabled = true,
+  disabled = false,
 }: ConfigEnvsInputsProps) {
   const [expanded, setExpanded] = useState(configVariant === ConfigBoxVariant.SIMPLE ? true : false)
 
@@ -86,6 +88,7 @@ export default function ConfigEnvsInputs({
                 onSelect={(val: boolean) => handleChange(key, val)}
                 renderOption={renderOption}
                 renderSelected={renderOption}
+                disabled={disabled}
               />
             ) : Array.isArray(value) ? (
               <MultiSelectInput<string | number | boolean>
@@ -93,6 +96,7 @@ export default function ConfigEnvsInputs({
                 selectedValues={value}
                 getValue={(value) => value.toString()}
                 onChange={(updatedList) => handleChange(key, updatedList as RecordValueType)}
+                disabled={disabled}
               />
             ) : typeof value === "number" ? (
               <Input
@@ -100,12 +104,14 @@ export default function ConfigEnvsInputs({
                 onChange={(text) => handleChange(key, parseFloat(text))}
                 type="number"
                 min="0"
+                disabled={disabled}
               />
             ) : (
               <Input
                 value={value ?? ""}
                 onChange={(text) => handleChange(key, text)}
                 type="text"
+                disabled={disabled}
               />
             )}
           </div>

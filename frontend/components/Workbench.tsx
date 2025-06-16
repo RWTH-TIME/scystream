@@ -9,7 +9,7 @@ import {
   useReactFlow,
   ConnectionMode
 } from "@xyflow/react"
-import { PlayArrow, Widgets, Delete, Save } from "@mui/icons-material"
+import { PlayArrow, Widgets, Delete } from "@mui/icons-material"
 import type { ComputeBlockNodeType } from "./nodes/ComputeBlockNode"
 import ComputeBlockNode from "./nodes/ComputeBlockNode"
 import "@xyflow/react/dist/style.css"

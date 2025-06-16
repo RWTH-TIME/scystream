@@ -29,7 +29,8 @@ from services.workflow_service.models.block import (
 )
 from services.workflow_service.models.input_output import (
     InputOutput,
-    InputOutputType
+    InputOutputType,
+    DataType
 )
 from services.workflow_service.schemas.compute_block import (
     BlockStatus,
@@ -97,6 +98,10 @@ def _get_unconfigured_envs(block: Block) -> ConfigType | None:
 
 
 def _get_unconfigured_ios(ios: list[InputOutput]) -> list[InputOutput]:
+    """
+    Filters the unconfigured config entrys from the passed ios and returns
+    io objects.
+    """
     result = []
 
     for io in ios:
@@ -115,89 +120,127 @@ def _get_unconfigured_ios(ios: list[InputOutput]) -> list[InputOutput]:
 
 
 def get_workflow_configurations(project_id: UUID) -> tuple[
-    list[WorkflowEnvsWithBlockInfo],  # Missing envs for block
-    list[InputOutput],  # Workflow Inputs
-    list[InputOutput],  # Intermediate IOs
-    list[InputOutput],  # Workflow Outputs
-    dict[UUID, Block]  # Block by Entrypoint
+    list[WorkflowEnvsWithBlockInfo],
+    list[InputOutput],   # Workflow Inputs
+    list[InputOutput],   # Intermediates
+    list[InputOutput],   # Workflow Outputs
+    dict[UUID, Block]    # Block by Entrypoint
 ]:
     """
-    Returns the Configurations for the Workflow.
+    Returns categorized I/O configurations and unconfigured envs for a
+    workflow.
+
+    Breakdown of returned values:
+
+    1. Unconfigured Envs:
+       - List of environment variables for each block that are required but
+       not configured.
+
+    2. Workflow Inputs:
+       - All inputs of blocks that do NOT have any upstream dependencies.
+       - These represent the entry points of data into the workflow.
+
+    3. Intermediates:
+       - Includes I/Os used internally between blocks.
+       - Specifically:
+         - Inputs that are unconnected (not wired from any upstream block).
+         - Inputs that ARE connected AND:
+             - Their data_type is CUSTOM, AND
+             - They are not fully configured (i.e., have missing config values)
+             (these are inputs that we cannot autoconfigure, therefore
+              configuring the upstream output might not be enough)
+         - All outputs that have a downstream connection.
+            (to allow the user to download intermediate results)
+
+    4. Workflow Outputs:
+       - All outputs of blocks that do NOT have any downstream dependencies.
+       - These represent the final results produced by the workflow.
+
+    5. Block by Entrypoint:
+       - A dictionary mapping the entrypoint UUID of each block to the actual
+       Block instance.
+
+    Notes:
+    - An InputOutput is considered "fully configured" if the config dict is
+    empty after filtering out set keys
+    - Presigned URLs for FILE-type I/Os are included in the
+    input/output objects.
+
+    Args:
+        project_id (UUID): The project ID for which the workflow configuration
+        is retrieved.
 
     Returns:
-        dict[UUID, ConfigType]: All ENVs WITH MISSING configs of the Blocks
-        list[InputOutput]: Inputs of the Workflow with unset configs if there
-            are any -> All inputs of blocks that dont have an
-            Upstream Block
-        list[InputOutput]: Inputs & Outputs of Blocks WITH MISSING
-            configurations (set configurations are not returned)
-        list[InputOutput]: Outputs of the Workflow -> All outputs of
-            blocks that dont have an Downstream Block with unset configs if
-            there are any.
-        dict[UUID, Block]: dict mapping EntryID to Block
+        Tuple containing:
+            - List of WorkflowEnvsWithBlockInfo
+            - List of InputOutput for workflow inputs
+            - List of InputOutput for intermediate values
+            - List of InputOutput for workflow outputs
+            - Dictionary mapping entrypoint UUIDs to Block instances
     """
+
     db: Session = next(get_database())
 
-    blocks: list[Block] = compute_block_controller.\
-        get_compute_blocks_by_project(
-            project_id
-    )
-    block_by_entry_id = {
-        b.selected_entrypoint_uuid: b for b in blocks
-    }
-
+    # 1. Load blocks
+    blocks = compute_block_controller.get_compute_blocks_by_project(project_id)
+    block_by_entry_id = {b.selected_entrypoint_uuid: b for b in blocks}
     entry_ids = list(block_by_entry_id.keys())
-    ios: list[InputOutput] = db.query(InputOutput).filter(
+
+    # 2. Load IOs
+    ios = db.query(InputOutput).filter(
         InputOutput.entrypoint_uuid.in_(entry_ids)
     ).all()
     presigned_urls = bulk_presigned_urls_from_ios(ios)
-
     io_map = _group_ios_by_block(ios, block_by_entry_id)
-    deps = db.execute(block_dependencies.select()).fetchall()
-    has_upstream = {
-        dep.downstream_block_uuid for dep in deps
-    }
-    has_downstream = {
-        dep.upstream_block_uuid for dep in deps
-    }
 
+    # 3. Load dependencies
+    deps = db.execute(block_dependencies.select()).fetchall()
+    has_upstream = {dep.downstream_block_uuid for dep in deps}
+    has_downstream = {dep.upstream_block_uuid for dep in deps}
+    connected_input_uuids = {dep.downstream_input_uuid for dep in deps}
+
+    # 4. Prepare result containers
     unconfigured_envs = []
-    inputs = []
-    outputs = []
+    workflow_inputs = []
+    workflow_outputs = []
     intermediates = []
 
     for block in blocks:
+        # Unconfigured ENV blocks
         if (block_envs := _get_unconfigured_envs(block)) is not None:
             unconfigured_envs.append(WorkflowEnvsWithBlockInfo(
                 block_uuid=block.uuid,
                 block_custom_name=block.custom_name,
                 envs=block_envs
-            )
-            )
+            ))
 
-        unconfigured_ios = _get_unconfigured_ios(
-            io_map.get(block.uuid, [])
-        )
+        # Determine connections
+        upstream = block.uuid in has_upstream
+        downstream = block.uuid in has_downstream
 
-        # Workflow Inputs
-        if block.uuid not in has_upstream:
-            inputs += [io for io in unconfigured_ios if io.type ==
-                       InputOutputType.INPUT]
+        # Get only unconfigured IOs for this block
+        unconfigured_ios = _get_unconfigured_ios(io_map.get(block.uuid, []))
 
-        # Workflow Outputs
-        if block.uuid not in has_downstream:
-            outputs += [io for io in unconfigured_ios if io.type ==
-                        InputOutputType.OUTPUT]
-
-        # Intermediates
-        if block.uuid in has_upstream and block.uuid in has_downstream:
-            intermediates += unconfigured_ios
+        for io in unconfigured_ios:
+            if io.type == InputOutputType.INPUT:
+                if not upstream:
+                    workflow_inputs.append(io)
+                elif (
+                    io.uuid not in connected_input_uuids or
+                    (io.data_type == DataType.CUSTOM and io.config)
+                ):
+                    intermediates.append(io)
+            elif io.type == InputOutputType.OUTPUT:
+                if not downstream:
+                    workflow_outputs.append(io)
+                else:
+                    intermediates.append(io)
 
     return (
         unconfigured_envs,
-        inputs,
+        workflow_inputs,
         intermediates,
-        outputs,
+        workflow_outputs,
         presigned_urls,
         block_by_entry_id
     )

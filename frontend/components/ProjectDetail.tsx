@@ -12,6 +12,7 @@ import { encodeFileToBase64, type InputOutput, type RecordValueType } from "./Cr
 import ConfigEnvsInputs from "./inputs/ConfigEnvsInputs"
 import { Save } from "@mui/icons-material"
 import { useAlert } from "@/hooks/useAlert"
+import { CircularProgress } from "@mui/material"
 
 type ProjectDetailProps = {
   deleteProject: (project_id: string) => void,
@@ -53,7 +54,7 @@ export default function ProjectDetail({
   const { setAlert } = useAlert()
 
   const { data, isLoading, isError } = useGetComputeBlocksConfigurationByProjectQuery(selectedProject?.uuid)
-  const { mutateAsync } = useUpdateWorkflowConfigurationsMutation(setAlert, selectedProject!.uuid)
+  const { mutateAsync, isPending: loadingUpdateConfigs } = useUpdateWorkflowConfigurationsMutation(setAlert, selectedProject!.uuid)
 
   const [projectDetailForm, setProjectDetailForm] = useState<ProjectDetailFormType>(emptyProjectDetailForm)
   const [initialProjectDetailForm, setInitialProjectDetailForm] = useState<ProjectDetailFormType>(emptyProjectDetailForm)
@@ -209,15 +210,7 @@ export default function ProjectDetail({
   async function onSave() {
     const payload = await getChangedPayload()
     mutateAsync(payload)
-    console.log("Payload to send to backend:", payload)
-    console.log(projectDetailForm)
   }
-
-
-  // TODO:
-  // Fix Intermediate UI (Show configs/Uploads/Downloads)
-  // - TODO: In simple mode, when type File, if one config key is unconfigured, the File *Input* must be shown
-  // Fix Upload/Download File UI
 
 
   useEffect(() => {
@@ -268,7 +261,7 @@ export default function ProjectDetail({
             onClick={onSave}
             className={`flex items-center justify-center w-12 h-12 ${hasChanged ? "bg-blue-500 hover:bg-blue-400" : "bg-gray-400"} text-white rounded-full transition-all duration-200 cursor-pointer disabled:cursor-not-allowed`}
           >
-            {<Save />}
+            {loadingUpdateConfigs ? <CircularProgress /> : <Save />}
           </button>
           <ActionButtons
             onPlayClick={() => triggerWorkflow(selectedProject!.uuid)}
@@ -315,7 +308,7 @@ export default function ProjectDetail({
             <LoadingAndError loading={isLoading} error={isError}>
               <ConfigBox
                 headline="Workflow Inputs"
-                description="Upload files or configure the required Inputs"
+                description="Provide the Data for the Workflows Entrypoints"
                 config={projectDetailForm.workflow_inputs}
                 updateConfig={(key, value, id) => { handleFieldConfigChange("workflow_inputs", key, value, id) }}
                 updateSelectedFile={(name, file, id) => { handleFileChange("workflow_inputs", name, file, id) }}
@@ -329,7 +322,7 @@ export default function ProjectDetail({
             <LoadingAndError loading={isLoading} error={isError}>
               <ConfigBox
                 headline="Workflow Outputs"
-                description="Outputs of the workflow, download the workflow outputs here"
+                description="Download or Configure the Locations of the Workflows Outputs"
                 config={projectDetailForm.workflow_outputs}
                 updateConfig={(key, value, id) => { handleFieldConfigChange("workflow_outputs", key, value, id) }}
                 updateSelectedFile={(name, file, id) => { handleFileChange("workflow_outputs", name, file, id) }}
@@ -342,29 +335,41 @@ export default function ProjectDetail({
 
       <div className="border-t border-gray-200" />
 
-      <div className="border">
-        <LoadingAndError loading={isLoading} error={isError}>
-          <div className="p-2">
-            <button
-              onClick={() => setIntermediatesExpanded(prev => !prev)}
-              className="mb-2 px-4 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              {intermediatesExpanded ? "Collapse" : "Expand"} Intermediates
-            </button>
+      {projectDetailForm.workflow_intermediates.length > 0 && (
+        <div className="border p-4 bg-gray-50">
+          <LoadingAndError loading={isLoading} error={isError}>
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h2 className="text-lg font-semibold">Intermediate I/Os</h2>
+                <p className="text-sm text-gray-600">
+                  These are configurations for block I/Os that are neither workflow inputs nor final outputs.
+                </p>
+              </div>
+              <button
+                onClick={() => setIntermediatesExpanded(prev => !prev)}
+                className="text-sm px-3 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 transition"
+              >
+                {intermediatesExpanded ? "Collapse" : "Expand"}
+              </button>
+            </div>
 
             {intermediatesExpanded && (
               <ConfigBox
                 headline="Intermediates"
-                description="I/O Configs of Intermediates"
+                description="Configure intermediate I/O parameters used within your workflow."
                 config={projectDetailForm.workflow_intermediates}
-                updateConfig={(key, value, id) => { handleFieldConfigChange("workflow_intermediates", key, value, id) }}
-                updateSelectedFile={(name, file, id) => { handleFileChange("workflow_intermediates", name, file, id) }}
-                variant={ConfigBoxVariant.COMPLEX}
+                updateConfig={(key, value, id) => {
+                  handleFieldConfigChange("workflow_intermediates", key, value, id)
+                }}
+                updateSelectedFile={(name, file, id) => {
+                  handleFileChange("workflow_intermediates", name, file, id)
+                }}
+                variant={ConfigBoxVariant.SIMPLE}
               />
             )}
-          </div>
-        </LoadingAndError>
-      </div>
+          </LoadingAndError>
+        </div>
+      )}
     </div>
   )
 }

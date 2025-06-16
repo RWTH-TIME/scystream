@@ -12,7 +12,6 @@ import type { WebSocketConnection } from "@/utils/websocketManager"
 import { webSocketManager } from "@/utils/websocketManager"
 import type { RecordValueType } from "@/components/CreateComputeBlockModal"
 import displayStandardAxiosErrors from "@/utils/errors"
-import { setErrorMap } from "zod"
 
 const config = getConfig()
 const PROJECT_STATUS_WS = "workflow/ws/project_status"
