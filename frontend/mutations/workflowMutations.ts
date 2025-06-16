@@ -10,6 +10,9 @@ import { ProjectStatus, type Project } from "@/utils/types"
 import type { ComputeBlockByProjectResponse } from "./computeBlockMutation"
 import type { WebSocketConnection } from "@/utils/websocketManager"
 import { webSocketManager } from "@/utils/websocketManager"
+import type { RecordValueType } from "@/components/CreateComputeBlockModal"
+import displayStandardAxiosErrors from "@/utils/errors"
+import { setErrorMap } from "zod"
 
 const config = getConfig()
 const PROJECT_STATUS_WS = "workflow/ws/project_status"
@@ -17,6 +20,7 @@ const CB_STATUS_WS = "workflow/ws/workflow_status/"
 const TRIGGER_WORKFLOW = "workflow/"
 const GET_WORKFLOW_TEMPLATES = "workflow/workflow_templates"
 const GET_CONFIGS_BY_PROJECT = "workflow/configurations/{project_id}"
+const UPDATE_CONFIGS_BY_PROJECT = "workflow/configurations/{project_id}"
 
 type ProjectStatusEvent = Record<string, string>
 
@@ -71,6 +75,42 @@ export function useGetComputeBlocksConfigurationByProjectQuery(id: string | unde
     },
     refetchOnWindowFocus: false,
     enabled: !!id,
+  })
+}
+
+export type SimpleUpdateEnvsDTO = {
+  block_uuid: string,
+  envs: Record<string, RecordValueType>,
+}
+
+export type SimpleUpdateIOSDTO = {
+  id: string,
+  config?: Record<string, RecordValueType>,
+  selected_file_b64?: string,
+  selected_file_type?: string,
+}
+
+export type UpdateWorkflowConfigurationsDTO = Partial<{
+  project_name: string,
+  envs: SimpleUpdateEnvsDTO[],
+  ios: SimpleUpdateIOSDTO[],
+}>
+
+export function useUpdateWorkflowConfigurationsMutation(setAlert: SetAlertType, project_id: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function updateWorkflowConfigs(workflow_configs: UpdateWorkflowConfigurationsDTO) {
+      const response = await api.put(UPDATE_CONFIGS_BY_PROJECT.replace("{project_id}", project_id), JSON.stringify(workflow_configs))
+      return response.data
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+      console.error(`Updating Workflow config failed ${error}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.cbConfigsByProject, project_id] })
+    }
   })
 }
 

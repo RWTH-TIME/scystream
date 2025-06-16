@@ -4,9 +4,15 @@ from utils.errors.error import handle_error
 import asyncio
 import logging
 
+from utils.database.session_injector import get_database
+from services.workflow_service.controllers import \
+    compute_block_controller as compute_block_controller
+from services.workflow_service.controllers import \
+    project_controller as project_controller
 from services.workflow_service.controllers import workflow_controller
 from services.workflow_service.schemas.workflow import (
-    WorkflowStatus, WorkflowTemplateMetaData, GetWorkflowConfigurationResponse
+    WorkflowStatus, WorkflowTemplateMetaData, GetWorkflowConfigurationResponse,
+    UpdateWorkflowConfigurations
 )
 from services.workflow_service.schemas.workflow import (
     InputOutputWithBlockInfo
@@ -67,6 +73,53 @@ def get_workflow_configurations(
     except Exception as e:
         logging.exception(
             f"Exception when getting workflow configurations: {e}")
+        raise handle_error(e)
+
+
+@router.put(
+    "/configurations/{project_id}",
+    status_code=200
+)
+def update_workflow_configurations(
+    project_id: UUID | None,
+    data: UpdateWorkflowConfigurations
+):
+    if not project_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Project ID missing"
+        )
+
+    db = next(get_database())
+
+    try:
+        with db.begin():
+            if data.project_name:
+                project_controller.rename_project(
+                    project_uuid=project_id,
+                    new_name=data.project_name,
+                    db=db
+                )
+
+            if data.envs:
+                updated_blocks = compute_block_controller.bulk_update_block_envs(
+                    db=db,
+                    updates=[compute_block_controller.BulkBlockEnvsUpdate(
+                        block_id=envdto.block_uuid,
+                        envs=envdto.envs
+                    ) for envdto in data.envs]
+                )
+                logging.info(updated_blocks)
+
+            if data.ios:
+                updated_ios = compute_block_controller.update_ios_with_uploads(
+                    db=db,
+                    data=data.ios
+                )
+                logging.info(updated_ios)
+
+    except Exception as e:
+        logging.exception(f"Error updaing workflow configs: {e}")
         raise handle_error(e)
 
 

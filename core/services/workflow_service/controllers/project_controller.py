@@ -7,8 +7,6 @@ import logging
 from utils.database.session_injector import get_database
 from services.workflow_service.models.project import Project
 from services.user_service.models.user import User
-import services.workflow_service.controllers.workflow_controller as \
-    workflow_controller
 import services.workflow_service.controllers.compute_block_controller as \
     compute_block_controller
 import services.workflow_service.controllers.template_controller as \
@@ -53,7 +51,7 @@ def create_project_from_template(
     db: Session = next(get_database())
 
     template: WorkflowTemplate =\
-        workflow_controller.get_workflow_template_by_identifier(
+        template_controller.get_workflow_template_by_identifier(
             template_identifier
         )
     required_blocks = template_controller.extract_block_urls_from_template(
@@ -65,9 +63,6 @@ def create_project_from_template(
 
     G = template_controller.build_workflow_graph(template)
 
-    # TODO:
-    # - Test if Template overwrites io configs correctly.
-    # - Test!!
     try:
         with db.begin():
             project_id = create_project(db, name, current_user_uuid)
@@ -101,9 +96,8 @@ def read_project(project_uuid: UUID) -> Project:
     return project
 
 
-def rename_project(project_uuid: UUID, new_name: str) -> Project:
+def rename_project(project_uuid: UUID, new_name: str, db: Session) -> Project:
     logging.debug(f"Renaming project {project_uuid} to {new_name}.")
-    db: Session = next(get_database())
 
     project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
 
@@ -112,9 +106,6 @@ def rename_project(project_uuid: UUID, new_name: str) -> Project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     project.name = new_name
-
-    db.commit()
-    db.refresh(project)
 
     logging.info(f"Project {project_uuid} renamed successfully to {new_name}")
     return project

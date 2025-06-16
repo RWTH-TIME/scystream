@@ -2,14 +2,16 @@ import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { ActionButtons } from "./Workbench"
 import DeleteModal from "./DeleteModal"
 import { useEffect, useState } from "react"
-import { useGetComputeBlocksConfigurationByProjectQuery } from "@/mutations/workflowMutations"
+import type { SimpleUpdateEnvsDTO, SimpleUpdateIOSDTO, UpdateWorkflowConfigurationsDTO } from "@/mutations/workflowMutations"
+import { useGetComputeBlocksConfigurationByProjectQuery, useUpdateWorkflowConfigurationsMutation } from "@/mutations/workflowMutations"
 import { ProjectStatusIndicator } from "./ProjectStatusIndicator"
 import { ProjectStatus } from "@/utils/types"
 import ConfigBox, { ConfigBoxVariant } from "./ConfigBox"
 import LoadingAndError from "./LoadingAndError"
-import type { InputOutput, RecordValueType } from "./CreateComputeBlockModal"
+import { encodeFileToBase64, type InputOutput, type RecordValueType } from "./CreateComputeBlockModal"
 import ConfigEnvsInputs from "./inputs/ConfigEnvsInputs"
 import { Save } from "@mui/icons-material"
+import { useAlert } from "@/hooks/useAlert"
 
 type ProjectDetailProps = {
   deleteProject: (project_id: string) => void,
@@ -48,11 +50,17 @@ export default function ProjectDetail({
   const { selectedProject, setSelectedProject } = useSelectedProject()
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(false)
+  const { setAlert } = useAlert()
 
   const { data, isLoading, isError } = useGetComputeBlocksConfigurationByProjectQuery(selectedProject?.uuid)
+  const { mutateAsync } = useUpdateWorkflowConfigurationsMutation(setAlert, selectedProject!.uuid)
 
   const [projectDetailForm, setProjectDetailForm] = useState<ProjectDetailFormType>(emptyProjectDetailForm)
   const [initialProjectDetailForm, setInitialProjectDetailForm] = useState<ProjectDetailFormType>(emptyProjectDetailForm)
+
+  const [modifiedEnvKeys, setModifiedEnvKeys] = useState<Map<string, Set<string>>>(new Map()) // block_uuid -> changed keys
+  const [modifiedIOKeys, setModifiedIOKeys] = useState<Map<string, Set<string>>>(new Map()) // io.id -> changed keys
+  const [changedIOFiles, setChangedIOFiles] = useState<Set<string>>(new Set()) // io.id with changed files
 
   const hasChanged = JSON.stringify(projectDetailForm) !== JSON.stringify(initialProjectDetailForm)
 
@@ -71,6 +79,14 @@ export default function ProjectDetail({
             const envItem = item as WorkflowEnvType
             if (envItem.block_uuid !== identifier) return envItem
 
+            setModifiedEnvKeys((prevMap) => {
+              const newMap = new Map(prevMap)
+              const keys = newMap.get(envItem.block_uuid) ?? new Set()
+              keys.add(key)
+              newMap.set(envItem.block_uuid, keys)
+              return newMap
+            })
+
             return {
               ...envItem,
               envs: {
@@ -82,6 +98,14 @@ export default function ProjectDetail({
             // Handle InputOutputs
             const ioItem = item as InputOutput
             if (ioItem.id !== identifier) return ioItem
+
+            setModifiedIOKeys((prevMap) => {
+              const newMap = new Map(prevMap)
+              const keys = newMap.get(ioItem.id!) ?? new Set()
+              keys.add(key)
+              newMap.set(ioItem.id!, keys)
+              return newMap
+            })
 
             return {
               ...ioItem,
@@ -108,7 +132,9 @@ export default function ProjectDetail({
         [field]: prev[field].map((item) => {
           const ioItem = item as InputOutput
           if (ioItem.id !== identifier) return ioItem
-          console.log(ioItem.id)
+
+          setChangedIOFiles((prev) => new Set(prev).add(ioItem.id!))
+
           return {
             ...ioItem,
             selected_file: file ?? undefined,
@@ -118,13 +144,77 @@ export default function ProjectDetail({
     })
   }
 
-  function onSave() {
+  async function getChangedPayload() {
+    const payload: UpdateWorkflowConfigurationsDTO = {}
+
+    // 1. Project Name
+    if (initialProjectDetailForm.name !== projectDetailForm.name) {
+      payload.project_name = projectDetailForm.name
+    }
+
+    // 2. Envs
+    const envsPayload = Array.from(modifiedEnvKeys.entries()).map(([block_uuid, keys]) => {
+      const current = projectDetailForm.envs.find(e => e.block_uuid === block_uuid)
+      if (!current) return null
+
+      const changedEnvs: Record<string, RecordValueType> = {}
+      keys.forEach(key => {
+        changedEnvs[key] = current.envs[key]
+      })
+
+      return { block_uuid, envs: changedEnvs }
+    }).filter(Boolean) as SimpleUpdateEnvsDTO[]
+
+    // 3. IOs (inputs + outputs + intermediates)
+    const allIOs = [
+      ...projectDetailForm.workflow_inputs,
+      ...projectDetailForm.workflow_outputs,
+      ...projectDetailForm.workflow_intermediates,
+    ]
+
+    const iosPayload = (await Promise.all(
+      allIOs.map(async (io) => {
+        const changedKeys = modifiedIOKeys.get(io.id!) ?? new Set()
+        const hasFileChanged = changedIOFiles.has(io.id!)
+
+        const config: Record<string, RecordValueType> = {}
+        changedKeys.forEach(key => {
+          config[key] = io.config[key]
+        })
+
+        if (changedKeys.size > 0 || hasFileChanged) {
+          return {
+            id: io.id,
+            config: changedKeys.size > 0 ? config : {},
+            selected_file_b64: hasFileChanged && io.selected_file
+              ? await encodeFileToBase64(io.selected_file)
+              : undefined,
+            selected_file_type: hasFileChanged && io.selected_file
+              ? io.selected_file.name.split(".").pop()?.toLowerCase()
+              : undefined,
+          }
+        }
+
+        return null
+      })
+    )).filter(Boolean) as SimpleUpdateIOSDTO[]
+
+    payload.ios = iosPayload
+    payload.envs = envsPayload
+
+    return payload
+  }
+
+
+  async function onSave() {
+    const payload = await getChangedPayload()
+    mutateAsync(payload)
+    console.log("Payload to send to backend:", payload)
     console.log(projectDetailForm)
   }
 
+
   // TODO:
-  // Find only the changes (project name, ios, configs)
-  // Implement Endpoint for mutation
   // Fix Intermediate UI (Show configs/Uploads/Downloads)
   // - TODO: In simple mode, when type File, if one config key is unconfigured, the File *Input* must be shown
   // Fix Upload/Download File UI
@@ -269,7 +359,7 @@ export default function ProjectDetail({
                 config={projectDetailForm.workflow_intermediates}
                 updateConfig={(key, value, id) => { handleFieldConfigChange("workflow_intermediates", key, value, id) }}
                 updateSelectedFile={(name, file, id) => { handleFileChange("workflow_intermediates", name, file, id) }}
-                variant={ConfigBoxVariant.SIMPLE}
+                variant={ConfigBoxVariant.COMPLEX}
               />
             )}
           </div>

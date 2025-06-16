@@ -122,6 +122,7 @@ function useUpdateProjectMutation(setAlert: SetAlertType) {
       return response.data.project_uuid
     },
     onSuccess: () => {
+      // TODO: Instead of Invalidating, Update Manually
       queryClient.invalidateQueries({ queryKey: [QueryKeys.projects] })
       setAlert("Successfully updated project.", AlertType.SUCCESS)
     },
@@ -131,8 +132,6 @@ function useUpdateProjectMutation(setAlert: SetAlertType) {
     }
   })
 }
-
-
 
 function useDeleteProjectMutation(setAlert: SetAlertType) {
   const queryClient = useQueryClient()

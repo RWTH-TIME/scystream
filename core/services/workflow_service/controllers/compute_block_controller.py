@@ -2,6 +2,7 @@ from utils.database.session_injector import get_database
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Session, contains_eager
 from fastapi import HTTPException
+from pydantic import BaseModel
 import os
 import tempfile
 import logging
@@ -28,11 +29,13 @@ from services.workflow_service.schemas.compute_block import (
     ConfigType,
     InputOutputDTO,
 )
+from services.workflow_service.schemas.compute_block import (
+    BaseInputOutputDTO
+)
 from scystream.sdk.config import load_config
 from scystream.sdk.config.models import (
     ComputeBlock as SDKComputeBlock,
 )
-
 
 CBC_FILE_IDENTIFIER = "cbc.yaml"
 
@@ -267,10 +270,9 @@ def get_envs_for_entrypoint(e_id: UUID) -> ConfigType | None:
 
 
 def get_ios_by_ids(
-        ids: list[UUID]
+        ids: list[UUID],
+        db: Session
 ) -> list[InputOutput]:
-    db: Session = next(get_database())
-
     return db.query(InputOutput).filter(InputOutput.uuid.in_(ids)).all()
 
 
@@ -412,29 +414,108 @@ def _update_io(
 
 
 def update_ios(
-    update_dict: dict[UUID, ConfigType]
+    update_dict: dict[UUID, ConfigType],
+    db: Session
 ) -> list[InputOutput]:
     logging.debug("Updating input/outputs.")
 
-    db: Session = next(get_database())
+    ids = list(update_dict.keys())
+    ios = db.query(InputOutput).filter(InputOutput.uuid.in_(ids)).all()
 
-    with db.begin():
-        ids = list(update_dict.keys())
-        ios = db.query(InputOutput).filter(InputOutput.uuid.in_(ids)).all()
+    if len(ios) == 0:
+        raise HTTPException(
+            status_code=400, detail="Provided Inputs do not exist.")
 
-        if len(ios) == 0:
-            raise HTTPException(
-                status_code=400, detail="Provided Inputs do not exist.")
-
-        for io in ios:
-            updated_downstreams = _update_io(db, io, update_dict.get(io.uuid))
-            ids.extend(updated_downstreams)
-
-        logging.info("Input/Output updates committed successfully.")
+    for io in ios:
+        updated_downstreams = _update_io(
+            db, io, update_dict.get(io.uuid))
+        ids.extend(updated_downstreams)
 
     updated = db.query(InputOutput).filter(
         InputOutput.uuid.in_(set(ids))).all()
+
     return updated
+
+
+def update_ios_with_uploads(
+        data: list[BaseInputOutputDTO],
+        db: Session
+) -> list[InputOutput]:
+    upload_candidates = [
+        d for d in data if d.selected_file_b64 and d.selected_file_type
+    ]
+
+    print("UPLOAD CANDID", upload_candidates)
+
+    if upload_candidates:
+        db_ios = get_ios_by_ids(
+            db=db,
+            ids=[d.id for d in upload_candidates]
+        )
+        db_io_map = {io.uuid: io for io in db_ios}
+
+        # Inject existing configs into upload candidates
+        for dto in upload_candidates:
+            db_io = db_io_map.get(dto.id)
+            if db_io:
+                dto.config = db_io.config
+
+        bulk_upload_files(upload_candidates)
+
+    # Update all configs
+    updated = update_ios(
+        update_dict={d.id: d.config for d in data},
+        db=db
+    )
+    return updated
+
+
+class BulkBlockEnvsUpdate(BaseModel):
+    block_id: UUID
+    envs: ConfigType
+
+
+def bulk_update_block_envs(
+    updates: list[BulkBlockEnvsUpdate],
+    db: Session
+):
+    block_ids = [item.block_id for item in updates]
+
+    blocks = db.query(Block).filter(Block.uuid.in_(block_ids)).all()
+    block_map = {block.uuid: block for block in blocks}
+
+    updated_blocks = []
+
+    for item in updates:
+        block_id = item.block_id
+        block = block_map.get(block_id)
+
+        if not block:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Block not found: {block_id}"
+            )
+
+        envs = item.envs
+
+        if envs:
+            if do_config_keys_match(
+                "envs",
+                block.selected_entrypoint.envs,
+                envs
+            ):
+                block.selected_entrypoint.envs = {
+                    **block.selected_entrypoint.envs, **envs
+                }
+            else:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Env-Keys do not match for block: {block_id}"
+                )
+
+        updated_blocks.append(block)
+
+    return updated_blocks
 
 
 def update_block(

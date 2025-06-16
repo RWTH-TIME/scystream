@@ -11,7 +11,6 @@ from services.workflow_service.schemas.project import (
     Project,
     CreateProjectRequest,
     CreateProjectResponse,
-    ReadProjectRequest,
     ReadByUserResponse,
     ReadAllResponse,
     RenameProjectRequest,
@@ -56,6 +55,7 @@ async def create_project_from_template(
         id = project_controller.create_project_from_template(
             data.name,
             data.template_identifier,
+            # TODO: Fix userID
             "a654459c-c021-4f3d-80ad-8bb5b51a0d20"
         )
         return CreateProjectResponse(project_uuid=id)
@@ -101,10 +101,13 @@ async def read_projects_by_user(user_uuid: UUID):
 # TODO: Rename function aswell
 @router.put("/", response_model=Project)
 async def rename_project(data: RenameProjectRequest):
+    db = next(get_database())
+
     try:
-        updated_project = project_controller.rename_project(
-            data.project_uuid, data.new_name
-        )
+        with db.begin():
+            updated_project = project_controller.rename_project(
+                data.project_uuid, data.new_name
+            )
         return updated_project
     except Exception as e:
         raise handle_error(e)

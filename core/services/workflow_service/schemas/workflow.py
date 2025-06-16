@@ -5,6 +5,7 @@ from enum import Enum
 from services.workflow_service.schemas.compute_block import (
     ConfigType,
     InputOutputDTO,
+    BaseInputOutputDTO,
     replace_minio_host
 )
 
@@ -33,8 +34,14 @@ class WorfklowValidationError(BaseModel):
 # Workflow Configuration
 class WorkflowEnvsWithBlockInfo(BaseModel):
     block_uuid: UUID
-    block_custom_name: str
+    block_custom_name: str | None = None
     envs: ConfigType
+
+
+class UpdateWorkflowConfigurations(BaseModel):
+    project_name: str | None = None
+    envs: list[WorkflowEnvsWithBlockInfo] | None = None
+    ios: list[BaseInputOutputDTO] | None = None
 
 
 class InputOutputWithBlockInfo(InputOutputDTO):
