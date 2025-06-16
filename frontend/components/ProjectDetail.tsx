@@ -96,10 +96,37 @@ export default function ProjectDetail({
     })
   }
 
+  function handleFileChange(
+    field: "workflow_inputs" | "workflow_outputs" | "workflow_intermediates",
+    _: string,
+    file?: File,
+    identifier?: string
+  ) {
+    setProjectDetailForm((prev) => {
+      return {
+        ...prev,
+        [field]: prev[field].map((item) => {
+          const ioItem = item as InputOutput
+          if (ioItem.id !== identifier) return ioItem
+          console.log(ioItem.id)
+          return {
+            ...ioItem,
+            selected_file: file ?? undefined,
+          }
+        })
+      }
+    })
+  }
+
+  function onSave() {
+    console.log(projectDetailForm)
+  }
+
   // TODO:
-  // Take care of File Changes aswell
+  // Find only the changes (project name, ios, configs)
   // Implement Endpoint for mutation
   // Fix Intermediate UI (Show configs/Uploads/Downloads)
+  // - TODO: In simple mode, when type File, if one config key is unconfigured, the File *Input* must be shown
   // Fix Upload/Download File UI
 
 
@@ -148,7 +175,7 @@ export default function ProjectDetail({
         <div className="flex justify-between gap-3">
           <button
             disabled={!hasChanged}
-            onClick={() => { }}
+            onClick={onSave}
             className={`flex items-center justify-center w-12 h-12 ${hasChanged ? "bg-blue-500 hover:bg-blue-400" : "bg-gray-400"} text-white rounded-full transition-all duration-200 cursor-pointer disabled:cursor-not-allowed`}
           >
             {<Save />}
@@ -201,7 +228,7 @@ export default function ProjectDetail({
                 description="Upload files or configure the required Inputs"
                 config={projectDetailForm.workflow_inputs}
                 updateConfig={(key, value, id) => { handleFieldConfigChange("workflow_inputs", key, value, id) }}
-                updateSelectedFile={() => { }}
+                updateSelectedFile={(name, file, id) => { handleFileChange("workflow_inputs", name, file, id) }}
                 variant={ConfigBoxVariant.SIMPLE}
               />
             </LoadingAndError>
@@ -215,7 +242,7 @@ export default function ProjectDetail({
                 description="Outputs of the workflow, download the workflow outputs here"
                 config={projectDetailForm.workflow_outputs}
                 updateConfig={(key, value, id) => { handleFieldConfigChange("workflow_outputs", key, value, id) }}
-                updateSelectedFile={() => { }}
+                updateSelectedFile={(name, file, id) => { handleFileChange("workflow_outputs", name, file, id) }}
                 variant={ConfigBoxVariant.SIMPLE}
               />
             </LoadingAndError>
@@ -241,10 +268,8 @@ export default function ProjectDetail({
                 description="I/O Configs of Intermediates"
                 config={projectDetailForm.workflow_intermediates}
                 updateConfig={(key, value, id) => { handleFieldConfigChange("workflow_intermediates", key, value, id) }}
-                updateSelectedFile={() => { }}
-                // TODO: In simple mode, when type File, if one config key is unconfigured, the File *Input* must be shown
-                // TODO: In simple mode, show unconfigured Fields for File Outputs aswell
-                variant={ConfigBoxVariant.COMPLEX}
+                updateSelectedFile={(name, file, id) => { handleFileChange("workflow_intermediates", name, file, id) }}
+                variant={ConfigBoxVariant.SIMPLE}
               />
             )}
           </div>

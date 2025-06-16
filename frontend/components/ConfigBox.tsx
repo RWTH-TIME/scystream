@@ -21,7 +21,7 @@ type ConfigBoxProps = {
   headline: string,
   description: string,
   updateConfig: (key: string, newValue: RecordValueType, io_id?: string) => void,
-  updateSelectedFile?: (name: string, file: File | undefined) => void,
+  updateSelectedFile?: (name: string, file?: File, io_id?: string) => void,
   variant?: ConfigBoxVariant,
 };
 
@@ -46,7 +46,7 @@ export default function ConfigBox({
 
   // File must not be specified using the configs, we can also upload them manually
   // This is the reason why this happens on ConfigBox not ConfigEnvsInput level
-  function handleFileChange(name: string, file: File) {
+  function handleFileChange(name: string, file: File, io_id?: string) {
     setSelectedFiles((prevState) => ({
       ...prevState,
       [name]: {
@@ -54,7 +54,7 @@ export default function ConfigBox({
         selectedFile: file
       }
     }))
-    updateSelectedFile!(name, file)
+    updateSelectedFile!(name, file, io_id)
   }
 
   return (
@@ -84,7 +84,7 @@ export default function ConfigBox({
                         label="Choose your file"
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           const file = e.target.files?.[0] || null
-                          if (file) handleFileChange(o.name, file)
+                          if (file) handleFileChange(o.name, file, o.id)
                         }}
                       />
                       {selectedFiles[o.name]?.selectedFile && (
@@ -96,7 +96,7 @@ export default function ConfigBox({
                               delete newState[o.name]
                               return newState
                             })
-                            updateSelectedFile!(o.name, undefined)
+                            updateSelectedFile!(o.name, undefined, o.id)
                             const input = document.getElementById(`file_input_${o.name}`) as HTMLInputElement | null
                             if (input) input.value = ""
                           }}

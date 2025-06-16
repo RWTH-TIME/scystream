@@ -23,7 +23,6 @@ type UpdateProjectDTO = {
 }
 
 function useProjectQuery(project_id: string) {
-  console.log("projid", project_id)
   return useQuery({
     queryKey: [project_id],
     queryFn: async function getProject() {
