@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from enum import Enum
 from typing import Literal
 from pydantic import BaseModel, validator, model_validator
 from urllib.parse import urlparse
@@ -9,11 +10,31 @@ from services.workflow_service.models.input_output import (
     InputOutput,
     InputOutputType
 )
-from services.workflow_service.schemas.workflow import BlockStatus
 from utils.config.environment import ENV
 from utils.config.defaults import get_file_cfg_defaults_dict
 
 ConfigType = dict[str, str | int | float | list | bool | None]
+
+
+class BlockStatus(Enum):
+    SUCCESS = "SUCCESS"
+    RUNNING = "RUNNING"
+    FAILED = "FAILED"
+    SCHEDULED = "SCHEDULED"
+    IDLE = "IDLE"
+
+    @classmethod
+    def from_airflow_state(cls, airflow_state: str | None) -> "BlockStatus":
+        if airflow_state is None:
+            return cls.IDLE
+        state_mapping = {
+            "success": cls.SUCCESS,
+            "running": cls.RUNNING,
+            "failed": cls.FAILED,
+            "scheduled": cls.SCHEDULED,
+        }
+
+        return state_mapping.get(airflow_state.lower(), cls.IDLE)
 
 
 def _validate_url(url: str):
@@ -34,7 +55,7 @@ def _get_io_data_type(type: str) -> str:
     return data_type_map.get(type, DataType.CUSTOM.value)
 
 
-def _replace_minio_host(url: str | None) -> str | None:
+def replace_minio_host(url: str | None) -> str | None:
     if url:
         defaults = get_file_cfg_defaults_dict("placeholder")
         default_minio_url = f"{defaults.get("S3_HOST")}:{
@@ -96,7 +117,7 @@ class InputOutputDTO(BaseIODTO):
             data_type=(input_output.data_type),
             description=input_output.description or "",
             config=input_output.config or {},
-            presigned_url=_replace_minio_host(url=presigned_url)
+            presigned_url=replace_minio_host(url=presigned_url),
         )
 
     @classmethod
@@ -387,7 +408,7 @@ class UpdateInputOutuputResponseDTO(BaseInputOutputDTO):
             type=input_output.type,
             entrypoint_id=input_output.entrypoint_uuid,
             config=input_output.config or {},
-            presigned_url=_replace_minio_host(url=presigned_url)
+            presigned_url=replace_minio_host(url=presigned_url)
         )
 
 

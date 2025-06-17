@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 import logging
 
+from utils.database.session_injector import get_database
 from utils.errors.error import handle_error
 from utils.data.file_handling import bulk_presigned_urls_from_ios
 from services.workflow_service.models.input_output import (
@@ -22,8 +23,8 @@ from services.workflow_service.controllers.compute_block_controller import (
     request_cb_info, create_compute_block, get_compute_blocks_by_project,
     delete_block, create_stream_and_update_target_cfg,
     get_block_dependencies_for_blocks, delete_edge, get_envs_for_entrypoint,
-    get_io_for_entrypoint, update_ios, update_block, bulk_upload_files,
-    get_ios_by_ids,
+    get_io_for_entrypoint, update_block, bulk_upload_files,
+    update_ios_with_uploads
 )
 import services.workflow_service.controllers.workflow_controller as \
     workflow_controller
@@ -51,6 +52,8 @@ async def create(
     data: CreateComputeBlockRequest,
     _: dict = Depends(authenticate_token)
 ):
+    db = next(get_database())
+
     try:
         """
         Upload the files to the default bucket and update the configs
@@ -60,24 +63,26 @@ async def create(
             data.selected_entrypoint.inputs
         )
 
-        cb = create_compute_block(
-            data.name,
-            data.description,
-            data.author,
-            data.image,
-            data.cbc_url,
-            data.custom_name,
-            data.x_pos,
-            data.y_pos,
-            data.selected_entrypoint.name,
-            data.selected_entrypoint.description,
-            data.selected_entrypoint.envs,
-            [input.to_input_output(input, "Input")
-             for input in updated_is],
-            [output.to_input_output(output, "Output")
-             for output in data.selected_entrypoint.outputs],
-            data.project_id
-        )
+        with db.begin():
+            cb = create_compute_block(
+                db,
+                data.name,
+                data.description,
+                data.author,
+                data.image,
+                data.cbc_url,
+                data.custom_name,
+                data.x_pos,
+                data.y_pos,
+                data.selected_entrypoint.name,
+                data.selected_entrypoint.description,
+                data.selected_entrypoint.envs,
+                [input.to_input_output(input, "Input")
+                 for input in updated_is],
+                [output.to_input_output(output, "Output")
+                 for output in data.selected_entrypoint.outputs],
+                data.project_id,
+            )
         return SimpleNodeDTO.from_compute_block(cb)
     except Exception as e:
         logging.error(f"Error creating compute block: {e}")
@@ -170,7 +175,7 @@ async def get_io(
         return [InputOutputDTO.from_input_output(
             io.name,
             io,
-            presigned_urls.get(str(io.uuid), None)) for io in ios
+            presigned_urls.get(io.uuid, None)) for io in ios
         ]
     except Exception as e:
         logging.exception(f"Error getting {
@@ -181,31 +186,18 @@ async def get_io(
 @router.put("/entrypoint/io/",
             response_model=list[UpdateInputOutuputResponseDTO])
 async def update_io(data: list[BaseInputOutputDTO]):
+    db = next(get_database())
+
     try:
-        upload_candidates = [
-            d for d in data if d.selected_file_b64 and d.selected_file_type
-        ]
+        with db.begin():
+            updated = update_ios_with_uploads(data, db)
 
-        if upload_candidates:
-            db_ios = get_ios_by_ids([d.id for d in upload_candidates])
-            db_io_map = {io.uuid: io for io in db_ios}
-
-            # Inject existing configs into upload candidates
-            for dto in upload_candidates:
-                db_io = db_io_map.get(dto.id)
-                if db_io:
-                    dto.config = db_io.config
-
-            bulk_upload_files(upload_candidates)
-
-        # Update Configs that are not upload_candidates
-        updated = update_ios({d.id: d.config for d in data})
         presigneds = bulk_presigned_urls_from_ios(updated)
 
         return [
             UpdateInputOutuputResponseDTO.from_input_output(
                 io,
-                presigneds.get(str(io.uuid))
+                presigneds.get(io.uuid)
             )
             for io in updated
         ]
@@ -237,13 +229,17 @@ async def delete_compute_block(
 def create_io_stream_and_update_io_cfg(
     data: EdgeDTO
 ):
+    db = next(get_database())
+
     try:
-        id = create_stream_and_update_target_cfg(
-            data.source,
-            data.sourceHandle,
-            data.target,
-            data.targetHandle
-        )
+        with db.begin():
+            id = create_stream_and_update_target_cfg(
+                db,
+                data.source,
+                data.sourceHandle,
+                data.target,
+                data.targetHandle
+            )
         return IDResponse(id=id)
     except Exception as e:
         logging.error(f"Error creating an edge and configuring input: {e}")
