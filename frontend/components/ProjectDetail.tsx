@@ -65,6 +65,10 @@ export default function ProjectDetail({
 
   const hasChanged = JSON.stringify(projectDetailForm) !== JSON.stringify(initialProjectDetailForm)
 
+  useEffect(() => {
+    console.log("SELECTED", selectedProject)
+  }, [selectedProject])
+
   function handleFieldConfigChange(
     field: "envs" | "workflow_inputs" | "workflow_outputs" | "workflow_intermediates",
     key: string,
@@ -252,7 +256,7 @@ export default function ProjectDetail({
         </div>
 
         <div className="flex items-center space-x-2">
-          <ProjectStatusIndicator s={selectedProject?.status ?? ProjectStatus.IDLE} />
+          <ProjectStatusIndicator s={selectedProject?.status || ProjectStatus.IDLE} />
         </div>
 
         <div className="flex justify-between gap-3">

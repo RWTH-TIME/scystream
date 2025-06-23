@@ -9,7 +9,7 @@ import Button, { ButtonSentiment } from "./Button"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useGraphData } from "./Workbench"
 import { useState } from "react"
-import FileInput from "./inputs/FileInput"
+import FileUploadModal from "./ConfigureFileModal"
 
 export enum ConfigBoxVariant {
   COMPLEX = 0,
@@ -24,44 +24,6 @@ type ConfigBoxProps = {
   updateSelectedFile?: (name: string, file?: File, io_id?: string) => void,
   variant?: ConfigBoxVariant,
 };
-
-function FileInputControl({
-  io,
-  selectedFile,
-  onFileChange,
-  onFileRemove,
-  disabled,
-}: {
-  io: InputOutput,
-  selectedFile?: File,
-  onFileChange: (name: string, file: File, io_id?: string) => void,
-  onFileRemove: (name: string, io_id?: string) => void,
-  disabled: boolean,
-}) {
-  if (disabled) return null
-
-  return (
-    <div className="flex items-center space-x-2">
-      <FileInput
-        id={`file_input_${io.name}`}
-        label="Choose your file"
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-          const file = e.target.files?.[0] || null
-          if (file) onFileChange(io.name, file, io.id)
-        }}
-      />
-      {selectedFile && (
-        <button
-          type="button"
-          onClick={() => onFileRemove(io.name, io.id)}
-          className="text-xs text-red-600 hover:underline"
-        >
-          Remove
-        </button>
-      )}
-    </div>
-  )
-}
 
 function ConfigInputsSection({
   io,
@@ -106,6 +68,12 @@ export default function ConfigBox({
 
   const { selectedProject } = useSelectedProject()
   const { edges } = useGraphData(selectedProject!.uuid)
+  const [modalIO, setModalIO] = useState<InputOutput | null>(null)
+
+  function setModalOpenFor(io: InputOutput) {
+    setModalIO(io)
+  }
+
 
   function isInputConnected(id: string) {
     return edges.some(edge => edge.targetHandle === id)
@@ -117,17 +85,6 @@ export default function ConfigBox({
       [name]: { selectedFile: file },
     }))
     updateSelectedFile?.(name, file, io_id)
-  }
-
-  function handleFileRemove(name: string, io_id?: string) {
-    setSelectedFiles(prev => {
-      const newState = { ...prev }
-      delete newState[name]
-      return newState
-    })
-    updateSelectedFile?.(name, undefined, io_id)
-    const input = document.getElementById(`file_input_${name}`) as HTMLInputElement | null
-    if (input) input.value = ""
   }
 
   if (!Array.isArray(config)) {
@@ -147,6 +104,17 @@ export default function ConfigBox({
 
   return (
     <div className="p-4 border rounded relative">
+      {modalIO && (
+        <FileUploadModal
+          isOpen={!!modalIO}
+          onClose={() => setModalIO(null)}
+          io={modalIO}
+          existingFile={selectedFiles[modalIO.name]?.selectedFile}
+          onConfirm={(file) => {
+            handleFileChange(modalIO.name, file!, modalIO.id)
+          }}
+        />
+      )}
       <h3 className="text-lg font-semibold">{headline}</h3>
       <p className="text-gray-700 mb-4">{description}</p>
 
@@ -181,22 +149,21 @@ export default function ConfigBox({
                 </h3>
                 <p className="text-gray-700">{io.description}</p>
               </div>
-              <div className="flex flex-col space-y-2 items-end">
+              <div className="flex flex-row items-end space-x-2">
                 {showFileInput && (
-                  <FileInputControl
-                    io={io}
-                    selectedFile={selectedFiles[io.name]?.selectedFile}
-                    onFileChange={handleFileChange}
-                    onFileRemove={handleFileRemove}
-                    disabled={false}
-                  />
+                  <Button
+                    onClick={() => setModalOpenFor(io)}
+                    sentiment={ButtonSentiment.NEUTRAL}
+                  >
+                    Configure File
+                  </Button>
                 )}
                 {io.presigned_url && (
                   <Button
                     onClick={() => window.open(io.presigned_url, "_blank")}
                     sentiment={ButtonSentiment.POSITIVE}
                   >
-                    Download
+                    Download Current
                   </Button>
                 )}
               </div>

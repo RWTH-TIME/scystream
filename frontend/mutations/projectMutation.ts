@@ -22,14 +22,15 @@ type UpdateProjectDTO = {
   new_name: string,
 }
 
-function useProjectQuery(project_id: string) {
+function useProjectQuery(project_id: string, enabled: boolean) {
   return useQuery({
     queryKey: [project_id],
     queryFn: async function getProject() {
       const response = await api.get(GET_PROJECT_ENDPOINT + project_id)
       return response.data as Project
     },
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    enabled
   })
 }
 

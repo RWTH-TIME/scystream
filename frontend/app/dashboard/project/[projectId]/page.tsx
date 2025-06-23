@@ -9,7 +9,7 @@ import ProjectDetail from "@/components/ProjectDetail"
 import { useDeleteProjectMutation, useProjectQuery } from "@/mutations/projectMutation"
 import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useAlert } from "@/hooks/useAlert"
-import { useTriggerWorkflowMutation } from "@/mutations/workflowMutations"
+import { useProjectStatusWS, useTriggerWorkflowMutation } from "@/mutations/workflowMutations"
 import { ReactFlowProvider } from "@xyflow/react"
 import { Workbench } from "@/components/Workbench"
 import { useRouter } from "next/navigation"
@@ -34,11 +34,12 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   const router = useRouter()
 
   const { selectedProject, setSelectedProject } = useSelectedProject()
-  const { data: project, isLoading: projectLoading, isError: projectError } = useProjectQuery(projectId)
+  const { data: project, isLoading: projectLoading, isError: projectError } = useProjectQuery(projectId, !selectedProject)
 
   const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
   const { mutateAsync: triggerWorkflow, isPending: triggerLoading } = useTriggerWorkflowMutation(setAlert)
-  // TODO: Status Websocket
+
+  useProjectStatusWS(setAlert)
 
   function deleteProject(project_id: string) {
     router.push("/dashboard")

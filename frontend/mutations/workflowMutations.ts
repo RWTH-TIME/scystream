@@ -135,6 +135,13 @@ export function useProjectStatusWS(setAlert: SetAlertType) {
 
         return updatedProjects
       })
+      // Update each affected individual project
+      Object.entries(data).forEach(([uuid, newStatus]) => {
+        queryClient.setQueryData([uuid], (old: Project | undefined) => {
+          if (!old) return
+          return { ...old, status: newStatus ?? old.status }
+        })
+      })
     }
 
     function handleWebsocketError() {
