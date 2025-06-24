@@ -28,6 +28,8 @@ async def lifespan(_: FastAPI):
     except OperationalError:
         logging.exception("Connection to database failed.")
         raise RuntimeError("Shutdown, database connection failed.")
+    finally:
+        yield
 
 
 origins = ["*" if ENV.DEVELOPMENT else ENV.EXTERNAL_URL]

@@ -396,11 +396,14 @@ services:
       KC_HEALTH_ENABLED: true
       KEYCLOAK_ADMIN: "admin"
       KEYCLOAK_ADMIN_PASSWORD: "admin"
-    command: start-dev
+    command: start-dev --import-realm
     depends_on:
       - keycloak-postgres
     ports:
       - "8090:8080"
+    volumes:
+      - ./.keycloak-config:/opt/keycloak/data/import:ro
+
 
 volumes:
   postgres-airflow-volume:
