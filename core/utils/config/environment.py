@@ -44,9 +44,16 @@ class Settings(BaseSettings):
     AIRFLOW_PASS: str = "airflow"
     AIRFLOW_DAG_DIR: str = "../airflow-dags"
 
+    KEYCLOAK_SERVER_URL: str = "http://keycloak"
+    KEYCLOAK_REALM: str = "scystream"
+    KEYCLOAK_CLIENT_ID: str = "scystream-core"
+    KEYCLOAK_CLIENT_SECRET: str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
     model_config = SettingsConfigDict(
-        env_file_encoding="utf-8", case_sensitive=True
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
     )
 
 
-ENV = Settings(_env_file=".env", _env_file_encoding="utf-8")
+ENV = Settings()
