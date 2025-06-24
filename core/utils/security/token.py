@@ -1,6 +1,6 @@
 from uuid import UUID as UUID4
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from keycloak import KeycloakOpenID
 from keycloak.exceptions import KeycloakAuthenticationError, KeycloakPostError
@@ -50,6 +50,17 @@ def verify(token: str) -> User:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
         )
+
+
+def get_user_from_token(
+    token: str = Query(...),
+) -> User:
+    user_info = verify(token)
+
+    if not user_info.email_verified:
+        raise HTTPException(403, detail="Verify email first")
+
+    return user_info
 
 
 def get_user(

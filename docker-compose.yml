@@ -266,7 +266,7 @@ services:
   
   # The postgres we offer the compute blocks to save data at
   data-postgres:
-    image: postgres:17
+    image: postgres
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -402,7 +402,7 @@ services:
     ports:
       - "8090:8080"
     volumes:
-      - ./.keycloak-config:/opt/keycloak/data/import:ro
+      - ./.keycloak-config:/opt/keycloak/data/import
 
 
 volumes:

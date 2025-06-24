@@ -1,99 +1,94 @@
-"use client"
+import type { ComponentType, PropsWithChildren } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
+import { login, logout, restoreSession, renewToken, onTokenExpiringCallback, removeUser } from "@/api/auth/authService"
+import type { User } from "oidc-client-ts"
+import { REDIRECT_URI } from "@/api/config"
 
-import { useState, useEffect } from "react"
-import { z } from "zod"
-import { useRouter } from "next/navigation"
-import { getConfig } from "@/utils/config"
-import { useRefreshMutation } from "@/mutations/userMutation"
-
-const TokenPayloadSchema = z.object({
-  uuid: z.string().uuid(),
-  email: z.string().email(),
-  iat: z.number(),
-  exp: z.number()
-}).transform((obj) => ({
-  uuid: obj.uuid,
-  email: obj.email,
-  iat: obj.iat,
-  exp: obj.exp
-}))
-
-type tokenSchema = z.output<typeof TokenPayloadSchema>
-
-export type User = {
-  uuid: string,
-  email: string,
+type AuthContextType = {
+  identity: User,
+  token: string,
+  logout: () => void,
 }
 
-function parseJWTPayload(token: string): JSON {
-  const payloadBase64 = token.split(".")[1] as string
-  const decodedPayload = Buffer.from(payloadBase64, "base64").toString()
-  return JSON.parse(decodedPayload)
-}
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-function tokenToPayload(token: string): tokenSchema | null {
-  const decoded = parseJWTPayload(token)
-  const parsed = TokenPayloadSchema.safeParse(decoded)
+export const AuthProvider = ({ children }: PropsWithChildren) => {
+  const [identity, setIdentity] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  return parsed.success ? parsed.data : null
-}
+  const forceLogin = async () => {
+    await removeUser()
+    await login(`${REDIRECT_URI}?redirect_uri=${encodeURIComponent(window.location.href)}`)
+  }
 
-function isJWTExpired(exp: number): boolean {
-  return (Date.now() / 1000 >= exp)
-}
-
-/*
-  This hook handles the authentication,
-  it will validate the token, wherever it is used.
-  It supplies the signOut utility.
-*/
-export default function useAuth() {
-  const [user, setUser] = useState<User | undefined>(undefined)
-  const [loading, setLoading] = useState<boolean>(true)
-  const { mutateAsync } = useRefreshMutation()
-  const config = getConfig()
-  const router = useRouter()
-
-  function signOut() {
-    localStorage.removeItem(config.accessTokenKey)
-    localStorage.removeItem(config.refreshTokenKey)
-    window.location.reload()
+  const handleLogout = async () => {
+    await logout()
   }
 
   useEffect(() => {
-    async function checkToken() {
+    const initAuth = async () => {
       try {
-        const token = localStorage.getItem(config.accessTokenKey)
-        const refreshToken = localStorage.getItem(config.refreshTokenKey)
-
-        if (!token) throw new Error("No token set.")
-
-        const tokenPayload = tokenToPayload(token)
-        if (!tokenPayload) throw new Error("Payload not set.")
-
-        if (isJWTExpired(tokenPayload.exp)) {
-          if (!refreshToken) throw new Error("No refresh token availible.")
-
-          const res = await mutateAsync({ refresh_token: refreshToken, old_access_token: token })
-          if (!res) throw new Error("Refreshing token failed.")
+        const user = await restoreSession()
+        if (!user) {
+          throw new Error("No user session")
         }
 
-        setUser({
-          uuid: tokenPayload.uuid,
-          email: tokenPayload.email
+        setIdentity(user)
+        onTokenExpiringCallback(async () => {
+          console.log("Token expiring. Attempting silent renewal...")
+          const refreshed = await renewToken()
+          if (refreshed) {
+            setIdentity(refreshed)
+          } else {
+            await forceLogin()
+          }
         })
+      } catch {
+        console.warn("Session restore failed, logging in.")
+        await forceLogin()
+      } finally {
         setLoading(false)
-      } catch (error) {
-        console.error(error)
-        setUser(undefined)
-        localStorage.removeItem(config.accessTokenKey)
-        localStorage.removeItem(config.refreshTokenKey)
-
-        router.push("/") // make the redirect automatic
       }
     }
-    checkToken()
-  }, [config.accessTokenKey, router, mutateAsync, config.refreshTokenKey])
 
-  return { user, loading, signOut }
+    initAuth()
+  }, [])
+
+  if (loading) return null
+
+  if (!identity) return null
+
+  return (
+    <AuthContext.Provider
+      value={{
+        identity,
+        token: identity.access_token,
+        logout: handleLogout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+
+export const withAuth = <P extends object>(Component: ComponentType<P>) => {
+  const WrappedComponent = (props: P) => (
+    <AuthProvider>
+      <Component {...props} />
+    </AuthProvider>
+  )
+  WrappedComponent.displayName = `withAuth(${Component.displayName || Component.name || "Component"})`
+
+  return WrappedComponent
+}
+
+
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+
+  return { ...context }
 }

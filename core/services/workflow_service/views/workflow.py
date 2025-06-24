@@ -12,7 +12,7 @@ from fastapi import (
 from services.workflow_service.controllers import workflow_controller
 from services.workflow_service.schemas.workflow import WorkflowStatus
 from utils.errors.error import handle_error
-from utils.security.token import User, get_user
+from utils.security.token import User, get_user, get_user_from_token
 
 router = APIRouter(prefix="/workflow", tags=["workflow"])
 
@@ -59,7 +59,7 @@ def pause_dag(
 @router.websocket("/ws/project_status")
 async def ws_project_status(
     websocket: WebSocket,
-    _: User = Depends(get_user),
+    _: User = Depends(get_user_from_token),
 ):
     """Returns the DAG statuses"""
     await websocket.accept()
@@ -92,7 +92,7 @@ async def ws_project_status(
 async def ws_workflow_status(
     websocket: WebSocket,
     project_id: UUID,
-    _: User = Depends(get_user),
+    _: User = Depends(get_user_from_token),
 ):
     """Returns the status of the blocks within a workflow"""
     await websocket.accept()
