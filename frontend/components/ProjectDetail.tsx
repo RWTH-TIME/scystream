@@ -11,7 +11,7 @@ import LoadingAndError from "./LoadingAndError"
 import { encodeFileToBase64, type InputOutput, type RecordValueType } from "./CreateComputeBlockModal"
 import ConfigEnvsInputs from "./inputs/ConfigEnvsInputs"
 import { Save } from "@mui/icons-material"
-import { useAlert } from "@/hooks/useAlert"
+import { AlertType, useAlert } from "@/hooks/useAlert"
 import { CircularProgress } from "@mui/material"
 
 type ProjectDetailProps = {
@@ -65,9 +65,14 @@ export default function ProjectDetail({
 
   const hasChanged = JSON.stringify(projectDetailForm) !== JSON.stringify(initialProjectDetailForm)
 
-  useEffect(() => {
-    console.log("SELECTED", selectedProject)
-  }, [selectedProject])
+  const envHasUnsavedChanges = (block_uuid: string) => {
+    return modifiedEnvKeys.has(block_uuid)
+  }
+
+  const ioHasUnsavedChanges = (id: string) => {
+    return modifiedIOKeys.has(id) || changedIOFiles.has(id)
+  }
+
 
   function handleFieldConfigChange(
     field: "envs" | "workflow_inputs" | "workflow_outputs" | "workflow_intermediates",
@@ -213,7 +218,20 @@ export default function ProjectDetail({
 
   async function onSave() {
     const payload = await getChangedPayload()
-    mutateAsync(payload)
+    try {
+      await mutateAsync(payload)
+
+      setModifiedEnvKeys(new Map())
+      setModifiedIOKeys(new Map())
+      setChangedIOFiles(new Set())
+
+      setInitialProjectDetailForm(projectDetailForm)
+
+      setAlert("Workflow configurations saved.", AlertType.SUCCESS)
+    } catch (error) {
+      console.error("Saving workflow configurations failed:", error)
+      // Errors are already handled in `onError`
+    }
   }
 
 
@@ -289,6 +307,11 @@ export default function ProjectDetail({
               >
                 <p className="text-md font-semibold">
                   Block: <span className="font-semibold">{item.block_custom_name}</span>
+                  {envHasUnsavedChanges(item.block_uuid) && (
+                    <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300">
+                      Unsaved
+                    </span>
+                  )}
                 </p>
                 <ConfigEnvsInputs
                   pairs={item.envs}
@@ -317,6 +340,7 @@ export default function ProjectDetail({
                 updateConfig={(key, value, id) => { handleFieldConfigChange("workflow_inputs", key, value, id) }}
                 updateSelectedFile={(name, file, id) => { handleFileChange("workflow_inputs", name, file, id) }}
                 variant={ConfigBoxVariant.SIMPLE}
+                hasIOChanged={ioHasUnsavedChanges}
               />
             </LoadingAndError>
           </div>
@@ -331,6 +355,7 @@ export default function ProjectDetail({
                 updateConfig={(key, value, id) => { handleFieldConfigChange("workflow_outputs", key, value, id) }}
                 updateSelectedFile={(name, file, id) => { handleFileChange("workflow_outputs", name, file, id) }}
                 variant={ConfigBoxVariant.SIMPLE}
+                hasIOChanged={ioHasUnsavedChanges}
               />
             </LoadingAndError>
           </div>

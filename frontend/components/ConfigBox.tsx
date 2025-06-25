@@ -23,6 +23,7 @@ type ConfigBoxProps = {
   updateConfig: (key: string, newValue: RecordValueType, io_id?: string) => void,
   updateSelectedFile?: (name: string, file?: File, io_id?: string) => void,
   variant?: ConfigBoxVariant,
+  hasIOChanged?: (id: string) => boolean,
 };
 
 function ConfigInputsSection({
@@ -62,7 +63,8 @@ export default function ConfigBox({
   description,
   updateConfig,
   updateSelectedFile,
-  variant = ConfigBoxVariant.COMPLEX
+  variant = ConfigBoxVariant.COMPLEX,
+  hasIOChanged,
 }: ConfigBoxProps) {
   const [selectedFiles, setSelectedFiles] = useState<{ [key: string]: { selectedFile: File } }>({})
 
@@ -120,6 +122,8 @@ export default function ConfigBox({
 
       {config.map(io => {
         const connected = isInputConnected(io.id!)
+        const hasChanges = !!hasIOChanged?.(io.id!)
+
         // File & DB Inputs are disabled if they are connected (we can do autoconfigure)
         const disableInputs =
           (io.data_type === InputOutputType.FILE || io.data_type === InputOutputType.DB) &&
@@ -138,7 +142,6 @@ export default function ConfigBox({
             <div className="flex items-start justify-between mb-2">
               <div>
                 <h3 className="text-md font-semibold flex items-center gap-1">
-                  { /* Show the Block name if Variant is Simple */}
                   {variant === ConfigBoxVariant.SIMPLE && (
                     <>
                       <span className="text-gray-600">{io.block_custom_name}</span>
@@ -146,6 +149,11 @@ export default function ConfigBox({
                     </>
                   )}
                   <span>{io.name}</span>
+                  {hasChanges && (
+                    <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300">
+                      Unsaved
+                    </span>
+                  )}
                 </h3>
                 <p className="text-gray-700">{io.description}</p>
               </div>

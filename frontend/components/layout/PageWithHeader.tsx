@@ -8,7 +8,7 @@ export default function PageWithHeader({ children, breadcrumbs }: PropsWithChild
   return (
     <div className="flex flex-col h-screen w-screen">
       <TopBar breadcrumbs={breadcrumbs} />
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1">
         {children}
       </div>
     </div>

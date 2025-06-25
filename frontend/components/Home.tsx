@@ -16,7 +16,7 @@ export default function Home() {
   const { mutate: createProjectMutate, isPending: createLoading } = useCreateProjectFromTemplateMutation(setAlert)
 
   return (
-    <div className="flex flex-col h-full  p-6 overflow-hidden">
+    <div className="flex flex-col h-full p-6 overflow-hidden">
       <CreateProjectModal
         isOpen={createProjectOpen}
         onClose={() => {
