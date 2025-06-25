@@ -102,13 +102,14 @@ def update_workflow_configurations(
                 )
 
             if data.envs:
-                updated_blocks = compute_block_controller.bulk_update_block_envs(
-                    db=db,
-                    updates=[compute_block_controller.BulkBlockEnvsUpdate(
-                        block_id=envdto.block_uuid,
-                        envs=envdto.envs
-                    ) for envdto in data.envs]
-                )
+                updated_blocks = compute_block_controller.\
+                    bulk_update_block_envs(
+                        db=db,
+                        updates=[compute_block_controller.BulkBlockEnvsUpdate(
+                            block_id=envdto.block_uuid,
+                            envs=envdto.envs
+                        ) for envdto in data.envs]
+                    )
                 logging.info(updated_blocks)
 
             if data.ios:
