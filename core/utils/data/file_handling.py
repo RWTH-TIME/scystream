@@ -13,7 +13,7 @@ from botocore.exceptions import (
     NoCredentialsError,
     BotoCoreError
 )
-from botocore.client import BaseClient
+from botocore.client import BaseClient, ClientError
 
 
 def get_s3_client(
@@ -40,30 +40,23 @@ def get_s3_client(
     return None
 
 
-def find_file_with_prefix(
+def find_file(
     client,
     bucket_name: str,
     file_path: str,
-    file_prefix: str
+    file_name: str,
+    file_ext: str,
 ) -> str | None:
+    object_key = f"{file_path.strip('/')}/{file_name}.{file_ext}"
+
     try:
-        response = client.list_objects_v2(
-            Bucket=bucket_name, Prefix=file_path.strip("/"))
-
-        if "Contents" not in response:
-            return None
-
-        for obj in response["Contents"]:
-            filename = obj["Key"]
-
-            if file_prefix in filename:
-                # File_Prefix contains a uuid and is therefore unique
-                return filename
-
-        return None
-    except Exception as e:
-        logging.error(f"Error finding file with prefix {
-                      file_prefix} on S3: {e}")
+        client.head_object(Bucket=bucket_name, Key=object_key)
+        return object_key  # File exists
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "404":
+            return None  # File does not exist
+        logging.error(f"Error checking file existence on S3 for {
+                      object_key}: {e}")
         return None
 
 
@@ -114,6 +107,7 @@ REQUIRED_CONFIG_KEYS = {
     "S3_ACCESS_KEY",
     "S3_SECRET_KEY",
     "BUCKET_NAME",
+    "FILE_EXT"
 }
 
 
@@ -148,10 +142,11 @@ def bulk_presigned_urls_from_ios(ios: list[InputOutput]) -> dict[UUID, str]:
             config["S3_ACCESS_KEY"],
             config["S3_SECRET_KEY"],
             config["BUCKET_NAME"],
+            config["FILE_EXT"]
         )
         io_groups[group_key].append((io, config))
 
-    for (host, port, access, secret, bucket), group in io_groups.items():
+    for (host, port, access, secret, bucket, ext), group in io_groups.items():
         s3_url = get_minio_url(host, port)
         client = get_s3_client(s3_url, access, secret)
         if not client:
@@ -159,11 +154,12 @@ def bulk_presigned_urls_from_ios(ios: list[InputOutput]) -> dict[UUID, str]:
             continue
 
         for io, cfg in group:
-            full_file_path = find_file_with_prefix(
+            full_file_path = find_file(
                 client,
                 bucket_name=cfg["BUCKET_NAME"],
                 file_path=cfg["FILE_PATH"],
-                file_prefix=cfg["FILE_NAME"]
+                file_name=cfg["FILE_NAME"],
+                file_ext=cfg["FILE_EXT"]
             )
             if not full_file_path:
                 logging.warning(f"No file found for IO {io.uuid}")

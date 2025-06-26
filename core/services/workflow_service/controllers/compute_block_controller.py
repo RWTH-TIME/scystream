@@ -138,10 +138,9 @@ def _upload_file_to_bucket(
     file_b64: str,
     file_ext: str
 ):
-    ext = file_ext.lstrip(".")
     file_uuid = uuid4()
-    configs = get_file_cfg_defaults_dict(file_uuid, ext)
-    target_file_name = configs["FILE_NAME"]
+    configs = get_file_cfg_defaults_dict(file_uuid)
+    target_file_name = f"{configs["FILE_NAME"]}.{file_ext}"
 
     s3_url = fh.get_minio_url(
         configs["S3_HOST"], configs["S3_PORT"])
@@ -158,6 +157,9 @@ def _upload_file_to_bucket(
         Key=target_file_name,
         Body=file_bytes
     )
+
+    # Add uploaded file ext to config
+    configs["FILE_EXT"] = file_ext.lstrip(".")
 
     return configs
 
@@ -444,8 +446,6 @@ def update_ios_with_uploads(
     upload_candidates = [
         d for d in data if d.selected_file_b64 and d.selected_file_type
     ]
-
-    print("UPLOAD CANDID", upload_candidates)
 
     if upload_candidates:
         db_ios = get_ios_by_ids(
