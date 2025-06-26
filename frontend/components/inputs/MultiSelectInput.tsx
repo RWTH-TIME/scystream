@@ -7,6 +7,7 @@ interface MultiSelectInputProps<T extends string | number | boolean> {
   onChange: (values: T[]) => void,
   getValue: (option: string | T) => string,
   placeholder?: string,
+  disabled?: boolean,
 }
 
 export default function MultiSelectInput<T extends string | number | boolean>({
@@ -14,6 +15,7 @@ export default function MultiSelectInput<T extends string | number | boolean>({
   selectedValues,
   onChange,
   getValue,
+  disabled = false
 }: MultiSelectInputProps<T>) {
   const [inputValue, setInputValue] = useState("")
 
@@ -48,6 +50,7 @@ export default function MultiSelectInput<T extends string | number | boolean>({
     <Autocomplete
       multiple
       freeSolo
+      disabled={disabled}
       options={options}
       getOptionLabel={getValue}
       value={selectedValues}
