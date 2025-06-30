@@ -1,7 +1,7 @@
-uvicorn==0.34.3
-fastapi==0.115.13
+uvicorn==0.35.0
+fastapi==0.115.14
 pydantic==2.11.7
-pydantic-settings==2.10.0
+pydantic-settings==2.10.1
 SQLAlchemy==2.0.41
 psycopg2-binary==2.9.10
 alembic==1.16.2
@@ -11,7 +11,7 @@ requests==2.32.4
 apache-airflow-client==2.10.0
 networkx==3.5
 Jinja2==3.1.6
-scystream-sdk==1.2.0
+scystream-sdk==1.2.1
 websockets==15.0.1
-boto3==1.38.41
+boto3==1.39.0
 GitPython==3.1.44
