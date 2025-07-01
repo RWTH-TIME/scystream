@@ -4,10 +4,10 @@ const schema = z.object({
   NODE_ENV: z.literal("production").or(z.literal("development")).default("production"),
   NEXT_PUBLIC_API_URL: z.string().url().default("http://localhost:4000/"),
   NEXT_PUBLIC_WS_URL: z.string().url().default("ws://localhost:4000/"),
-  NEXT_PUBLIC_OIDC_PROVIDER: z.string().url(),
-  NEXT_PUBLIC_CLIENT_ID: z.string(),
-  NEXT_PUBLIC_REDIRECT_URI: z.string().url(),
-  NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI: z.string().url()
+  NEXT_PUBLIC_OIDC_PROVIDER: z.string().url().default("http://keycloak"),
+  NEXT_PUBLIC_CLIENT_ID: z.string().default("scystream-frontend"),
+  NEXT_PUBLIC_REDIRECT_URI: z.string().url().default("http://localhost:3000"),
+  NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI: z.string().url().default("http://localhost:3000")
 })
 
 const parsed = schema.safeParse({
@@ -43,4 +43,3 @@ export const CONFIG = {
   REDIRECT_URI,
   POST_LOGOUT_REDIRECT_URI
 }
-
