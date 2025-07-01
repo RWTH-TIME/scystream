@@ -1,4 +1,5 @@
-import { CLIENT_ID, OIDC_PROVIDER, POST_LOGOUT_REDIRECT_URI, REDIRECT_URI } from "@/api/config"
+import { CLIENT_ID, OIDC_PROVIDER, POST_LOGOUT_REDIRECT_URI, REDIRECT_URI } from "@/utils/config"
+
 import type { User } from "oidc-client-ts"
 import { UserManager } from "oidc-client-ts"
 
@@ -49,7 +50,7 @@ export const storeToken = (token: string) => {
   const parsed = parseJwt(token)
   if (!parsed || !parsed.exp) return
 
-  const expiry = parsed.exp * 1000 // convert to ms
+  const expiry = parsed.exp * 1000
   const value = JSON.stringify({ token, expiry })
   localStorage.setItem("token", value)
 }

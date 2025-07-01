@@ -1,8 +1,8 @@
 import type { ComponentType, PropsWithChildren } from "react"
 import { createContext, useContext, useEffect, useState } from "react"
-import { login, logout, restoreSession, renewToken, onTokenExpiringCallback, removeUser } from "@/api/auth/authService"
+import { login, logout, restoreSession, renewToken, onTokenExpiringCallback, removeUser } from "@/utils/auth/authService"
 import type { User } from "oidc-client-ts"
-import { REDIRECT_URI } from "@/api/config"
+import { REDIRECT_URI } from "@/utils/config"
 
 type AuthContextType = {
   identity: User,

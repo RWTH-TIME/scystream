@@ -1,4 +1,4 @@
-import { getToken } from "@/api/auth/authService"
+import { getToken } from "@/utils/auth/authService"
 
 type Listener<T> = (data: T) => void
 type ErrorHandler = () => void

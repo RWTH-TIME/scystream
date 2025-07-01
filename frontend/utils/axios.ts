@@ -1,11 +1,10 @@
 import axios from "axios"
-import { getConfig } from "./config"
-import { getToken } from "@/api/auth/authService"
+import { API_URL } from "@/utils/config"
+import { getToken } from "@/utils/auth/authService"
 
-const config = getConfig()
 
 const api = axios.create({
-  baseURL: config.apiUrl,
+  baseURL: API_URL,
 })
 
 api.defaults.headers.common["Content-Type"] = "application/json"
@@ -29,11 +28,8 @@ api.interceptors.response.use(function(response) {
   return response
 }, async function(error) {
   // Status code outside range of 2xx
-  if (error.response.status === 401 && error.config.url !== "user/login") {
+  if (error.response.status === 401) {
     console.error(`Error refreshing token: ${error}.`)
-
-    localStorage.removeItem(config.accessTokenKey)
-    localStorage.removeItem(config.refreshTokenKey)
 
     return Promise.reject(error)
   }

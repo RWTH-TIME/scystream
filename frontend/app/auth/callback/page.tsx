@@ -2,7 +2,7 @@
 
 import type { NextPage } from "next"
 import { Suspense, useEffect } from "react"
-import { handleCallback } from "@/api/auth/authService"
+import { handleCallback } from "@/utils/auth/authService"
 import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
 
@@ -13,7 +13,6 @@ const AuthCallback: NextPage = () => {
 
   useEffect(() => {
     const checkAuthCallback = async () => {
-      // Check if the URL contains OIDC callback params
       if (searchParams.get("code") && searchParams.get("state")) {
         console.log("Processing OIDC callback...")
         try {

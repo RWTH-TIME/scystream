@@ -2,7 +2,7 @@ import type { BreadCrumbsProps } from "./BreadCrumbs"
 import BreadCrumbs from "./BreadCrumbs"
 
 import { useEffect, useState } from "react"
-import { getUser, logout } from "@/api/auth/authService"
+import { getUser, logout } from "@/utils/auth/authService"
 
 export type TopBarProps = Partial<BreadCrumbsProps>
 
