@@ -11,12 +11,12 @@
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
-    "@emotion/styled": "11.14.0",
+    "@emotion/styled": "11.14.1",
     "@mui/icons-material": "6.4.12",
     "@mui/material": "6.4.12",
-    "@tailwindcss/postcss": "4.1.10",
-    "@tanstack/react-query": "5.81.2",
-    "@xyflow/react": "12.7.0",
+    "@tailwindcss/postcss": "4.1.11",
+    "@tanstack/react-query": "5.81.5",
+    "@xyflow/react": "12.8.1",
     "axios": "1.10.0",
     "next": "15.3.4",
     "oidc-client-ts": "^3.3.0",
@@ -28,15 +28,15 @@
   "devDependencies": {
     "@helpwave/eslint-config": "1.29.0",
     "@stylistic/eslint-plugin": "3.1.0",
-    "@types/node": "22.15.32",
+    "@types/node": "22.15.34",
     "@types/react": "19.1.8",
     "@types/react-dom": "19.1.6",
     "@types/uuid": "10.0.0",
-    "eslint": "9.29.0",
+    "eslint": "9.30.0",
     "eslint-config-next": "15.3.4",
     "postcss": "8.5.6",
-    "tailwindcss": "4.1.10",
+    "tailwindcss": "4.1.11",
     "typescript": "5.8.3",
-    "typescript-eslint": "8.34.1"
+    "typescript-eslint": "8.35.0"
   }
 }
