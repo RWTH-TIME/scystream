@@ -1,32 +1,42 @@
-from fastapi import APIRouter, Depends, HTTPException
-from uuid import UUID
 import logging
+from uuid import UUID
 
-from utils.errors.error import handle_error
-from utils.data.file_handling import bulk_presigned_urls_from_ios
-from services.workflow_service.models.input_output import (
-    InputOutputType
-)
-from services.workflow_service.schemas.compute_block import (
-    ComputeBlockInformationRequest, ComputeBlockInformationResponse,
-    CreateComputeBlockRequest, IDResponse,
-    GetNodesByProjectResponse,
-    EdgeDTO, SimpleNodeDTO, InputOutputDTO, BaseInputOutputDTO,
-    UpdateInputOutuputResponseDTO, UpdateComputeBlockDTO, ConfigType,
-    BlockStatus
-)
-from services.user_service.middleware.authenticate_token import (
-    authenticate_token,
-)
+from fastapi import APIRouter, Depends, HTTPException
+from services.workflow_service.controllers import workflow_controller
 from services.workflow_service.controllers.compute_block_controller import (
-    request_cb_info, create_compute_block, get_compute_blocks_by_project,
-    delete_block, create_stream_and_update_target_cfg,
-    get_block_dependencies_for_blocks, delete_edge, get_envs_for_entrypoint,
-    get_io_for_entrypoint, update_ios, update_block, bulk_upload_files,
+    bulk_upload_files,
+    create_compute_block,
+    create_stream_and_update_target_cfg,
+    delete_block,
+    delete_edge,
+    get_block_dependencies_for_blocks,
+    get_compute_blocks_by_project,
+    get_envs_for_entrypoint,
+    get_io_for_entrypoint,
     get_ios_by_ids,
+    request_cb_info,
+    update_block,
+    update_ios,
 )
-import services.workflow_service.controllers.workflow_controller as \
-    workflow_controller
+from services.workflow_service.models.input_output import InputOutputType
+from services.workflow_service.schemas.compute_block import (
+    BaseInputOutputDTO,
+    BlockStatus,
+    ComputeBlockInformationRequest,
+    ComputeBlockInformationResponse,
+    ConfigType,
+    CreateComputeBlockRequest,
+    EdgeDTO,
+    GetNodesByProjectResponse,
+    IDResponse,
+    InputOutputDTO,
+    SimpleNodeDTO,
+    UpdateComputeBlockDTO,
+    UpdateInputOutuputResponseDTO,
+)
+from utils.data.file_handling import bulk_presigned_urls_from_ios
+from utils.errors.error import handle_error
+from utils.security.token import User, get_user
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
 
@@ -34,7 +44,7 @@ router = APIRouter(prefix="/compute_block", tags=["compute_block"])
 @router.post("/information", response_model=ComputeBlockInformationResponse)
 async def cb_information(
     data: ComputeBlockInformationRequest,
-    _: dict = Depends(authenticate_token)
+    _: User = Depends(get_user),
 ):
     try:
         cb = request_cb_info(
@@ -42,14 +52,14 @@ async def cb_information(
         )
         return ComputeBlockInformationResponse.from_sdk_compute_block(cb)
     except Exception as e:
-        logging.error(f"Error getting compute block information: {e}")
+        logging.exception(f"Error getting compute block information: {e}")
         raise handle_error(e)
 
 
 @router.post("/", response_model=SimpleNodeDTO)
 async def create(
     data: CreateComputeBlockRequest,
-    _: dict = Depends(authenticate_token)
+    _: User = Depends(get_user),
 ):
     try:
         """
@@ -57,7 +67,7 @@ async def create(
         accordingly
         """
         updated_is = bulk_upload_files(
-            data.selected_entrypoint.inputs
+            data.selected_entrypoint.inputs,
         )
 
         cb = create_compute_block(
@@ -72,22 +82,26 @@ async def create(
             data.selected_entrypoint.name,
             data.selected_entrypoint.description,
             data.selected_entrypoint.envs,
-            [input.to_input_output(input, "Input")
-             for input in updated_is],
-            [output.to_input_output(output, "Output")
-             for output in data.selected_entrypoint.outputs],
-            data.project_id
+            [input.to_input_output(input, "Input") for input in updated_is],
+            [
+                output.to_input_output(output, "Output")
+                for output in data.selected_entrypoint.outputs
+            ],
+            data.project_id,
         )
         return SimpleNodeDTO.from_compute_block(cb)
     except Exception as e:
-        logging.error(f"Error creating compute block: {e}")
+        logging.exception(f"Error creating compute block: {e}")
         raise handle_error(e)
 
 
-@router.get("/by_project/{project_id}",
-            response_model=GetNodesByProjectResponse)
+@router.get(
+    "/by_project/{project_id}",
+    response_model=GetNodesByProjectResponse,
+)
 async def get_by_project(
-    project_id: UUID | None = None
+    project_id: UUID | None = None,
+    _: User = Depends(get_user),
 ):
     if not project_id:
         raise HTTPException(status_code=422, detail="Project ID is required.")
@@ -102,38 +116,40 @@ async def get_by_project(
         return GetNodesByProjectResponse(
             blocks=[
                 SimpleNodeDTO.from_compute_block(
-                    cb, status.get(str(cb.uuid), BlockStatus.IDLE))
+                    cb,
+                    status.get(str(cb.uuid), BlockStatus.IDLE),
+                )
                 for cb in compute_blocks
             ],
-            edges=[EdgeDTO.from_block_dependencies(
-                dp) for dp in dependencies
-            ]
+            edges=[EdgeDTO.from_block_dependencies(dp) for dp in dependencies],
         )
     except Exception as e:
-        logging.error(f"Error getting compute blocks by project: {e}")
+        logging.exception(f"Error getting compute blocks by project: {e}")
         raise handle_error(e)
 
 
-@router.get("/entrypoint/{entry_id}/envs/",
-            response_model=ConfigType)
+@router.get("/entrypoint/{entry_id}/envs/", response_model=ConfigType)
 async def get_envs(
-    entry_id: UUID | None = None
+    entry_id: UUID | None = None,
+    _: User = Depends(get_user),
 ):
     if not entry_id:
         raise HTTPException(
-            status_code=422, detail="Entrypoint ID is required.")
+            status_code=422,
+            detail="Entrypoint ID is required.",
+        )
 
     try:
         return get_envs_for_entrypoint(entry_id)
     except Exception as e:
-        logging.error(f"Error getting envs of entrypoint {entry_id}: {e}")
+        logging.exception(f"Error getting envs of entrypoint {entry_id}: {e}")
         raise handle_error(e)
 
 
-@router.put("/",
-            response_model=UpdateComputeBlockDTO)
+@router.put("/", response_model=UpdateComputeBlockDTO)
 async def update_compute_block(
-    data: UpdateComputeBlockDTO
+    data: UpdateComputeBlockDTO,
+    _: User = Depends(get_user),
 ):
     try:
         b = update_block(
@@ -141,46 +157,57 @@ async def update_compute_block(
             data.envs,
             data.custom_name,
             data.x_pos,
-            data.y_pos
+            data.y_pos,
         )
         return UpdateComputeBlockDTO(
             id=b.uuid,
             envs=b.selected_entrypoint.envs,
             custom_name=b.custom_name,
             x_pos=b.x_pos,
-            y_pos=b.y_pos
+            y_pos=b.y_pos,
         )
     except Exception as e:
-        logging.error(f"Error updating compute block {data.id}: {e}")
+        logging.exception(f"Error updating compute block {data.id}: {e}")
         raise handle_error(e)
 
 
 @router.get("/entrypoint/{entry_id}/io/", response_model=list[InputOutputDTO])
 async def get_io(
     entry_id: UUID,
-    io_type: InputOutputType
+    io_type: InputOutputType,
+    _: User = Depends(get_user),
 ):
     if not entry_id:
         raise HTTPException(
-            status_code=422, detail="Entrypoint ID is required."
+            status_code=422,
+            detail="Entrypoint ID is required.",
         )
     try:
         ios = get_io_for_entrypoint(entry_id, io_type)
         presigned_urls = bulk_presigned_urls_from_ios(ios)
-        return [InputOutputDTO.from_input_output(
-            io.name,
-            io,
-            presigned_urls.get(str(io.uuid), None)) for io in ios
+        return [
+            InputOutputDTO.from_input_output(
+                io.name,
+                io,
+                presigned_urls.get(str(io.uuid), None),
+            )
+            for io in ios
         ]
     except Exception as e:
-        logging.exception(f"Error getting {
-            io_type.value}s of entrypoint {entry_id}: {e}")
+        logging.exception(
+            f"Error getting {io_type.value}s of entrypoint {entry_id}: {e}",
+        )
         raise handle_error(e)
 
 
-@router.put("/entrypoint/io/",
-            response_model=list[UpdateInputOutuputResponseDTO])
-async def update_io(data: list[BaseInputOutputDTO]):
+@router.put(
+    "/entrypoint/io/",
+    response_model=list[UpdateInputOutuputResponseDTO],
+)
+async def update_io(
+    data: list[BaseInputOutputDTO],
+    _: User = Depends(get_user),
+):
     try:
         upload_candidates = [
             d for d in data if d.selected_file_b64 and d.selected_file_type
@@ -205,62 +232,66 @@ async def update_io(data: list[BaseInputOutputDTO]):
         return [
             UpdateInputOutuputResponseDTO.from_input_output(
                 io,
-                presigneds.get(str(io.uuid))
+                presigneds.get(str(io.uuid)),
             )
             for io in updated
         ]
 
     except Exception as e:
-        logging.exception(f"Error updating ios with ids {
-            [d.id for d in data]}: {e}")
+        logging.exception(
+            f"Error updating ios with ids {[d.id for d in data]}: {e}",
+        )
         raise handle_error(e)
 
 
 @router.delete("/{block_id}", status_code=200)
 async def delete_compute_block(
-    block_id: UUID | None = None
+    block_id: UUID | None = None,
+    _: User = Depends(get_user),
 ):
     if not block_id:
         return HTTPException(
             status_code=422,
-            detail="Compute Block id required."
+            detail="Compute Block id required.",
         )
 
     try:
         delete_block(block_id)
     except Exception as e:
-        logging.error(f"Error deleting compute block: {e}")
+        logging.exception(f"Error deleting compute block: {e}")
         raise handle_error(e)
 
 
 @router.post("/edge", response_model=IDResponse)
 def create_io_stream_and_update_io_cfg(
-    data: EdgeDTO
+    data: EdgeDTO,
+    _: User = Depends(get_user),
 ):
     try:
         id = create_stream_and_update_target_cfg(
             data.source,
             data.sourceHandle,
             data.target,
-            data.targetHandle
+            data.targetHandle,
         )
         return IDResponse(id=id)
     except Exception as e:
-        logging.error(f"Error creating an edge and configuring input: {e}")
+        logging.exception(f"Error creating an edge and configuring input: {e}")
         raise handle_error(e)
 
 
 @router.post("/edge/delete", status_code=200)
 def delete_stream(
-    data: EdgeDTO
+    data: EdgeDTO,
+    _: User = Depends(get_user),
 ):
     try:
         delete_edge(
             data.source,
             data.sourceHandle,
             data.target,
-            data.targetHandle
+            data.targetHandle,
         )
     except Exception as e:
-        logging.error(f"Error deleting an edge: {e}")
+        logging.exception(f"Error deleting an edge: {e}")
         raise handle_error(e)

@@ -1,3 +1,5 @@
+import { getToken } from "@/utils/auth/authService"
+
 type Listener<T> = (data: T) => void
 type ErrorHandler = () => void
 
@@ -16,7 +18,10 @@ export class WebSocketConnection<T> {
   private connect() {
     if (this.websocket) return
 
-    this.websocket = new WebSocket(this.url)
+    const token = getToken()
+
+    const url = `${this.url}?token=${token}`
+    this.websocket = new WebSocket(url)
 
     this.websocket.onopen = () => console.log(`WebSocket connected: ${this.url}`)
 

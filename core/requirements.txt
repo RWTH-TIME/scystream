@@ -13,5 +13,6 @@ networkx==3.5
 Jinja2==3.1.6
 scystream-sdk==1.2.1
 websockets==15.0.1
+python-keycloak==5.3.1
 boto3==1.39.0
 GitPython==3.1.44

@@ -1,7 +1,7 @@
 import type { SetAlertType } from "@/hooks/useAlert"
 import { AlertType } from "@/hooks/useAlert"
 import { api } from "@/utils/axios"
-import { getConfig } from "@/utils/config"
+import { WS_URL } from "@/utils/config"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { useEffect, useRef } from "react"
@@ -11,7 +11,6 @@ import type { ComputeBlockByProjectResponse } from "./computeBlockMutation"
 import type { WebSocketConnection } from "@/utils/websocketManager"
 import { webSocketManager } from "@/utils/websocketManager"
 
-const config = getConfig()
 const PROJECT_STATUS_WS = "workflow/ws/project_status"
 const CB_STATUS_WS = "workflow/ws/workflow_status/"
 const TRIGGER_WORKFLOW = "workflow/"
@@ -53,7 +52,7 @@ export function useProjectStatusWS(setAlert: SetAlertType) {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    const websocket = webSocketManager.getConnection<ProjectStatusEvent>(`${config.wsUrl}${PROJECT_STATUS_WS}`)
+    const websocket = webSocketManager.getConnection<ProjectStatusEvent>(`${WS_URL}${PROJECT_STATUS_WS}`)
 
     function handleProjectStatusMessage(data: ProjectStatusEvent) {
       queryClient.setQueryData([QueryKeys.projects], (oldData: Project[]) => {
@@ -100,7 +99,7 @@ export function useComputeBlockStatusWS(setAlert: SetAlertType, project_id: stri
   useEffect(() => {
     if (!project_id) return
 
-    const connectionString = `${config.wsUrl}${CB_STATUS_WS}${project_id}`
+    const connectionString = `${WS_URL}${CB_STATUS_WS}${project_id}`
 
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
