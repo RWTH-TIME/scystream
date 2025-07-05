@@ -24,6 +24,7 @@ const emptyMetadataForm: MetadataFormType = {
 
 export default function MetadataTab() {
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
+  // TODO: #166
   const { selectedProject } = useSelectedProject()
   const { setAlert } = useAlert()
 

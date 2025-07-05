@@ -236,7 +236,7 @@ services:
   
   ### spark:
   spark-master:
-    image: bitnami/spark:3.5.5
+    image: bitnami/spark:3.5.6
     environment:
       - SPARK_MODE=master
       - SPARK_MASTER_HOST=spark-master
@@ -253,7 +253,7 @@ services:
   
   # In production, there should be more workers
   spark-worker:
-    image: bitnami/spark:3.5.5
+    image: bitnami/spark:3.5.6
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER=spark://spark-master:7077
@@ -266,7 +266,7 @@ services:
   
   # The postgres we offer the compute blocks to save data at
   data-postgres:
-    image: postgres:17
+    image: postgres
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -284,7 +284,7 @@ services:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
     volumes:
-      - minio_data:/data
+      - minio-data:/data
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -368,6 +368,42 @@ services:
       - "3010:3000"
     networks:
       - core
+      
+  keycloak-postgres:
+    image: postgres
+    volumes:
+      - "keycloak-postgres-data:/var/lib/postgresql/data"
+    environment:
+      POSTGRES_DB: "keycloak"
+      POSTGRES_USER: "keycloak"
+      POSTGRES_PASSWORD: "password"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak
+    environment:
+      KC_DB: "postgres"
+      KC_DB_URL: "jdbc:postgresql://keycloak-postgres:5432/keycloak"
+      KC_DB_USERNAME: "keycloak"
+      KC_DB_PASSWORD: "password"
+
+      KC_HOSTNAME: "localhost"
+      KC_HOSTNAME_PORT: 8080
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+
+      KC_LOG_LEVEL: "info"
+      KC_METRICS_ENABLED: true
+      KC_HEALTH_ENABLED: true
+      KEYCLOAK_ADMIN: "admin"
+      KEYCLOAK_ADMIN_PASSWORD: "admin"
+    command: start-dev --import-realm
+    depends_on:
+      - keycloak-postgres
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./.keycloak-config:/opt/keycloak/data/import
+
 
 volumes:
   postgres-airflow-volume:
@@ -377,4 +413,5 @@ volumes:
   airflow-config:
   airflow-sources:
   core-postgres:
-  minio_data:
+  minio-data:
+  keycloak-postgres-data:

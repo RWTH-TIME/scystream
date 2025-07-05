@@ -17,6 +17,7 @@ export default function ProjectList() {
 
   const [createProjectOpen, setCreateProjectOpen] = useState<boolean>(false)
   const { setSelectedComputeBlock } = useSelectedComputeBlock()
+  // TODO: #166 dont use useSelectedProject anymore
   const { setSelectedProject } = useSelectedProject()
 
   const { data: projects, isLoading, isError } = useProjectsQuery()
@@ -39,7 +40,7 @@ export default function ProjectList() {
               onClick={() => {
                 setSelectedComputeBlock(undefined)
                 setSelectedProject(project)
-                router.push(`/dashboard/project/${project.uuid}`)
+                router.push(`/project/${project.uuid}`)
               }}
               className="rounded-sm border border-gray-200  p-4 bg-white flex justify-between items-center transition-colors duration-200 hover:bg-gray-50 cursor-pointer"
             >

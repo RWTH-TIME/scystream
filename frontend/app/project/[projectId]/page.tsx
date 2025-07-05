@@ -1,7 +1,6 @@
 "use client"
 
 import PageWithHeader from "@/components/layout/PageWithHeader"
-import useAuth from "@/hooks/useAuth"
 import LoadingAndError from "@/components/LoadingAndError"
 import { use, useEffect, useState } from "react"
 import Tabs from "@/components/Tabs"
@@ -13,6 +12,7 @@ import { useProjectStatusWS, useTriggerWorkflowMutation } from "@/mutations/work
 import { ReactFlowProvider } from "@xyflow/react"
 import { Workbench } from "@/components/Workbench"
 import { useRouter } from "next/navigation"
+import { withAuth } from "@/hooks/useAuth"
 
 type ProjectPageParams = {
   projectId: string,
@@ -27,12 +27,12 @@ const TABS = [
   { key: "editor", label: "Editor" }
 ]
 
-export default function ProjectPage({ params }: ProjectPageProps) {
+function ProjectPage({ params }: ProjectPageProps) {
   const { projectId } = use(params)
-  const { loading } = useAuth()
   const { setAlert } = useAlert()
   const router = useRouter()
 
+  // TODO: #166 remove useSelectedProject
   const { selectedProject, setSelectedProject } = useSelectedProject()
   const { data: project, isLoading: projectLoading, isError: projectError } = useProjectQuery(projectId, !selectedProject)
 
@@ -42,10 +42,11 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   useProjectStatusWS(setAlert)
 
   function deleteProject(project_id: string) {
-    router.push("/dashboard")
+    router.push("/")
     deleteMutate(project_id)
   }
 
+  // TODO: #166 Remove setSelectedProject => Use Params Instead
   useEffect(() => {
     if (project) {
       setSelectedProject(project)
@@ -56,10 +57,10 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   const [activeTab, setActiveTab] = useState<string>("project")
 
   return (
-    <LoadingAndError loading={loading || projectLoading} error={projectError}>
+    <LoadingAndError loading={projectLoading} error={projectError}>
       <PageWithHeader breadcrumbs={[
-        { text: "Dashboard", link: "/dashboard" },
-        { text: "Project", link: "/dashboard" },
+        { text: "Dashboard", link: "/" },
+        { text: "Project", link: "/" },
         { text: selectedProject?.name ?? "", link: "/project" }
       ]}>
         <div className="flex flex-col h-full">
@@ -93,3 +94,4 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   )
 }
 
+export default withAuth(ProjectPage)

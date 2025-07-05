@@ -138,6 +138,7 @@ def _upload_file_to_bucket(
     file_b64: str,
     file_ext: str
 ):
+    # TODO: Create Bucket if not avail
     file_uuid = uuid4()
     configs = get_file_cfg_defaults_dict(file_uuid)
     target_file_name = f"{configs["FILE_NAME"]}.{file_ext}"

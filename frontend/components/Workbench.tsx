@@ -124,6 +124,7 @@ export function Workbench({
 }: WorkbenchProps) {
   const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
 
+  // TODO: #166 dont use useSelectedProject
   const { selectedProject, setSelectedProject } = useSelectedProject()
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
 

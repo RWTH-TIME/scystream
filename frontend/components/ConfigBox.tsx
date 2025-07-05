@@ -68,6 +68,7 @@ export default function ConfigBox({
 }: ConfigBoxProps) {
   const [selectedFiles, setSelectedFiles] = useState<{ [key: string]: { selectedFile: File } }>({})
 
+  // TODO: #166 dont use useSelectedProject anymore
   const { selectedProject } = useSelectedProject()
   const { edges } = useGraphData(selectedProject!.uuid)
   const [modalIO, setModalIO] = useState<InputOutput | null>(null)

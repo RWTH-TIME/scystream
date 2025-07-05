@@ -129,6 +129,8 @@ export default function CreateComputeBlockModal({
   const [computeBlockDraft, setComputeBlockDraft] = useState<ComputeBlockDraft>(emptyComputeBlockDraft)
   const [selectedEntrypoint, setSelectedEntrypoint] = useState<Entrypoint | undefined>(undefined)
   const [activeStep, setActiveStep] = useState<number>(0)
+
+  // TODO: #166 dont use useSelectedProject()
   const { selectedProject } = useSelectedProject()
   const { setAlert } = useAlert()
   const { mutateAsync, isPending: loading } = useCreateComputeBlockMutation(setAlert, selectedProject?.uuid)
