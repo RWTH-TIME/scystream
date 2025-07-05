@@ -16,7 +16,6 @@ from services.workflow_service.schemas.project import (
     CreateProjectFromTemplateResponse,
     CreateProjectFromTemplateRequest,
     Project,
-    ReadProjectRequest
 )
 from utils.database.session_injector import get_database
 from utils.security.token import User, get_user
