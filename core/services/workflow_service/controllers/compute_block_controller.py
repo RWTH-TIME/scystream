@@ -1,4 +1,8 @@
+from utils.database.session_injector import get_database
+from uuid import UUID, uuid4
+from sqlalchemy.orm import Session, contains_eager
 from fastapi import HTTPException
+from pydantic import BaseModel
 import os
 import tempfile
 import logging
@@ -7,10 +11,7 @@ import base64
 
 from git import Repo
 from typing import Literal
-from uuid import UUID, uuid4
 from sqlalchemy import select, case, asc, delete
-from sqlalchemy.orm import Session, contains_eager
-from utils.database.session_injector import get_database
 from utils.config.defaults import (
     get_file_cfg_defaults_dict,
     get_pg_cfg_defaults_dict,
@@ -20,20 +21,26 @@ import utils.data.file_handling as fh
 from services.workflow_service.models.block import Block, block_dependencies
 from services.workflow_service.models.entrypoint import Entrypoint
 from services.workflow_service.models.input_output import (
-    InputOutput, InputOutputType, DataType
+    DataType,
+    InputOutput,
+    InputOutputType
 )
 from services.workflow_service.schemas.compute_block import (
     ConfigType,
     InputOutputDTO,
 )
+from services.workflow_service.schemas.compute_block import (
+    BaseInputOutputDTO
+)
 from scystream.sdk.config import load_config
-from scystream.sdk.config.models import ComputeBlock
-
+from scystream.sdk.config.models import (
+    ComputeBlock as SDKComputeBlock,
+)
 
 CBC_FILE_IDENTIFIER = "cbc.yaml"
 
 
-def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
+def _get_cb_info_from_repo(repo_url: str) -> SDKComputeBlock:
     logging.debug(f"Cloning ComputeBlock Repo from: {repo_url}")
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -68,17 +75,14 @@ def _get_cb_info_from_repo(repo_url: str) -> ComputeBlock:
             raise e
 
 
-def request_cb_info(repo_url: str) -> ComputeBlock:
+def request_cb_info(repo_url: str) -> SDKComputeBlock:
     logging.debug(f"Requesting ComputeBlock info for: {repo_url}")
     cb = _get_cb_info_from_repo(repo_url)
 
     for entry_name, entry in cb.entrypoints.items():
         for on, output in entry.outputs.items():
             # Determine the type and the default values
-            o_type = (
-                DataType.FILE if output.type == "file"
-                else DataType.PGTABLE
-            )
+            o_type = DataType(output.type)
             default_values = (
                 get_file_cfg_defaults_dict(on)
                 if o_type is DataType.FILE
@@ -134,10 +138,10 @@ def _upload_file_to_bucket(
     file_b64: str,
     file_ext: str
 ):
-    ext = file_ext.lstrip(".")
+    # TODO: Create Bucket if not avail
     file_uuid = uuid4()
-    configs = get_file_cfg_defaults_dict(file_uuid, ext)
-    target_file_name = configs["FILE_NAME"]
+    configs = get_file_cfg_defaults_dict(file_uuid)
+    target_file_name = f"{configs["FILE_NAME"]}.{file_ext}"
 
     s3_url = fh.get_minio_url(
         configs["S3_HOST"], configs["S3_PORT"])
@@ -154,6 +158,9 @@ def _upload_file_to_bucket(
         Key=target_file_name,
         Body=file_bytes
     )
+
+    # Add uploaded file ext to config
+    configs["FILE_EXT"] = file_ext.lstrip(".")
 
     return configs
 
@@ -174,7 +181,21 @@ def bulk_upload_files(
     return data
 
 
+def bulk_query_blocks(repo_urls: list[str]) -> dict[str, SDKComputeBlock]:
+    """
+    Returns a mapping of repo_url to a ComputeBlock instance
+    """
+    blocks: dict[str, Block] = {}
+
+    for repo_url in repo_urls:
+        logging.debug(f"Querying block from: {repo_url}")
+        blocks[repo_url] = _get_cb_info_from_repo(repo_url)
+
+    return blocks
+
+
 def create_compute_block(
+        db: Session,
         name: str,
         description: str,
         author: str,
@@ -190,47 +211,49 @@ def create_compute_block(
         outputs: list[InputOutput],
         project_id: str
 ) -> Block:
+    """
+    Creates a Compute Block.
+    Make Sure to pass a transactional Session into this function (param: db)
+    """
     logging.info(f"Creating compute block: {name}")
-    db: Session = next(get_database())
 
     try:
-        with db.begin():
-            # (1) Create Entrypoint
-            entry = Entrypoint(
-                name=entry_name,
-                description=entry_description,
-                envs=envs,
-            )
-            db.add(entry)
+        # (1) Create Entrypoint
+        entry = Entrypoint(
+            name=entry_name,
+            description=entry_description,
+            envs=envs,
+        )
+        db.add(entry)
+        db.flush()
+
+        # (2) Create Input/Outputs
+        input_outputs = inputs + outputs
+
+        for o in input_outputs:
+            o.entrypoint_uuid = entry.uuid
+
+        if input_outputs:
+            db.bulk_save_objects(input_outputs)
             db.flush()
 
-            # (2) Create Input/Outputs
-            input_outputs = inputs + outputs
+        # (3) Create Block
+        cb = Block(
+            name=name,
+            project_uuid=project_id,
+            custom_name=custom_name,
+            description=description,
+            author=author,
+            docker_image=docker_image,
+            cbc_url=repo_url,
+            x_pos=x_pos,
+            y_pos=y_pos,
+            selected_entrypoint_uuid=entry.uuid
+        )
+        db.add(cb)
+        db.flush()
 
-            for o in input_outputs:
-                o.entrypoint_uuid = entry.uuid
-
-            if input_outputs:
-                db.bulk_save_objects(input_outputs)
-                db.flush()
-
-            # (3) Create Block
-            cb = Block(
-                name=name,
-                project_uuid=project_id,
-                custom_name=custom_name,
-                description=description,
-                author=author,
-                docker_image=docker_image,
-                cbc_url=repo_url,
-                x_pos=x_pos,
-                y_pos=y_pos,
-                selected_entrypoint_uuid=entry.uuid
-            )
-            db.add(cb)
-            db.flush()
-
-            db.refresh(entry)
+        db.refresh(entry)
         logging.info(f"Compute block created succesfully: {cb.uuid}")
         return cb
     except Exception as e:
@@ -250,10 +273,9 @@ def get_envs_for_entrypoint(e_id: UUID) -> ConfigType | None:
 
 
 def get_ios_by_ids(
-        ids: list[UUID]
+        ids: list[UUID],
+        db: Session
 ) -> list[InputOutput]:
-    db: Session = next(get_database())
-
     return db.query(InputOutput).filter(InputOutput.uuid.in_(ids)).all()
 
 
@@ -314,15 +336,14 @@ def get_block_dependencies_for_blocks(
     return db.execute(query).fetchall()
 
 
-def _check_config_keys_mismatch(
+def do_config_keys_match(
     config_type: Literal["envs", "io"],
     original_config: ConfigType,
     update_config: ConfigType,
-    entity_id: UUID,
-):
+) -> bool:
     """
     Check if the keys in the original config and update config are the same.
-    If not, raise an Exception.
+    If not, returns False.
     """
     original_keys = set(original_config.keys())
     update_keys = set(update_config.keys())
@@ -331,16 +352,12 @@ def _check_config_keys_mismatch(
     invalid_keys = update_keys - original_keys
     if invalid_keys:
         logging.debug(f"Invalid keys found for {
-                      config_type} in entity {entity_id}:")
+                      config_type}:")
         logging.debug(f"Original {config_type} keys: {original_keys}")
         logging.debug(f"Updated {config_type} keys: {update_keys}")
         logging.debug(f"Invalid keys: {invalid_keys}")
-        raise HTTPException(
-            status_code=422,
-            detail=f"Updated {config_type} contains invalid keys: {
-                ', '.join(map(str, invalid_keys))} for {config_type} with id {
-                    entity_id}"
-        )
+        return False
+    return True
 
 
 def _update_io(
@@ -353,8 +370,13 @@ def _update_io(
     """
     logging.debug(f"Updating IO with id: {io.uuid}")
 
-    _check_config_keys_mismatch("io", io.config, new_config, io.uuid)
-    io.config = {**io.config, **new_config}
+    if do_config_keys_match("io", io.config, new_config):
+        io.config = {**io.config, **new_config}
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Config Keys of io with id {io.uuid} do not match."
+        )
 
     # Only Update Outputs of type File & PgTable
     if (
@@ -395,29 +417,106 @@ def _update_io(
 
 
 def update_ios(
-    update_dict: dict[UUID, ConfigType]
+    update_dict: dict[UUID, ConfigType],
+    db: Session
 ) -> list[InputOutput]:
     logging.debug("Updating input/outputs.")
 
-    db: Session = next(get_database())
+    ids = list(update_dict.keys())
+    ios = db.query(InputOutput).filter(InputOutput.uuid.in_(ids)).all()
 
-    with db.begin():
-        ids = list(update_dict.keys())
-        ios = db.query(InputOutput).filter(InputOutput.uuid.in_(ids)).all()
+    if len(ios) == 0:
+        raise HTTPException(
+            status_code=400, detail="Provided Inputs do not exist.")
 
-        if len(ios) == 0:
-            raise HTTPException(
-                status_code=400, detail="Provided Inputs do not exist.")
-
-        for io in ios:
-            updated_downstreams = _update_io(db, io, update_dict.get(io.uuid))
-            ids.extend(updated_downstreams)
-
-        logging.info("Input/Output updates committed successfully.")
+    for io in ios:
+        updated_downstreams = _update_io(
+            db, io, update_dict.get(io.uuid))
+        ids.extend(updated_downstreams)
 
     updated = db.query(InputOutput).filter(
         InputOutput.uuid.in_(set(ids))).all()
+
     return updated
+
+
+def update_ios_with_uploads(
+        data: list[BaseInputOutputDTO],
+        db: Session
+) -> list[InputOutput]:
+    upload_candidates = [
+        d for d in data if d.selected_file_b64 and d.selected_file_type
+    ]
+
+    if upload_candidates:
+        db_ios = get_ios_by_ids(
+            db=db,
+            ids=[d.id for d in upload_candidates]
+        )
+        db_io_map = {io.uuid: io for io in db_ios}
+
+        # Inject existing configs into upload candidates
+        for dto in upload_candidates:
+            db_io = db_io_map.get(dto.id)
+            if db_io:
+                dto.config = db_io.config
+
+        bulk_upload_files(upload_candidates)
+
+    # Update all configs
+    updated = update_ios(
+        update_dict={d.id: d.config for d in data},
+        db=db
+    )
+    return updated
+
+
+class BulkBlockEnvsUpdate(BaseModel):
+    block_id: UUID
+    envs: ConfigType
+
+
+def bulk_update_block_envs(
+    updates: list[BulkBlockEnvsUpdate],
+    db: Session
+):
+    block_ids = [item.block_id for item in updates]
+
+    blocks = db.query(Block).filter(Block.uuid.in_(block_ids)).all()
+    block_map = {block.uuid: block for block in blocks}
+
+    updated_blocks = []
+
+    for item in updates:
+        block_id = item.block_id
+        block = block_map.get(block_id)
+
+        if not block:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Block not found: {block_id}"
+            )
+
+        envs = item.envs
+
+        if envs:
+            if do_config_keys_match(
+                "envs",
+                block.selected_entrypoint.envs,
+                envs
+            ):
+                block.selected_entrypoint.envs = {
+                    **block.selected_entrypoint.envs, **envs
+                }
+            else:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Env-Keys do not match for block: {block_id}"
+                )
+
+        updated_blocks.append(block)
+
+    return updated_blocks
 
 
 def update_block(
@@ -437,10 +536,18 @@ def update_block(
         block.custom_name = custom_name
 
     if envs:
-        _check_config_keys_mismatch(
-            "envs", block.selected_entrypoint.envs, envs, block.uuid)
-        block.selected_entrypoint.envs = {
-            **block.selected_entrypoint.envs, **envs}
+        if do_config_keys_match(
+            "envs",
+            block.selected_entrypoint.envs,
+            envs
+        ):
+            block.selected_entrypoint.envs = {
+                **block.selected_entrypoint.envs, **envs}
+        else:
+            raise HTTPException(
+                status_code=422,
+                detail="Env-Keys do not match."
+            )
 
     if x_pos is not None:
         block.x_pos = x_pos
@@ -471,6 +578,7 @@ def delete_block(
 
 
 def create_stream_and_update_target_cfg(
+    db: Session,
     from_block_uuid: UUID,
     from_output_uuid: UUID,
     to_block_uuid: UUID,
@@ -481,50 +589,48 @@ def create_stream_and_update_target_cfg(
                   {from_output_uuid} to block {to_block_uuid} input
                   {to_input_uuid}
                   """)
-    db: Session = next(get_database())
 
-    with db.begin():
-        dependency = {
-            "upstream_block_uuid": from_block_uuid,
-            "upstream_output_uuid": from_output_uuid,
-            "downstream_block_uuid": to_block_uuid,
-            "downstream_input_uuid": to_input_uuid,
-        }
+    dependency = {
+        "upstream_block_uuid": from_block_uuid,
+        "upstream_output_uuid": from_output_uuid,
+        "downstream_block_uuid": to_block_uuid,
+        "downstream_input_uuid": to_input_uuid,
+    }
 
-        db.execute(block_dependencies.insert().values(dependency))
+    db.execute(block_dependencies.insert().values(dependency))
 
-        # Compare the cfgs, overwrite the cfgs
-        target_io = db.query(InputOutput).filter_by(
-            uuid=to_input_uuid).one_or_none()
-        source_io = db.query(InputOutput).filter_by(
-            uuid=from_output_uuid).one_or_none()
+    # Compare the cfgs, overwrite the cfgs
+    target_io = db.query(InputOutput).filter_by(
+        uuid=to_input_uuid).one_or_none()
+    source_io = db.query(InputOutput).filter_by(
+        uuid=from_output_uuid).one_or_none()
 
-        if target_io.data_type != source_io.data_type:
-            # Data types do not match, dont allow connection
-            logging.error(f"Input datatype {
-                target_io.data_type} does not match with \
-                                     output type {target_io.data_type}")
-            raise HTTPException(
-                status_code=400,
-                detail="Source & Target types do not match"
-            )
-
-        # Custom inputs are not overwritten
-        if (
-                (target_io.data_type != source_io.data_type) or
-                (target_io.data_type is DataType.CUSTOM)
-        ):
-            logging.info("Edge from custom output to input created.")
-            return target_io.uuid
-
-        logging.debug(f"Updating Input {to_input_uuid} configs.")
-        extracted_defaults = extract_default_keys_from_io(
-            source_io
+    if target_io.data_type != source_io.data_type:
+        # Data types do not match, dont allow connection
+        logging.error(f"Input datatype {
+            target_io.data_type} does not match with \
+                                 output type {target_io.data_type}")
+        raise HTTPException(
+            status_code=400,
+            detail="Source & Target types do not match"
         )
-        target_io.config = updated_configs_with_values(
-            target_io, extracted_defaults, target_io.data_type)
 
-        return target_io.entrypoint_uuid
+    # Custom inputs are not overwritten
+    if (
+            (target_io.data_type != source_io.data_type) or
+            (target_io.data_type is DataType.CUSTOM)
+    ):
+        logging.info("Edge from custom output to input created.")
+        return target_io.uuid
+
+    logging.debug(f"Updating Input {to_input_uuid} configs.")
+    extracted_defaults = extract_default_keys_from_io(
+        source_io
+    )
+    target_io.config = updated_configs_with_values(
+        target_io, extracted_defaults, target_io.data_type)
+
+    return target_io.entrypoint_uuid
 
 
 def delete_edge(

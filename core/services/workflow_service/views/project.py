@@ -1,7 +1,8 @@
-import logging
+from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
+from utils.errors.error import handle_error
+import logging
 
-from fastapi import APIRouter, Depends
 from services.workflow_service.controllers import (
     project_controller,
     workflow_controller,
@@ -9,13 +10,14 @@ from services.workflow_service.controllers import (
 from services.workflow_service.schemas.project import (
     CreateProjectRequest,
     CreateProjectResponse,
-    Project,
-    ReadAllResponse,
     ReadByUserResponse,
-    ReadProjectRequest,
+    ReadAllResponse,
     RenameProjectRequest,
+    CreateProjectFromTemplateResponse,
+    CreateProjectFromTemplateRequest,
+    Project,
 )
-from utils.errors.error import handle_error
+from utils.database.session_injector import get_database
 from utils.security.token import User, get_user
 
 router = APIRouter(prefix="/project", tags=["project"])
@@ -26,26 +28,60 @@ async def create_project(
     data: CreateProjectRequest,
     user: User = Depends(get_user),
 ):
+    db = next(get_database())
     try:
-        project_uuid = project_controller.create_project(
-            data.name,
-            user.uuid,
-        )
+        with db.begin():
+            project_uuid = project_controller.create_project(
+                db, data.name, user.uuid
+            )
         return CreateProjectResponse(project_uuid=project_uuid)
     except Exception as e:
         logging.exception(f"Error creating project: {e}")
         raise handle_error(e)
 
 
-@router.get("/", response_model=Project)
-async def read_project(
-    data: ReadProjectRequest,
-    _: User = Depends(get_user),
+@router.post(
+    "/from_template",
+    response_model=CreateProjectFromTemplateResponse
+)
+async def create_project_from_template(
+    data: CreateProjectFromTemplateRequest,
+    user: User = Depends(get_user)
 ):
     try:
-        return project_controller.read_project(data.project_uuid)
+        id = project_controller.create_project_from_template(
+            data.name,
+            data.template_identifier,
+            user.uuid,
+        )
+        return CreateProjectResponse(project_uuid=id)
     except Exception as e:
-        logging.exception(f"Error reading project: {e}")
+        logging.error(f"Error creating project from template: {e}")
+        raise handle_error(e)
+
+
+@router.get("/read_all", response_model=ReadAllResponse)
+async def read_all_projects():
+    try:
+        projects = project_controller.read_all_projects()
+        return ReadAllResponse(projects=projects)
+    except Exception as e:
+        logging.error(f"Error reading all projects: {e}")
+        raise handle_error(e)
+
+
+@router.get("/{project_id}", response_model=Project)
+async def read_project(
+        project_id: UUID | None = None,
+):
+    try:
+        if project_id is None:
+            raise HTTPException(status=422, detail="Project ID is required")
+
+        project = project_controller.read_project(project_id)
+        return project
+    except Exception as e:
+        logging.error(f"Error reading project: {e}")
         raise handle_error(e)
 
 
@@ -61,27 +97,15 @@ async def read_projects_by_user(
         raise handle_error(e)
 
 
-@router.get("/read_all", response_model=ReadAllResponse)
-async def read_all_projects(_: User = Depends(get_user)):
-    try:
-        projects = project_controller.read_all_projects()
-        return ReadAllResponse(projects=projects)
-    except Exception as e:
-        logging.exception(f"Error reading all projects: {e}")
-        raise handle_error(e)
-
-
-# TODO: Rename function aswell
 @router.put("/", response_model=Project)
-async def rename_project(
-    data: RenameProjectRequest,
-    _: User = Depends(get_user),
-):
+async def rename_project(data: RenameProjectRequest):
+    db = next(get_database())
+
     try:
-        updated_project = project_controller.rename_project(
-            data.project_uuid,
-            data.new_name,
-        )
+        with db.begin():
+            updated_project = project_controller.rename_project(
+                data.project_uuid, data.new_name
+            )
         return updated_project
     except Exception as e:
         raise handle_error(e)

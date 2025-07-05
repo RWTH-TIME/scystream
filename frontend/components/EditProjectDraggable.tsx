@@ -13,6 +13,7 @@ const TABS = [
 
 export default function EditProjectDraggable() {
   const { setAlert } = useAlert()
+  // TODO: #166 -> useSelectedProject
   const { selectedProject, setSelectedProject } = useSelectedProject()
   const [projectName, setProjectName] = useState<string>(selectedProject?.name ?? "")
   const [activeTab, setActiveTab] = useState<string>("metadata") // Single tab for now
