@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { env } from "next-runtime-env"
 
 const schema = z.object({
   NODE_ENV: z.literal("production").or(z.literal("development")).default("production"),
@@ -12,27 +13,27 @@ const schema = z.object({
 
 const parsed = schema.safeParse({
   NODE_ENV: process.env.NODE_ENV,
-  NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-  NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
-  NEXT_PUBLIC_OIDC_PROVIDER: process.env.NEXT_PUBLIC_OIDC_PROVIDER,
-  NEXT_PUBLIC_CLIENT_ID: process.env.NEXT_PUBLIC_CLIENT_ID,
-  NEXT_PUBLIC_REDIRECT_URI: process.env.NEXT_PUBLIC_REDIRECT_URI,
-  NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI: process.env.NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI
+  NEXT_PUBLIC_API_URL: env("NEXT_PUBLIC_API_URL"),
+  NEXT_PUBLIC_WS_URL: env("NEXT_PUBLIC_WS_URL"),
+  NEXT_PUBLIC_OIDC_PROVIDER: env("NEXT_PUBLIC_OIDC_PROVIDER"),
+  NEXT_PUBLIC_CLIENT_ID: env("NEXT_PUBLIC_CLIENT_ID"),
+  NEXT_PUBLIC_REDIRECT_URI: env("NEXT_PUBLIC_REDIRECT_URI"),
+  NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI: env("NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI"),
 })
 
 if (!parsed.success) {
   throw new Error(`Invalid environment variables:\n${parsed.error}`)
 }
 
-const env = parsed.data
+const data = parsed.data
 
-export const NODE_ENV = env.NODE_ENV
-export const API_URL = env.NEXT_PUBLIC_API_URL
-export const WS_URL = env.NEXT_PUBLIC_WS_URL
-export const OIDC_PROVIDER = env.NEXT_PUBLIC_OIDC_PROVIDER
-export const CLIENT_ID = env.NEXT_PUBLIC_CLIENT_ID
-export const REDIRECT_URI = env.NEXT_PUBLIC_REDIRECT_URI
-export const POST_LOGOUT_REDIRECT_URI = env.NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI
+export const NODE_ENV = data.NODE_ENV
+export const API_URL = data.NEXT_PUBLIC_API_URL
+export const WS_URL = data.NEXT_PUBLIC_WS_URL
+export const OIDC_PROVIDER = data.NEXT_PUBLIC_OIDC_PROVIDER
+export const CLIENT_ID = data.NEXT_PUBLIC_CLIENT_ID
+export const REDIRECT_URI = data.NEXT_PUBLIC_REDIRECT_URI
+export const POST_LOGOUT_REDIRECT_URI = data.NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI
 
 export const CONFIG = {
   NODE_ENV,

@@ -4,6 +4,8 @@ import "./globals.css"
 import QueryProvider from "@/hooks/useQueryClient"
 import { AlertProvider } from "@/hooks/useAlert"
 import Alert from "@/components/Alert"
+import { PublicEnvScript } from "next-runtime-env"
+
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -19,6 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-lt-installed="true">
+      <head>
+        <PublicEnvScript />
+      </head>
       <body className={inter.className}>
         <QueryProvider>
           <AlertProvider>
