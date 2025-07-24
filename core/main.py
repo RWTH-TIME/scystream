@@ -65,7 +65,8 @@ async def callback(request: Request):
 @app.get("/login", response_class=RedirectResponse, include_in_schema=False)
 async def login(request: Request):
     auth_url = keycloak_openid.auth_url(
-        redirect_uri=str(request.url_for("callback")),
+        redirect_uri=ENV.KEYCLOAK_REDIRECT_URL
+        or str(request.url_for("callback")),
         scope="openid profile email",
     )
 

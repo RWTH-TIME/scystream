@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     KEYCLOAK_REALM: str = "scystream"
     KEYCLOAK_CLIENT_ID: str = "scystream-core"
     KEYCLOAK_CLIENT_SECRET: str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    KEYCLOAK_REDIRECT_URL: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
