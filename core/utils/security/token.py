@@ -81,7 +81,8 @@ def authenticate_user(keycode: str, request: Request) -> str:
         token = keycloak_openid.token(
             grant_type="authorization_code",
             code=keycode,
-            redirect_uri=str(request.url_for("callback")),
+            redirect_uri=ENV.KEYCLOAK_REDIRECT_URL
+            or str(request.url_for("callback")),
             scope="openid profile email",
         )
         return token["access_token"]
