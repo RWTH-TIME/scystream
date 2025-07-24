@@ -1,14 +1,12 @@
-FROM node:lts-alpine AS installer
+FROM node:22.17-alpine AS installer
 
 WORKDIR /app
 
-COPY package.json ./
+COPY package.json package-lock.json ./
 
 RUN npm install
 
-##
-
-FROM node:lts-alpine AS builder
+FROM node:22.17-alpine AS builder
 
 WORKDIR /app
 
@@ -16,25 +14,20 @@ COPY . .
 
 COPY --from=installer /app/node_modules ./node_modules
 
-# NEXT_PUBLIC previxed env variables have to be set at built time
-ARG NEXT_PUBLIC_API_URL=http://localhost:4000
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-
 RUN npm run build
 
-##
+FROM node:22.17-alpine
 
-FROM node:lts-alpine
 WORKDIR /app
 
-ARG PORT=80
-
-ENV PORT ${PORT}
+ENV PORT=80 \
+    NODE_ENV=production
 
 COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
 EXPOSE ${PORT}
 
-CMD npm start -- -p $PORT
+CMD ["sh", "-c", "npm start -- -p $PORT"]
