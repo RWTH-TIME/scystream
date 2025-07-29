@@ -36,7 +36,7 @@ export default function Button({
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       {...rest}
-      className={`px-4 py-2 rounded-md shadow-xs transition-all ${disabled ? "opacity-50 cursor-not-allowed" : `hover:cursor-pointer ${sentimentStyles}`
+      className={`px-4 py-2 rounded-sm shadow-xs transition-all ${disabled ? "opacity-50 cursor-not-allowed" : `hover:cursor-pointer ${sentimentStyles}`
         } ${className}`}
     >
       {children}

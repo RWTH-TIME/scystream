@@ -52,6 +52,7 @@ alembic upgrade head
 | JWT_ACCES_TOKEN_EXPIRE_MIN        | 15                        | access token expire time in minutes       |
 | JWT_REFRESH_TOKEN_EXPIRE_DAYS     | 30                        | refresh token expire time in days         |
 | EXTERNAL_URL_DATA_S3              | http://localhost:9000     | Externally reachable URL with Port of Minio provided for compute block storage. Make sure that this reaches the same Minio provided by the following config defaults. |
+| WORKFLOW_TEMPLATE_REPO            | git@git.rwth-aachen.de:tim-institute/pipeline-templates.git | The URL to the git repository that contains your template workflow definitions | 
 
 #### File Output Defaults
 

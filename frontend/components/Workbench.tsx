@@ -18,15 +18,14 @@ import EditProjectDraggable from "./EditProjectDraggable"
 import EditComputeBlockDraggable from "./EditComputeBlockDraggable"
 import type { InputOutput } from "@/components/CreateComputeBlockModal"
 import CreateComputeBlockModal from "./CreateComputeBlockModal"
-import { useDeleteProjectMutation } from "@/mutations/projectMutation"
-import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import type { EdgeDTO } from "@/mutations/computeBlockMutation"
 import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMutation, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import DeleteModal from "./DeleteModal"
-import { useComputeBlockStatusWS, useTriggerWorkflowMutation } from "@/mutations/workflowMutations"
+import { useComputeBlockStatusWS } from "@/mutations/workflowMutations"
 import { CircularProgress } from "@mui/material"
+import { useSelectedProject } from "@/hooks/useSelectedProject"
 
 
 export function useGraphData(selectedProjectUUID: string | undefined) {
@@ -86,19 +85,23 @@ type ActionButtonsProps = {
   isTriggerLoading: boolean,
 }
 
-function ActionButtons({ onPlayClick, onDeleteClick, isTriggerLoading }: ActionButtonsProps) {
+export function ActionButtons({
+  onPlayClick,
+  onDeleteClick,
+  isTriggerLoading,
+}: ActionButtonsProps) {
   return (
     <div className="flex justify-self-end gap-3">
       <button
         disabled={isTriggerLoading}
         onClick={onPlayClick}
-        className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200"
+        className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
       >
         {isTriggerLoading ? <CircularProgress /> : <PlayArrow />}
       </button>
       <button
         onClick={onDeleteClick}
-        className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200"
+        className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200 cursor-pointer"
       >
         <Delete />
       </button>
@@ -106,8 +109,22 @@ function ActionButtons({ onPlayClick, onDeleteClick, isTriggerLoading }: ActionB
   )
 }
 
-export function Workbench() {
+type WorkbenchProps = {
+  deleteProject: (project_id: string) => void,
+  isProjectDeleteLoading: boolean,
+  triggerWorkflow: (project_id: string) => void,
+  isTriggerWorkflowLoading: boolean,
+}
+
+export function Workbench({
+  deleteProject,
+  isProjectDeleteLoading,
+  triggerWorkflow,
+  isTriggerWorkflowLoading
+}: WorkbenchProps) {
   const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
+
+  // TODO: #166 dont use useSelectedProject
   const { selectedProject, setSelectedProject } = useSelectedProject()
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
 
@@ -115,11 +132,9 @@ export function Workbench() {
 
   const { screenToFlowPosition, fitView } = useReactFlow()
 
-  const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
   const { mutate: deleteEdgeMutate } = useDeleteEdgeMutation(setAlert, selectedProject?.uuid)
   const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, selectedProject?.uuid)
   const { mutate: updateBlockMutate } = useUpdateComputeBlockMutation(setAlert, selectedProject?.uuid)
-  const { mutateAsync: triggerWorkflow, isPending: triggerLoading } = useTriggerWorkflowMutation(setAlert)
 
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
   const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false)
@@ -131,7 +146,7 @@ export function Workbench() {
     setTimeout(() => {
       fitView()
     }, 50)
-  }, [fitView, selectedProject])
+  }, [fitView, selectedProject?.uuid])
 
   useEffect(() => {
     const onDeleteEdge = () => {
@@ -154,11 +169,9 @@ export function Workbench() {
 
 
   function onProjectDelete() {
-    if (selectedProject) {
-      deleteMutate(selectedProject.uuid)
-      setDeleteApproveOpen(false)
-      setSelectedProject(undefined)
-    }
+    deleteProject(selectedProject!.uuid)
+    setDeleteApproveOpen(false)
+    setSelectedProject(undefined)
   }
 
   const onDragStart = (event: React.DragEvent<HTMLButtonElement>) => {
@@ -239,12 +252,7 @@ export function Workbench() {
   )
 
   function onPlayClicked() {
-    if (!selectedProject) return
-    triggerWorkflow(selectedProject.uuid)
-  }
-
-  if (!selectedProject) {
-    return <div>Select a Project!</div>
+    triggerWorkflow(selectedProject!.uuid)
   }
 
   return (
@@ -253,9 +261,9 @@ export function Workbench() {
         isOpen={deleteApproveOpen}
         onClose={() => setDeleteApproveOpen(false)}
         onDelete={onProjectDelete}
-        loading={deleteLoading}
+        loading={isProjectDeleteLoading}
         header="Delete Project"
-        desc={`Are you sure you want to delete the project: ${selectedProject?.name}`}
+        desc={`Are you sure you want to delete the project: ${selectedProject?.name}?`}
       />
 
       <CreateComputeBlockModal
@@ -271,7 +279,7 @@ export function Workbench() {
         <ActionButtons
           onPlayClick={onPlayClicked}
           onDeleteClick={() => setDeleteApproveOpen(true)}
-          isTriggerLoading={triggerLoading}
+          isTriggerLoading={isTriggerWorkflowLoading}
         />
       </div>
 

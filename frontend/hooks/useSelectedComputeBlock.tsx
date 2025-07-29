@@ -1,3 +1,5 @@
+"use client"
+
 import type { ComputeBlock } from "@/components/CreateComputeBlockModal"
 import React, { createContext, useContext, useState, type PropsWithChildren } from "react"
 

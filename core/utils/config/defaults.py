@@ -11,13 +11,8 @@ SETTINGS_CLASS = {
 }
 
 
-def get_file_cfg_defaults_dict(io_name: str, ext: str | None = None) -> dict:
+def get_file_cfg_defaults_dict(io_name: str) -> dict:
     file_name = f"file_{io_name}_{uuid4()}"
-    if ext:
-        """
-        Appends the file extention if specified, necessary for file uploads
-        """
-        file_name = f"{file_name}.{ext}"
     return {
         "S3_HOST": ENV.DEFAULT_CB_CONFIG_S3_HOST,
         "S3_PORT": ENV.DEFAULT_CB_CONFIG_S3_PORT,

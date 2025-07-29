@@ -22,6 +22,15 @@ class CreateProjectResponse(BaseModel):
     project_uuid: UUID
 
 
+class CreateProjectFromTemplateRequest(BaseModel):
+    name: str
+    template_identifier: str  # File Name of yaml definition of DAG-Template
+
+
+class CreateProjectFromTemplateResponse(BaseModel):
+    project_uuid: UUID
+
+
 class ReadProjectRequest(BaseModel):
     project_uuid: UUID
 

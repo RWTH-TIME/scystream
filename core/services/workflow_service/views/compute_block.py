@@ -1,6 +1,21 @@
 import logging
 from uuid import UUID
 
+from sqlalchemy.orm import Session
+from utils.database.session_injector import get_database
+from utils.errors.error import handle_error
+from utils.data.file_handling import bulk_presigned_urls_from_ios
+from services.workflow_service.models.input_output import (
+    InputOutputType
+)
+from services.workflow_service.schemas.compute_block import (
+    ComputeBlockInformationRequest, ComputeBlockInformationResponse,
+    CreateComputeBlockRequest, IDResponse,
+    GetNodesByProjectResponse,
+    EdgeDTO, SimpleNodeDTO, InputOutputDTO, BaseInputOutputDTO,
+    UpdateInputOutuputResponseDTO, UpdateComputeBlockDTO, ConfigType,
+    BlockStatus
+)
 from fastapi import APIRouter, Depends, HTTPException
 from services.workflow_service.controllers import workflow_controller
 from services.workflow_service.controllers.compute_block_controller import (
@@ -13,29 +28,10 @@ from services.workflow_service.controllers.compute_block_controller import (
     get_compute_blocks_by_project,
     get_envs_for_entrypoint,
     get_io_for_entrypoint,
-    get_ios_by_ids,
     request_cb_info,
     update_block,
-    update_ios,
+    update_ios_with_uploads
 )
-from services.workflow_service.models.input_output import InputOutputType
-from services.workflow_service.schemas.compute_block import (
-    BaseInputOutputDTO,
-    BlockStatus,
-    ComputeBlockInformationRequest,
-    ComputeBlockInformationResponse,
-    ConfigType,
-    CreateComputeBlockRequest,
-    EdgeDTO,
-    GetNodesByProjectResponse,
-    IDResponse,
-    InputOutputDTO,
-    SimpleNodeDTO,
-    UpdateComputeBlockDTO,
-    UpdateInputOutuputResponseDTO,
-)
-from utils.data.file_handling import bulk_presigned_urls_from_ios
-from utils.errors.error import handle_error
 from utils.security.token import User, get_user
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
@@ -60,6 +56,7 @@ async def cb_information(
 async def create(
     data: CreateComputeBlockRequest,
     _: User = Depends(get_user),
+    db: Session = Depends(get_database)
 ):
     try:
         """
@@ -70,26 +67,27 @@ async def create(
             data.selected_entrypoint.inputs,
         )
 
-        cb = create_compute_block(
-            data.name,
-            data.description,
-            data.author,
-            data.image,
-            data.cbc_url,
-            data.custom_name,
-            data.x_pos,
-            data.y_pos,
-            data.selected_entrypoint.name,
-            data.selected_entrypoint.description,
-            data.selected_entrypoint.envs,
-            [input.to_input_output(input, "Input") for input in updated_is],
-            [
-                output.to_input_output(output, "Output")
-                for output in data.selected_entrypoint.outputs
-            ],
-            data.project_id,
-        )
-        return SimpleNodeDTO.from_compute_block(cb)
+        with db.begin():
+            cb = create_compute_block(
+                db,
+                data.name,
+                data.description,
+                data.author,
+                data.image,
+                data.cbc_url,
+                data.custom_name,
+                data.x_pos,
+                data.y_pos,
+                data.selected_entrypoint.name,
+                data.selected_entrypoint.description,
+                data.selected_entrypoint.envs,
+                [input.to_input_output(input, "Input")
+                 for input in updated_is],
+                [output.to_input_output(output, "Output")
+                 for output in data.selected_entrypoint.outputs],
+                data.project_id,
+            )
+            return SimpleNodeDTO.from_compute_block(cb)
     except Exception as e:
         logging.exception(f"Error creating compute block: {e}")
         raise handle_error(e)
@@ -185,13 +183,10 @@ async def get_io(
     try:
         ios = get_io_for_entrypoint(entry_id, io_type)
         presigned_urls = bulk_presigned_urls_from_ios(ios)
-        return [
-            InputOutputDTO.from_input_output(
-                io.name,
-                io,
-                presigned_urls.get(str(io.uuid), None),
-            )
-            for io in ios
+        return [InputOutputDTO.from_input_output(
+            io.name,
+            io,
+            presigned_urls.get(io.uuid, None)) for io in ios
         ]
     except Exception as e:
         logging.exception(
@@ -200,38 +195,20 @@ async def get_io(
         raise handle_error(e)
 
 
-@router.put(
-    "/entrypoint/io/",
-    response_model=list[UpdateInputOutuputResponseDTO],
-)
-async def update_io(
-    data: list[BaseInputOutputDTO],
-    _: User = Depends(get_user),
-):
+@router.put("/entrypoint/io/",
+            response_model=list[UpdateInputOutuputResponseDTO])
+async def update_io(data: list[BaseInputOutputDTO]):
+    db = next(get_database())
     try:
-        upload_candidates = [
-            d for d in data if d.selected_file_b64 and d.selected_file_type
-        ]
+        with db.begin():
+            updated = update_ios_with_uploads(data, db)
 
-        if upload_candidates:
-            db_ios = get_ios_by_ids([d.id for d in upload_candidates])
-            db_io_map = {io.uuid: io for io in db_ios}
-
-            # Inject existing configs into upload candidates
-            for dto in upload_candidates:
-                db_io = db_io_map.get(dto.id)
-                if db_io:
-                    dto.config = db_io.config
-
-            bulk_upload_files(upload_candidates)
-
-        # Update Configs that are not upload_candidates
-        updated = update_ios({d.id: d.config for d in data})
         presigneds = bulk_presigned_urls_from_ios(updated)
 
         return [
             UpdateInputOutuputResponseDTO.from_input_output(
                 io,
+                presigneds.get(io.uuid),
                 presigneds.get(str(io.uuid)),
             )
             for io in updated
@@ -267,13 +244,17 @@ def create_io_stream_and_update_io_cfg(
     data: EdgeDTO,
     _: User = Depends(get_user),
 ):
+    db = next(get_database())
+
     try:
-        id = create_stream_and_update_target_cfg(
-            data.source,
-            data.sourceHandle,
-            data.target,
-            data.targetHandle,
-        )
+        with db.begin():
+            id = create_stream_and_update_target_cfg(
+                db,
+                data.source,
+                data.sourceHandle,
+                data.target,
+                data.targetHandle
+            )
         return IDResponse(id=id)
     except Exception as e:
         logging.exception(f"Error creating an edge and configuring input: {e}")
