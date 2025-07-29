@@ -317,6 +317,7 @@ def generate_dag_code(graph, templates, dag_id, project_uuid):
             project=str(project_uuid),
             environment=data["environment"],
             local_storage_path_external="/tmp/scystream-data",
+            network_mode=ENV.CB_NETWORK_MODE
         ))
 
     # Render dependencies

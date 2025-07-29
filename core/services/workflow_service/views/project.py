@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 from utils.errors.error import handle_error
 import logging
+from sqlalchemy.orm import Session
 
 from services.workflow_service.controllers import (
     project_controller,
@@ -27,8 +28,8 @@ router = APIRouter(prefix="/project", tags=["project"])
 async def create_project(
     data: CreateProjectRequest,
     user: User = Depends(get_user),
+    db: Session = Depends(get_database)
 ):
-    db = next(get_database())
     try:
         with db.begin():
             project_uuid = project_controller.create_project(
@@ -98,13 +99,14 @@ async def read_projects_by_user(
 
 
 @router.put("/", response_model=Project)
-async def rename_project(data: RenameProjectRequest):
-    db = next(get_database())
-
+async def rename_project(
+    data: RenameProjectRequest,
+    db: Session = Depends(get_database)
+):
     try:
         with db.begin():
             updated_project = project_controller.rename_project(
-                data.project_uuid, data.new_name
+                data.project_uuid, data.new_name, db
             )
         return updated_project
     except Exception as e:

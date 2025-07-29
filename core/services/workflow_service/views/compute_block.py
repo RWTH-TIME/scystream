@@ -1,6 +1,7 @@
 import logging
 from uuid import UUID
 
+from sqlalchemy.orm import Session
 from utils.database.session_injector import get_database
 from utils.errors.error import handle_error
 from utils.data.file_handling import bulk_presigned_urls_from_ios
@@ -55,9 +56,8 @@ async def cb_information(
 async def create(
     data: CreateComputeBlockRequest,
     _: User = Depends(get_user),
+    db: Session = Depends(get_database)
 ):
-    db = next(get_database())
-
     try:
         """
         Upload the files to the default bucket and update the configs

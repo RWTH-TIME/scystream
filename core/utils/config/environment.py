@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     # This has to reach the internal minio, provided by the defaults
     EXTERNAL_URL_DATA_S3: str = "http://localhost:9000"
 
+    CB_NETWORK_MODE: str = "scystream_data_processing"
+
     DEFAULT_CB_CONFIG_S3_HOST: str = "http://data-minio"
     DEFAULT_CB_CONFIG_S3_PORT: str = "9000"
     DEFAULT_CB_CONFIG_S3_ACCESS_KEY: str = "minioadmin"

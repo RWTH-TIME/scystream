@@ -7,7 +7,7 @@
             Scheduler.execute_function(\\\"{{ entry_name }}\\\")\"'",
             docker_url="unix://var/run/docker.sock",
             environment={{ environment }},
-            network_mode="scystream_data_processing",
+            network_mode={{ network_mode }},
             force_pull=True,
         )
 
