@@ -3,10 +3,9 @@ from airflow.operators.docker_operator import DockerOperator
 from docker.types import Mount
 from datetime import datetime
 
-# TODO: do we overwrite this?
 default_args = {
     'owner': 'airflow',
     'start_date': datetime(2025, 1, 1),
 }
 
-with DAG('{{dag_id}}', default_args=default_args, is_paused_upon_creation=True) as dag:
+with DAG('{{dag_id}}', default_args=default_args, schedule_interval="@once", is_paused_upon_creation=True) as dag:
