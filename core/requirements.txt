@@ -2,7 +2,7 @@ uvicorn==0.35.0
 fastapi==0.116.1
 pydantic==2.11.7
 pydantic-settings==2.10.1
-SQLAlchemy==2.0.41
+SQLAlchemy==2.0.42
 psycopg2-binary==2.9.10
 alembic==1.16.4
 bcrypt==4.3.0
@@ -14,5 +14,5 @@ Jinja2==3.1.6
 scystream-sdk==1.2.1
 websockets==15.0.1
 python-keycloak==5.7.0
-boto3==1.39.11
-GitPython==3.1.44
+boto3==1.40.1
+GitPython==3.1.45
