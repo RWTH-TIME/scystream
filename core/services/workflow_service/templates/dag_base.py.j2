@@ -8,4 +8,4 @@ default_args = {
     'start_date': datetime(2025, 1, 1),
 }
 
-with DAG('{{dag_id}}', default_args=default_args, schedule_interval=None, is_paused_upon_creation=True) as dag:
+with DAG('{{dag_id}}', default_args=default_args, schedule_interval=None, catchup=False, is_paused_upon_creation=True) as dag:
