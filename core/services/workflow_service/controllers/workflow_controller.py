@@ -51,6 +51,8 @@ from services.workflow_service.schemas.workflow import (
 from utils.config.environment import ENV
 from utils.data.file_handling import bulk_presigned_urls_from_ios
 from utils.database.session_injector import get_database
+import requests
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -58,8 +60,38 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 DAG_DIRECTORY = ENV.AIRFLOW_DAG_DIR
+
+
+class AirflowAccessTokenResponse(BaseModel):
+    access_token: str
+
+
+def get_airflow_client_access_token(
+    host: str,
+    username: str,
+    password: str,
+) -> str:
+    url = f"{host}/auth/token"
+    payload = {
+        "username": username,
+        "password": password,
+    }
+    headers = {"Content-Type": "application/json"}
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code != 201:
+        raise RuntimeError(f"Failed to get access token: \
+            {response.status_code} {response.text}")
+    response_success = AirflowAccessTokenResponse(**response.json())
+    return response_success.access_token
+
+
 airflow_config = Configuration(
     host=ENV.AIRFLOW_HOST,
+)
+
+
+airflow_config.access_token = get_airflow_client_access_token(
+    host=airflow_config.host,
     username=ENV.AIRFLOW_USER,
     password=ENV.AIRFLOW_PASS,
 )
