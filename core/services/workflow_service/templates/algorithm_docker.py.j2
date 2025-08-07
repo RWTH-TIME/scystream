@@ -2,7 +2,7 @@
             task_id='{{task_id}}',
             image='{{image}}',
             api_version='auto',
-            auto_remove=True,
+            auto_remove='force',
             command = "sh -c 'python -c \"import main; from scystream.sdk.scheduler import Scheduler; \
             Scheduler.execute_function(\\\"{{ entry_name }}\\\")\"'",
             docker_url="unix://var/run/docker.sock",
