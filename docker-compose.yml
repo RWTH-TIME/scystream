@@ -237,6 +237,11 @@ services:
     restart: always
     ports:
       - "8000:80"
+    environment:
+      NEXT_PUBLIC_OIDC_PROVIDER: http://localhost:8090,
+      NEXT_PUBLIC_CLIENT_ID: "scystream-frontend"
+      NEXT_PUBLIC_REDIRECT_URI: "http://localhost:8000"
+      NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI: "http://localhost:8000"
     networks:
       - core
 
@@ -345,6 +350,8 @@ services:
       KEYCLOAK_ADMIN: "admin"
       KEYCLOAK_ADMIN_PASSWORD: "admin"
     command: start-dev --import-realm
+    ports:
+      - "8090:8080"
     depends_on:
       - keycloak-postgres
     volumes:
