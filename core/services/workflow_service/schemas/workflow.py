@@ -112,6 +112,7 @@ class Block(BaseModel):
 class PipelineMetadata(BaseModel):
     name: str
     description: str
+    tags: list[str] = []
 
 
 class WorkflowTemplate(BaseModel):

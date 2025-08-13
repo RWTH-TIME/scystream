@@ -278,6 +278,8 @@ services:
       interval: 10s
       timeout: 2s
       retries: 5
+    ports:
+      - "5432:5432"
     networks:
       - core
 
