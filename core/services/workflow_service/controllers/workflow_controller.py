@@ -294,10 +294,20 @@ def get_workflow_configurations(project_id: UUID) -> tuple[
     )
 
 
-def get_workflow_templates() -> list[WorkflowTemplate]:
-    return template_controller.get_workflow_templates_from_repo(
+def get_workflow_templates() -> dict[str, list[WorkflowTemplate]]:
+    templates = template_controller.get_workflow_templates_from_repo(
         ENV.WORKFLOW_TEMPLATE_REPO,
     )
+
+    grouped = defaultdict(list)
+
+    for tpl in templates:
+        if not tpl.pipeline.tags:
+            grouped["untagged"].append(tpl)
+        else:
+            for tag in tpl.pipeline.tags:
+                grouped[tag].append(tpl)
+    return dict(grouped)
 
 
 def create_graph(project):

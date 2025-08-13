@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from uuid import UUID
+from collections import defaultdict
 
 from utils.database.session_injector import get_database
 from services.workflow_service.controllers import \
@@ -172,19 +173,23 @@ def pause_dag(
 
 @router.get(
     "/workflow_templates",
-    response_model=list[WorkflowTemplateMetaData]
+    response_model=dict[str, list[WorkflowTemplateMetaData]],
 )
 async def workflow_templates():
     try:
-        templates = workflow_controller.get_workflow_templates()
-        return [
-            WorkflowTemplateMetaData(
-                file_identifier=tpl.file_identifier,
-                name=tpl.pipeline.name,
-                description=tpl.pipeline.description,
-            )
-            for tpl in templates
-        ]
+        grouped_templates = workflow_controller.get_workflow_templates()
+
+        result = defaultdict(list)
+        for tag, templates in grouped_templates.items():
+            for tpl in templates:
+                result[tag].append(
+                    WorkflowTemplateMetaData(
+                        file_identifier=tpl.file_identifier,
+                        name=tpl.pipeline.name,
+                        description=tpl.pipeline.description,
+                    )
+                )
+        return dict(result)
     except Exception as e:
         raise handle_error(e)
 
