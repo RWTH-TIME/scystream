@@ -559,7 +559,6 @@ def get_latest_dag_run(project_id: UUID) -> str | None:
             dag_runs = api.get_dag_runs(
                 dag_id,
                 limit=1,
-                order_by="-execution_date",
             ).dag_runs
 
             if dag_runs:
