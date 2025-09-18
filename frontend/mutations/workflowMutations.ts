@@ -22,12 +22,20 @@ const UPDATE_CONFIGS_BY_PROJECT = "workflow/configurations/{project_id}"
 
 type ProjectStatusEvent = Record<string, string>
 
+export type WorkflowTemplateMetaData = {
+  file_identifier: string,
+  name: string,
+  description: string,
+}
+
+export type TemplatesByTag = Record<string, WorkflowTemplateMetaData[]>
+
 export function useWorkflowTemplatesQuery() {
   return useQuery({
     queryKey: [QueryKeys.workflowTemplates],
     queryFn: async function getWorkflowTemplates() {
       const response = await api.get(GET_WORKFLOW_TEMPLATES)
-      return response.data
+      return response.data as TemplatesByTag
     },
     refetchOnWindowFocus: false,
     staleTime: 1000 * 60 * 3
