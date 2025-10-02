@@ -9,6 +9,8 @@ from services.workflow_service.schemas.compute_block import (
     replace_minio_host
 )
 
+from airflow_client.client.models.dag_run_state import DagRunState
+
 
 class WorkflowStatus(Enum):
     RUNNING = "RUNNING"
@@ -17,11 +19,14 @@ class WorkflowStatus(Enum):
     FAILED = "FAILED"
 
     @classmethod
-    def from_airflow_state(cls, airflow_state: str) -> "WorkflowStatus":
+    def from_airflow_state(
+            cls,
+            airflow_state: DagRunState
+    ) -> "WorkflowStatus":
         state_mapping = {
-            "running": cls.RUNNING,
-            "success": cls.FINISHED,
-            "failed": cls.FAILED
+            airflow_state.RUNNING: cls.RUNNING,
+            airflow_state.SUCCESS: cls.FINISHED,
+            airflow_state.FAILED: cls.FAILED
         }
         return state_mapping.get(airflow_state.lower(), cls.IDLE)
 
