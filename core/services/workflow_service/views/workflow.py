@@ -207,7 +207,7 @@ async def ws_project_status(
             for di, dr in dag_runs.items():
                 project_id = workflow_controller.dag_id_to_project_id(di)
                 status = WorkflowStatus.from_airflow_state(
-                    str(dr.get("state")),
+                    dr.state,
                 )
 
                 all_proj_status[project_id] = status.value
