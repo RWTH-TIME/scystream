@@ -156,7 +156,7 @@ def build_workflow_graph(template: WorkflowTemplate):
     assigns positions for the workbench.
     """
 
-    G = nx.DiGraph()
+    G = nx.MultiDiGraph()
 
     for block in template.blocks:
         G.add_node(block.name, block=block)
