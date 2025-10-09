@@ -13,7 +13,7 @@ from airflow_client.client.api.dag_run_api import DagRunApi
 from airflow_client.client.api.task_instance_api import TaskInstanceApi
 from airflow_client.client.api_client import ApiClient
 from airflow_client.client.configuration import Configuration
-from airflow_client.client.exceptions import ApiException
+from airflow_client.client.exceptions import ApiException, NotFoundException
 from airflow_client.client.models.dag_patch_body import DAGPatchBody
 from airflow_client.client.models.dag_runs_batch_body import (
     DAGRunsBatchBody,
@@ -536,11 +536,13 @@ def last_dag_run_overview(dag_ids: list[str]) -> dict:
         for dag_id in dag_ids:
             try:
                 all_runs = api.get_list_dag_runs_batch(
-                    dag_id,
+                    "~",
                     DAGRunsBatchBody(
+                        dag_ids=dag_ids,
                         page_limit=1000,
                     ),
                 )
+
                 # We only select the newest runs per DAG
                 # Unfortunately airflow_client does not offer this
                 # out of the box
@@ -569,12 +571,14 @@ def get_latest_dag_run(project_id: UUID) -> str | None:
             dag_runs = api.get_dag_runs(
                 dag_id,
                 limit=1,
-                order_by="-execution_date",
+                order_by="-logical_date"
             ).dag_runs
 
             if dag_runs:
                 return dag_runs[0].dag_run_id
             logging.debug(f"No DAG runs found for DAG {dag_id}")
+            return None
+        except NotFoundException:
             return None
         except ApiException as e:
             logging.exception(f"Error fetching DAG runs for {dag_id}: {e}")
