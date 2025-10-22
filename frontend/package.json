@@ -14,11 +14,11 @@
     "@emotion/styled": "11.14.1",
     "@mui/icons-material": "6.5.0",
     "@mui/material": "6.5.0",
-    "@tailwindcss/postcss": "4.1.14",
-    "@tanstack/react-query": "5.90.2",
-    "@xyflow/react": "12.8.6",
+    "@tailwindcss/postcss": "4.1.15",
+    "@tanstack/react-query": "5.90.5",
+    "@xyflow/react": "12.9.0",
     "axios": "1.12.2",
-    "next": "15.5.4",
+    "next": "15.5.6",
     "next-runtime-env": "3.3.0",
     "oidc-client-ts": "3.3.0",
     "react": "19.2.0",
@@ -29,15 +29,15 @@
   "devDependencies": {
     "@helpwave/eslint-config": "1.29.0",
     "@stylistic/eslint-plugin": "3.1.0",
-    "@types/node": "22.18.8",
-    "@types/react": "19.2.0",
-    "@types/react-dom": "19.2.0",
+    "@types/node": "22.18.12",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
     "@types/uuid": "10.0.0",
-    "eslint": "9.36.0",
-    "eslint-config-next": "15.5.4",
+    "eslint": "9.38.0",
+    "eslint-config-next": "15.5.6",
     "postcss": "8.5.6",
-    "tailwindcss": "4.1.14",
+    "tailwindcss": "4.1.15",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.45.0"
+    "typescript-eslint": "8.46.2"
   }
 }
