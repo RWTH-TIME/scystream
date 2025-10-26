@@ -44,7 +44,8 @@ class RepoRegistry:
             path = Path(ENV.REPO_CACHE_DIR) / name
             self._clone_or_update(url, path)
 
-    def _clone_or_update(self, url: str, path: Path):
+    def _clone_or_update(self, url: str, path: Path | str):
+        path = Path(path)
         try:
             if not path.exists():
                 logging.info(f"Cloning {url} -> {path}")
