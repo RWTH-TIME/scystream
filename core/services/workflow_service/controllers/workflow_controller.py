@@ -294,10 +294,8 @@ def get_workflow_configurations(project_id: UUID) -> tuple[
     )
 
 
-def get_workflow_templates() -> dict[str, list[WorkflowTemplate]]:
-    templates = template_controller.get_workflow_templates_from_repo(
-        ENV.WORKFLOW_TEMPLATE_REPO,
-    )
+def get_tagged_workflow_templates() -> dict[str, list[WorkflowTemplate]]:
+    templates = template_controller.get_workflow_templates()
 
     grouped = defaultdict(list)
 

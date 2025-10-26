@@ -11,6 +11,7 @@ from sqlalchemy.exc import OperationalError
 from utils.config.environment import ENV
 from utils.database.connection import engine
 from utils.security.token import authenticate_user, keycloak_openid
+from utils.config.registry import RepoRegistry
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -18,19 +19,19 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-app = FastAPI(title="scystream-core")
-
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     try:
         engine.connect()
+        RepoRegistry()  # loads repos initially
     except OperationalError:
         logging.exception("Connection to database failed.")
         raise RuntimeError("Shutdown, database connection failed.")
     finally:
         yield
 
+app = FastAPI(title="scystream-core", lifespan=lifespan)
 
 origins = ["*" if ENV.DEVELOPMENT else ENV.EXTERNAL_URL]
 app.add_middleware(

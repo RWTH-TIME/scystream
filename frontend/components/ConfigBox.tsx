@@ -135,7 +135,7 @@ export default function ConfigBox({
         // might be unset.
         const showFileInput =
           (io.type === IOType.INPUT)
-          && !connected
+          && !connected && io.data_type === InputOutputType.FILE
 
 
         return (

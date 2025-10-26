@@ -18,6 +18,7 @@ from utils.config.defaults import (
     SETTINGS_CLASS, extract_default_keys_from_io
 )
 import utils.data.file_handling as fh
+from utils.config.registry import RepoRegistry
 from services.workflow_service.models.block import Block, block_dependencies
 from services.workflow_service.models.entrypoint import Entrypoint
 from services.workflow_service.models.input_output import (
@@ -41,38 +42,52 @@ CBC_FILE_IDENTIFIER = "cbc.yaml"
 
 
 def _get_cb_info_from_repo(repo_url: str) -> SDKComputeBlock:
-    logging.debug(f"Cloning ComputeBlock Repo from: {repo_url}")
+    registry = RepoRegistry()
+    cached_path = registry.get_cached_repo_path(repo_url)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        try:
-            Repo.clone_from(
-                repo_url,
-                tmpdir,
-                multi_options=[
-                    "--depth=1",
-                    "-c",
-                    "core.sshCommand=ssh -o StrictHostKeyChecking=no"
-                ],
-                allow_unsafe_options=True
-            )
-
-            cbc_path = os.path.join(tmpdir, CBC_FILE_IDENTIFIER)
-
-            if not os.path.isfile(cbc_path):
-                raise HTTPException(
-                    status_code=422,
-                    detail=f"Repository {repo_url} does not contain a cbc.yaml"
-                )
-
-            return load_config(cbc_path)
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Could not clone the repository {repo_url}: {e}")
+    if cached_path:
+        logging.debug(f"Using cached repo for {repo_url} at {cached_path}")
+        cbc_path = os.path.join(cached_path, CBC_FILE_IDENTIFIER)
+        if not os.path.isfile(cbc_path):
             raise HTTPException(
                 status_code=422,
-                detail=f"Couldn't clone the repository: {repo_url}"
+                detail=f"Cached repo {repo_url} missing cbc.yaml"
             )
-        except HTTPException as e:
-            raise e
+        return load_config(cbc_path)
+    else:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            try:
+                Repo.clone_from(
+                    repo_url,
+                    tmpdir,
+                    multi_options=[
+                        "--depth=1",
+                        "-c",
+                        "core.sshCommand=ssh -o StrictHostKeyChecking=no"
+                    ],
+                    allow_unsafe_options=True
+                )
+
+                cbc_path = os.path.join(tmpdir, CBC_FILE_IDENTIFIER)
+
+                if not os.path.isfile(cbc_path):
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Repository {repo_url} does\
+                                not contain a cbc.yaml"
+                    )
+
+                return load_config(cbc_path)
+            except subprocess.CalledProcessError as e:
+                logging.error(
+                    f"Could not clone the repository {repo_url}: {e}"
+                )
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Couldn't clone the repository: {repo_url}"
+                )
+            except HTTPException as e:
+                raise e
 
 
 def request_cb_info(repo_url: str) -> SDKComputeBlock:
