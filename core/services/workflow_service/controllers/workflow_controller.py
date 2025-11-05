@@ -85,16 +85,18 @@ def get_airflow_client_access_token(
     return response_success.access_token
 
 
-airflow_config = Configuration(
-    host=ENV.AIRFLOW_HOST,
-)
+def get_airflow_config() -> Configuration:
+    airflow_config = Configuration(
+        host=ENV.AIRFLOW_HOST,
+    )
 
+    airflow_config.access_token = get_airflow_client_access_token(
+        host=airflow_config.host,
+        username=ENV.AIRFLOW_USER,
+        password=ENV.AIRFLOW_PASS,
+    )
 
-airflow_config.access_token = get_airflow_client_access_token(
-    host=airflow_config.host,
-    username=ENV.AIRFLOW_USER,
-    password=ENV.AIRFLOW_PASS,
-)
+    return airflow_config
 
 
 def _project_id_to_dag_id(pi: UUID | str) -> str:
@@ -459,7 +461,7 @@ def wait_for_dag_registration(
     timeout: int = 10,
     wait: float = 0.5,
 ) -> bool:
-    with ApiClient(airflow_config) as api_client:
+    with ApiClient(get_airflow_config()) as api_client:
         api = DAGApi(api_client)
         start_time = time.time()
 
@@ -489,7 +491,7 @@ def translate_project_to_dag(project_uuid: UUID) -> str:
 
 
 def unpause_dag(dag_id: str, is_paused: bool = False) -> None:
-    with ApiClient(airflow_config) as api_client:
+    with ApiClient(get_airflow_config()) as api_client:
         api = DAGApi(api_client)
         try:
             api.patch_dag(dag_id, DAGPatchBody(is_paused=is_paused))
@@ -499,7 +501,7 @@ def unpause_dag(dag_id: str, is_paused: bool = False) -> None:
 
 
 def trigger_workflow_run(dag_id: str) -> None:
-    with ApiClient(airflow_config) as api_client:
+    with ApiClient(get_airflow_config()) as api_client:
         unpause_dag(dag_id)
         api = DagRunApi(api_client)
 
@@ -513,7 +515,7 @@ def trigger_workflow_run(dag_id: str) -> None:
 
 
 def get_all_dags():
-    with ApiClient(airflow_config) as api_client:
+    with ApiClient(get_airflow_config()) as api_client:
         api = DAGApi(api_client)
 
         try:
@@ -527,7 +529,7 @@ def get_all_dags():
 
 
 def last_dag_run_overview(dag_ids: list[str]) -> dict:
-    with ApiClient(airflow_config) as api_client:
+    with ApiClient(get_airflow_config()) as api_client:
         api = DagRunApi(api_client)
         most_recent_runs = {}
 
@@ -564,7 +566,7 @@ def last_dag_run_overview(dag_ids: list[str]) -> dict:
 
 def get_latest_dag_run(project_id: UUID) -> str | None:
     dag_id = _project_id_to_dag_id(project_id)
-    with ApiClient(airflow_config) as api_client:
+    with ApiClient(get_airflow_config()) as api_client:
         api = DagRunApi(api_client)
 
         try:
@@ -587,7 +589,7 @@ def get_latest_dag_run(project_id: UUID) -> str | None:
 
 def delete_dag_from_airflow(project_id: UUID) -> str | None:
     dag_id = _project_id_to_dag_id(project_id)
-    with ApiClient(airflow_config) as api_client:
+    with ApiClient(get_airflow_config()) as api_client:
         api = DAGApi(api_client)
 
         try:
@@ -611,7 +613,7 @@ def dag_status(project_id: UUID) -> dict:
     if not latest_run_id:
         return {}
 
-    with ApiClient(airflow_config) as api_client:
+    with ApiClient(get_airflow_config()) as api_client:
         api = TaskInstanceApi(api_client)
 
         task_statuses = {}
