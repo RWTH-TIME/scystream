@@ -47,11 +47,9 @@ class Settings(BaseSettings):
     AIRFLOW_DAG_DIR: str = "../airflow-dags"
 
     REPO_CACHE_DIR: str = "repos"
-    REPO_CONFIG_FILE: str = "repos.yaml"
     WORKFLOW_TEMPLATE_REPO: str = (
         "git@git.rwth-aachen.de:tim-institute/pipeline-templates.git"
     )
-    TEMPLATE_DIR: str = "templates"
 
     KEYCLOAK_SERVER_URL: str = "http://keycloak"
     KEYCLOAK_REALM: str = "scystream"

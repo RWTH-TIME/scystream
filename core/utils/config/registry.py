@@ -1,9 +1,11 @@
-import os
-import yaml
 import logging
 from pathlib import Path
-from git import Repo, GitCommandError
+from urllib.parse import urlparse
 from utils.config.environment import ENV
+import os
+from git import Repo
+import subprocess
+from fastapi import HTTPException
 
 
 class RepoRegistry:
@@ -16,72 +18,83 @@ class RepoRegistry:
             cls._instance = super().__new__(cls)
             cls._instance._repos = []
             cls._instance._load()
-            cls._instance._sync_all()
         return cls._instance
 
     def _load(self):
-        config_file = Path(ENV.REPO_CONFIG_FILE)
-        if not config_file.exists():
-            logging.warning(f"Repo config file not found: {config_file}")
+        cache_dir = Path(ENV.REPO_CACHE_DIR)
+
+        if not cache_dir.exists():
+            logging.warning(f"Repo cache dir does not exist: {cache_dir}")
             self._repos = []
             return
 
-        with open(config_file, "r") as f:
-            data = yaml.safe_load(f) or {}
-            self._repos = data.get("repos", [])
+        repos = []
+        for entry in cache_dir.iterdir():
+            if entry.is_dir() and (entry / ".git").exists():
+                repos.append(entry)
 
-        logging.info(f"Loaded {len(self._repos)} repos from {config_file}")
+        self._repos = repos
+        logging.info(
+                f"Loaded {len(self._repos)} cached repos from {cache_dir}"
+            )
 
-    def _sync_all(self):
-        os.makedirs(ENV.REPO_CACHE_DIR, exist_ok=True)
+    def _get_repo_name_from_url(self, repo_url: str) -> str:
+        url = repo_url.strip()
 
-        # 1️⃣ Template repo
-        self._clone_or_update(ENV.WORKFLOW_TEMPLATE_REPO, ENV.TEMPLATE_DIR)
+        # Normalize ssh clone "url"
+        if ":" in url and not url.startswith(
+            ("http://", "https://", "ssh://", "git://")
+        ):
+            url = "ssh://" + repo_url.replace(":", "/", 1)
 
-        # 2️⃣ Cached repos
-        for repo_info in self._repos:
-            name, url = repo_info["name"], repo_info["url"]
-            path = Path(ENV.REPO_CACHE_DIR) / name
-            self._clone_or_update(url, path)
+        parsed = urlparse(url)
+        repo = os.path.basename(parsed.path)
 
-    def _clone_or_update(self, url: str, path: Path | str):
-        path = Path(path)
-        try:
-            if not path.exists():
-                logging.info(f"Cloning {url} -> {path}")
+        # Strip trailing .git
+        if repo.endswith(".git"):
+            repo = repo[:-4]
+
+        return repo
+
+    def get_repo(self, repo_url: str) -> str:
+        """
+        Return cached repo path if repo_url is configured and exists.
+        Clones repo to cache if not exists
+        """
+        repo_name = self._get_repo_name_from_url(repo_url)
+        path = Path(ENV.REPO_CACHE_DIR) / repo_name
+
+        if path.exists():
+            return str(path)
+        else:
+            # If repo not cached, clone and return path
+            try:
+                logging.info(f"Repo {repo_url} not cached, cloning...")
                 Repo.clone_from(
-                    url,
-                    str(path),
+                    repo_url,
+                    path,
                     multi_options=[
                         "--depth=1",
                         "-c",
-                        "core.sshCommand=ssh -o StrictHostKeyChecking=no",
+                        "core.sshCommand=ssh -o StrictHostKeyChecking=no"
                     ],
-                    allow_unsafe_options=True,
+                    allow_unsafe_options=True
                 )
-                logging.info(f"Cloned {path.name}")
-            else:
-                logging.info(f"Pulling latest for {path.name}")
-                repo = Repo(str(path))
-                repo.git.pull(url)
-        except GitCommandError as e:
-            logging.warning(f"Git operation failed for {path.name}: {e}")
-        except Exception as e:
-            logging.error(f"Unexpected error syncing {path.name}: {e}")
 
-    def get_cached_repo_path(self, repo_url: str) -> str | None:
-        """Return cached repo path if repo_url is configured and exists."""
-        repo_url = repo_url.strip()
-        for repo in self._repos:
-            if repo["url"].strip() == repo_url:
-                path = Path(ENV.REPO_CACHE_DIR) / repo["name"]
-                if path.exists():
-                    return str(path)
-        return None
+                return str(path)
+            except subprocess.CalledProcessError as e:
+                logging.error(
+                    f"Could not clone the repository {repo_url}: {e}"
+                )
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Couldn't clone the repository: {repo_url}"
+                )
+            except HTTPException as e:
+                raise e
 
     def list_all(self):
         return self._repos
 
     def reload(self):
         self._load()
-        self._sync_all()
