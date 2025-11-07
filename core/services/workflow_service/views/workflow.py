@@ -177,7 +177,7 @@ def pause_dag(
 )
 async def workflow_templates():
     try:
-        grouped_templates = workflow_controller.get_workflow_templates()
+        grouped_templates = workflow_controller.get_tagged_workflow_templates()
 
         result = defaultdict(list)
         for tag, templates in grouped_templates.items():

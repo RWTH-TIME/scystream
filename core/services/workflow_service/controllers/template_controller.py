@@ -4,11 +4,9 @@ from uuid import UUID, uuid4
 import networkx as nx
 import logging
 from pydantic import ValidationError
-from git import Repo
 import yaml
-import subprocess
-import tempfile
 
+from utils.config.registry import RepoRegistry
 from sqlalchemy.orm import Session
 from utils.config.environment import ENV
 from services.workflow_service.schemas.compute_block import (
@@ -47,88 +45,54 @@ def get_workflow_template_by_identifier(identifier: str) -> WorkflowTemplate:
     ENV finds it by its identifier, which is the file name
     (e.g., 'template.yaml').
     """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        try:
-            Repo.clone_from(
-                ENV.WORKFLOW_TEMPLATE_REPO,
-                tmpdir,
-                multi_options=[
-                    "--depth=1",
-                    "-c",
-                    "core.sshCommand=ssh -o StrictHostKeyChecking=no"
-                ],
-                allow_unsafe_options=True
-            )
+    try:
+        registry = RepoRegistry()
+        repo_path = registry.get_repo(
+            ENV.WORKFLOW_TEMPLATE_REPO
+        )
 
-            file_path = os.path.join(tmpdir, identifier)
-
-            if not os.path.isfile(file_path):
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Template file '{
-                        identifier}' not found in repository."
-                )
-
-            with open(file_path, "r") as f:
-                data = yaml.safe_load(f) or {}
-                data["file_identifier"] = identifier
-                return WorkflowTemplate.model_validate(data)
-
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Could not clone the repository {
-                          ENV.WORKFLOW_TEMPLATE_REPO}: {e}")
+        file_path = os.path.join(repo_path, identifier)
+        if not os.path.isfile(file_path):
             raise HTTPException(
-                status_code=422,
-                detail=f"Couldn't clone the repository: {
-                    ENV.WORKFLOW_TEMPLATE_REPO}"
-            )
-        except ValidationError as ve:
-            logging.warning(f"Validation failed for {identifier}: {ve}")
-            raise HTTPException(
-                status_code=422,
-                detail=f"Template validation failed: {ve}"
+                status_code=404,
+                detail=f"Template file '{
+                    identifier}' not found in repository."
             )
 
+        with open(file_path, "r") as f:
+            data = yaml.safe_load(f) or {}
+            data["file_identifier"] = identifier
+            return WorkflowTemplate.model_validate(data)
+    except ValidationError as ve:
+        logging.warning(f"Validation failed for {identifier}: {ve}")
+        raise HTTPException(
+            status_code=422,
+            detail=f"Template validation failed: {ve}"
+        )
 
-def get_workflow_templates_from_repo(repo_url: str) -> list[WorkflowTemplate]:
-    logging.debug(f"Cloning WorkflowTemplate Repo form: {repo_url}")
+
+def get_workflow_templates() -> list[WorkflowTemplate]:
     templates: WorkflowTemplate = []
 
-    with tempfile.TemporaryDirectory() as tmpdir:
+    registry = RepoRegistry()
+    repo_path = registry.get_repo(
+        ENV.WORKFLOW_TEMPLATE_REPO
+    )
+
+    for file in os.listdir(repo_path):
+        if not file.endswith((".yaml", ".yml")):
+            continue
+
+        file_path = os.path.join(repo_path, file)
         try:
-            Repo.clone_from(
-                repo_url,
-                tmpdir,
-                multi_options=[
-                    "--depth=1",
-                    "-c",
-                    "core.sshCommand=ssh -o StrictHostKeyChecking=no"
-                ],
-                allow_unsafe_options=True
-            )
-
-            for file in os.listdir(tmpdir):
-                if not file.endswith((".yaml", ".yml")):
-                    continue
-
-                file_path = os.path.join(tmpdir, file)
-                try:
-                    with open(file_path, "r") as f:
-                        data = yaml.safe_load(f) or {}
-                        data["file_identifier"] = file
-                        template = WorkflowTemplate.model_validate(data)
-                        templates.append(template)
-                except ValidationError as ve:
-                    logging.warning(f"Validation failed for {file_path}: {ve}")
-                    raise ve
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Could not clone the repository {repo_url}: {e}")
-            raise HTTPException(
-                status_code=422,
-                detail=f"Couldn't clone the repository: {repo_url}"
-            )
-        except HTTPException as e:
-            raise e
+            with open(file_path, "r") as f:
+                data = yaml.safe_load(f) or {}
+                data["file_identifier"] = file
+                template = WorkflowTemplate.model_validate(data)
+                templates.append(template)
+        except ValidationError as ve:
+            logging.warning(f"Validation failed for {file_path}: {ve}")
+            raise ve
 
     return templates
 
