@@ -1,21 +1,8 @@
 import asyncio
 import logging
-from uuid import UUID
 from collections import defaultdict
+from uuid import UUID
 
-from utils.database.session_injector import get_database
-from services.workflow_service.controllers import \
-    compute_block_controller as compute_block_controller
-from services.workflow_service.controllers import \
-    project_controller as project_controller
-from services.workflow_service.controllers import workflow_controller
-from services.workflow_service.schemas.workflow import (
-    WorkflowStatus, WorkflowTemplateMetaData, GetWorkflowConfigurationResponse,
-    UpdateWorkflowConfigurations
-)
-from services.workflow_service.schemas.workflow import (
-    InputOutputWithBlockInfo
-)
 from fastapi import (
     APIRouter,
     Depends,
@@ -23,6 +10,21 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from services.workflow_service.controllers import (
+    compute_block_controller as compute_block_controller,
+)
+from services.workflow_service.controllers import (
+    project_controller as project_controller,
+)
+from services.workflow_service.controllers import workflow_controller
+from services.workflow_service.schemas.workflow import (
+    GetWorkflowConfigurationResponse,
+    InputOutputWithBlockInfo,
+    UpdateWorkflowConfigurations,
+    WorkflowStatus,
+    WorkflowTemplateMetaData,
+)
+from utils.database.session_injector import get_database
 from utils.errors.error import handle_error
 from utils.security.token import User, get_user, get_user_from_token
 
@@ -31,22 +33,23 @@ router = APIRouter(prefix="/workflow", tags=["workflow"])
 
 @router.get(
     "/configurations/{project_id}",
-    response_model=GetWorkflowConfigurationResponse
+    response_model=GetWorkflowConfigurationResponse,
 )
 def get_workflow_configurations(
-        project_id: UUID | None = None
+    project_id: UUID | None = None,
 ):
     if not project_id:
         raise HTTPException(
             status_code=422,
-            detail="Project ID missing"
+            detail="Project ID missing",
         )
 
     try:
-        envs, inputs, inter, outputs, presigned, block_by_entry_id = \
+        envs, inputs, inter, outputs, presigned, block_by_entry_id = (
             workflow_controller.get_workflow_configurations(
-                project_id
+                project_id,
             )
+        )
 
         return GetWorkflowConfigurationResponse(
             envs=envs,
@@ -57,7 +60,8 @@ def get_workflow_configurations(
                     block_by_entry_id.get(i.entrypoint_uuid).uuid,
                     block_by_entry_id.get(i.entrypoint_uuid).custom_name,
                     presigned.get(i.uuid, None),
-                ) for i in inputs
+                )
+                for i in inputs
             ],
             workflow_intermediates=[
                 InputOutputWithBlockInfo.from_input_output(
@@ -66,7 +70,8 @@ def get_workflow_configurations(
                     block_by_entry_id.get(i.entrypoint_uuid).uuid,
                     block_by_entry_id.get(i.entrypoint_uuid).custom_name,
                     presigned.get(i.uuid, None),
-                ) for i in inter
+                )
+                for i in inter
             ],
             workflow_outputs=[
                 InputOutputWithBlockInfo.from_input_output(
@@ -75,27 +80,29 @@ def get_workflow_configurations(
                     block_by_entry_id.get(o.entrypoint_uuid).uuid,
                     block_by_entry_id.get(o.entrypoint_uuid).custom_name,
                     presigned.get(o.uuid, None),
-                ) for o in outputs
-            ]
+                )
+                for o in outputs
+            ],
         )
     except Exception as e:
         logging.exception(
-            f"Exception when getting workflow configurations: {e}")
+            f"Exception when getting workflow configurations: {e}",
+        )
         raise handle_error(e)
 
 
 @router.put(
     "/configurations/{project_id}",
-    status_code=200
+    status_code=200,
 )
 def update_workflow_configurations(
     project_id: UUID | None,
-    data: UpdateWorkflowConfigurations
+    data: UpdateWorkflowConfigurations,
 ):
     if not project_id:
         raise HTTPException(
             status_code=422,
-            detail="Project ID missing"
+            detail="Project ID missing",
         )
 
     db = next(get_database())
@@ -106,24 +113,28 @@ def update_workflow_configurations(
                 project_controller.rename_project(
                     project_uuid=project_id,
                     new_name=data.project_name,
-                    db=db
+                    db=db,
                 )
 
             if data.envs:
-                updated_blocks = compute_block_controller.\
-                    bulk_update_block_envs(
+                updated_blocks = (
+                    compute_block_controller.bulk_update_block_envs(
                         db=db,
-                        updates=[compute_block_controller.BulkBlockEnvsUpdate(
-                            block_id=envdto.block_uuid,
-                            envs=envdto.envs
-                        ) for envdto in data.envs]
+                        updates=[
+                            compute_block_controller.BulkBlockEnvsUpdate(
+                                block_id=envdto.block_uuid,
+                                envs=envdto.envs,
+                            )
+                            for envdto in data.envs
+                        ],
                     )
+                )
                 logging.info(updated_blocks)
 
             if data.ios:
                 updated_ios = compute_block_controller.update_ios_with_uploads(
                     db=db,
-                    data=data.ios
+                    data=data.ios,
                 )
                 logging.info(updated_ios)
 
@@ -187,7 +198,7 @@ async def workflow_templates():
                         file_identifier=tpl.file_identifier,
                         name=tpl.pipeline.name,
                         description=tpl.pipeline.description,
-                    )
+                    ),
                 )
         return dict(result)
     except Exception as e:
@@ -199,7 +210,7 @@ async def ws_project_status(
     websocket: WebSocket,
     _: User = Depends(get_user_from_token),
 ):
-    """Returns the DAG statuses"""
+    """Returns the DAG statuses."""
     await websocket.accept()
 
     try:
@@ -220,7 +231,7 @@ async def ws_project_status(
             await websocket.send_json(all_proj_status)
             await asyncio.sleep(2)
     except WebSocketDisconnect:
-        logging.info(f"Websocket disconnected for project {project_id!s}")
+        logging.info("Websocket disconnected for a project")
     except Exception as e:
         logging.exception(f"Error in ws_workflow_status: {e}")
         await websocket.close(code=1011)
@@ -232,7 +243,7 @@ async def ws_workflow_status(
     project_id: UUID,
     _: User = Depends(get_user_from_token),
 ):
-    """Returns the status of the blocks within a workflow"""
+    """Returns the status of the blocks within a workflow."""
     await websocket.accept()
 
     try:
