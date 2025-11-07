@@ -1,9 +1,0 @@
-repos:
-  - name: wosdownloader
-    url: git@git.rwth-aachen.de:tim-institute/literature-analysis-pipeline/wosdownloader.git
-  - name: database-interactions
-    url: git@github.com:RWTH-TIME/database-interactions.git
-  - name: topic-modeling
-    url: git@github.com:RWTH-TIME/topic-modeling.git
-  - name: language-preprocessing
-    url: git@github.com:RWTH-TIME/language-preprocessing.git
