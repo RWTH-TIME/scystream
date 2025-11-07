@@ -61,7 +61,7 @@ function ProjectPage({ params }: ProjectPageProps) {
       <PageWithHeader breadcrumbs={[
         { text: "Dashboard", link: "/" },
         { text: "Project", link: "/" },
-        { text: selectedProject?.name ?? "", link: "/project" }
+        { text: selectedProject?.name ?? "", link: `/project/${projectId}` }
       ]}>
         <div className="flex flex-col h-full">
           <Tabs activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
