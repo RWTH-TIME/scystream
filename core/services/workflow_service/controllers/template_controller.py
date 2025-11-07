@@ -6,6 +6,7 @@ import logging
 from pydantic import ValidationError
 import yaml
 
+from utils.config.registry import RepoRegistry
 from sqlalchemy.orm import Session
 from utils.config.environment import ENV
 from services.workflow_service.schemas.compute_block import (
@@ -45,8 +46,12 @@ def get_workflow_template_by_identifier(identifier: str) -> WorkflowTemplate:
     (e.g., 'template.yaml').
     """
     try:
-        file_path = os.path.join(ENV.TEMPLATE_DIR, identifier)
+        registry = RepoRegistry()
+        repo_path = registry.get_repo(
+            ENV.WORKFLOW_TEMPLATE_REPO
+        )
 
+        file_path = os.path.join(repo_path, identifier)
         if not os.path.isfile(file_path):
             raise HTTPException(
                 status_code=404,
@@ -69,11 +74,16 @@ def get_workflow_template_by_identifier(identifier: str) -> WorkflowTemplate:
 def get_workflow_templates() -> list[WorkflowTemplate]:
     templates: WorkflowTemplate = []
 
-    for file in os.listdir(ENV.TEMPLATE_DIR):
+    registry = RepoRegistry()
+    repo_path = registry.get_repo(
+        ENV.WORKFLOW_TEMPLATE_REPO
+    )
+
+    for file in os.listdir(repo_path):
         if not file.endswith((".yaml", ".yml")):
             continue
 
-        file_path = os.path.join(ENV.TEMPLATE_DIR, file)
+        file_path = os.path.join(repo_path, file)
         try:
             with open(file_path, "r") as f:
                 data = yaml.safe_load(f) or {}
