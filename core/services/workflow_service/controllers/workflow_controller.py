@@ -8,6 +8,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import networkx as nx
+import requests
 from airflow_client.client.api.dag_api import DAGApi
 from airflow_client.client.api.dag_run_api import DagRunApi
 from airflow_client.client.api.task_instance_api import TaskInstanceApi
@@ -23,6 +24,7 @@ from airflow_client.client.models.trigger_dag_run_post_body import (
 )
 from fastapi import HTTPException
 from jinja2 import Environment, FileSystemLoader
+from pydantic import BaseModel
 from services.workflow_service.controllers import (
     compute_block_controller,
     template_controller,
@@ -51,8 +53,6 @@ from services.workflow_service.schemas.workflow import (
 from utils.config.environment import ENV
 from utils.data.file_handling import bulk_presigned_urls_from_ios
 from utils.database.session_injector import get_database
-import requests
-from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -79,8 +79,10 @@ def get_airflow_client_access_token(
     headers = {"Content-Type": "application/json"}
     response = requests.post(url, json=payload, headers=headers)
     if response.status_code != 201:
-        raise RuntimeError(f"Failed to get access token: \
-            {response.status_code} {response.text}")
+        raise RuntimeError(
+            f"Failed to get access token: \
+            {response.status_code} {response.text}",
+        )
     response_success = AirflowAccessTokenResponse(**response.json())
     return response_success.access_token
 
@@ -479,7 +481,7 @@ def wait_for_dag_registration(
 def translate_project_to_dag(project_uuid: UUID) -> str:
     """Parses a project and its blocks into a DAG, validates it, and saves
     it."""
-    project = read_project(project_uuid)  # Ensures project is set
+    project = read_project(project_uuid)
     graph = create_graph(project)
     templates = init_templates()
     dag_id = _project_id_to_dag_id(project_uuid)
@@ -543,9 +545,6 @@ def last_dag_run_overview(dag_ids: list[str]) -> dict:
                     ),
                 )
 
-                # We only select the newest runs per DAG
-                # Unfortunately airflow_client does not offer this
-                # out of the box
                 for run in all_runs.dag_runs:
                     dag_id = run.dag_id
                     if (
@@ -571,7 +570,7 @@ def get_latest_dag_run(project_id: UUID) -> str | None:
             dag_runs = api.get_dag_runs(
                 dag_id,
                 limit=1,
-                order_by="-logical_date"
+                order_by=["-logical_date"],
             ).dag_runs
 
             if dag_runs:
