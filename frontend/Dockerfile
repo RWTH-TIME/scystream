@@ -1,4 +1,4 @@
-FROM node:22.20.0-alpine AS installer
+FROM node:22.21.1-alpine AS installer
 
 WORKDIR /app
 
@@ -6,7 +6,7 @@ COPY package.json package-lock.json ./
 
 RUN npm install
 
-FROM node:22.20.0-alpine AS builder
+FROM node:22.21.1-alpine AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY --from=installer /app/node_modules ./node_modules
 
 RUN npm run build
 
-FROM node:22.20.0-alpine
+FROM node:22.21.1-alpine
 
 WORKDIR /app
 
