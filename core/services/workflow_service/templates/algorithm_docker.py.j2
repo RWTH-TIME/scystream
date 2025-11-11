@@ -8,7 +8,7 @@
             docker_url="unix://var/run/docker.sock",
             environment={{ environment }},
             network_mode="{{ network_mode }}",
-            force_pull=True,
+            force_pull=False,
             mount_tmp_dir=True,
         )
 
