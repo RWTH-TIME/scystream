@@ -83,19 +83,24 @@ type ActionButtonsProps = {
   onPlayClick: () => void,
   onDeleteClick: () => void,
   isTriggerLoading: boolean,
+  allWorkflowInputsConfigured: boolean,
 }
 
 export function ActionButtons({
   onPlayClick,
   onDeleteClick,
   isTriggerLoading,
+  allWorkflowInputsConfigured
 }: ActionButtonsProps) {
   return (
     <div className="flex justify-self-end gap-3">
       <button
-        disabled={isTriggerLoading}
+        disabled={isTriggerLoading || !allWorkflowInputsConfigured}
         onClick={onPlayClick}
-        className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
+        className={`flex items-center justify-center w-12 h-12 ${allWorkflowInputsConfigured && !isTriggerLoading
+          ? "bg-blue-500 hover:bg-blue-400"
+          : "bg-gray-400"
+          } text-white rounded-full transition-all duration-200 cursor-pointer disabled:cursor-not-allowed`}
       >
         {isTriggerLoading ? <CircularProgress /> : <PlayArrow />}
       </button>
@@ -280,6 +285,7 @@ export function Workbench({
           onPlayClick={onPlayClicked}
           onDeleteClick={() => setDeleteApproveOpen(true)}
           isTriggerLoading={isTriggerWorkflowLoading}
+          allWorkflowInputsConfigured={true} // Expert-Mode can trigger workflow run always
         />
       </div>
 

@@ -162,7 +162,7 @@ export default function ConfigBox({
                 {showFileInput && (
                   <Button
                     onClick={() => setModalOpenFor(io)}
-                    sentiment={ButtonSentiment.NEUTRAL}
+                    sentiment={ButtonSentiment.POSITIVE}
                   >
                     Configure File
                   </Button>
