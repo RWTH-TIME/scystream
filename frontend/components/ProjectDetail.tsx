@@ -73,6 +73,21 @@ export default function ProjectDetail({
     return modifiedIOKeys.has(id) || changedIOFiles.has(id)
   }
 
+  const allWorkflowInputsConfigured = projectDetailForm.workflow_inputs.every(io => {
+    // Checks if all workflow inputs are configured / file uploaded
+    if (io.presigned_url) return true
+
+    if (!io.config || Object.values(io.config).length === 0) return true
+
+    if (io.config && Object.values(io.config).length > 0) {
+      return Object.values(io.config).every(
+        v => v !== null && v !== undefined && v !== ""
+      )
+    }
+
+    return false
+  })
+
 
   function handleFieldConfigChange(
     field: "envs" | "workflow_inputs" | "workflow_outputs" | "workflow_intermediates",
@@ -289,6 +304,7 @@ export default function ProjectDetail({
             onPlayClick={() => triggerWorkflow(selectedProject!.uuid)}
             onDeleteClick={() => setDeleteApproveOpen(true)}
             isTriggerLoading={isTriggerWorkflowLoading}
+            allWorkflowInputsConfigured={allWorkflowInputsConfigured}
           />
         </div>
       </div>
