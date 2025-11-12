@@ -13,7 +13,7 @@ from services.workflow_service.schemas.compute_block import (
     CreateComputeBlockRequest, IDResponse,
     GetNodesByProjectResponse,
     EdgeDTO, SimpleNodeDTO, InputOutputDTO, BaseInputOutputDTO,
-    UpdateInputOutuputResponseDTO, UpdateComputeBlockDTO, ConfigType,
+    UpdateInputOutputResponseDTO, UpdateComputeBlockDTO, ConfigType,
     BlockStatus
 )
 from fastapi import APIRouter, Depends, HTTPException
@@ -196,7 +196,7 @@ async def get_io(
 
 
 @router.put("/entrypoint/io/",
-            response_model=list[UpdateInputOutuputResponseDTO])
+            response_model=list[UpdateInputOutputResponseDTO])
 async def update_io(data: list[BaseInputOutputDTO]):
     db = next(get_database())
     try:
@@ -206,10 +206,9 @@ async def update_io(data: list[BaseInputOutputDTO]):
         presigneds = bulk_presigned_urls_from_ios(updated)
 
         return [
-            UpdateInputOutuputResponseDTO.from_input_output(
+            UpdateInputOutputResponseDTO.from_input_output(
                 io,
                 presigneds.get(io.uuid),
-                presigneds.get(str(io.uuid)),
             )
             for io in updated
         ]

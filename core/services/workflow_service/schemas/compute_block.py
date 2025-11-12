@@ -396,7 +396,7 @@ class BaseInputOutputDTO(BaseModel):
         return self
 
 
-class UpdateInputOutuputResponseDTO(BaseInputOutputDTO):
+class UpdateInputOutputResponseDTO(BaseInputOutputDTO):
     type: InputOutputType
     entrypoint_id: UUID
     presigned_url: str | None = None
