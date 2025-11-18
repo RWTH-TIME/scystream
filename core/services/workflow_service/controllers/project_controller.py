@@ -184,7 +184,7 @@ def read_projects_by_user_uuid(user_uuid: UUID) -> list[Project]:
 
     projects = (
         db.query(Project)
-        .filter(Project.user_uuids.contains([user_uuid]))
+        .filter(Project.users.contains([user_uuid]))
         .all()
     )
 
@@ -196,4 +196,5 @@ def read_projects_by_user_uuid(user_uuid: UUID) -> list[Project]:
         )
 
     logging.info(f"Retrieved {len(projects)} projects for user {user_uuid}")
+
     return projects

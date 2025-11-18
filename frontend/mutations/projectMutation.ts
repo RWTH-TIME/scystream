@@ -6,7 +6,7 @@ import { AlertType, type SetAlertType } from "@/hooks/useAlert"
 import displayStandardAxiosErrors from "@/utils/errors"
 import type { Project } from "@/utils/types"
 
-const GET_PROJECTS_ENDPOINT = "project/read_all"
+const GET_PROJECTS_ENDPOINT = "project/read_by_user"
 const GET_PROJECT_ENDPOINT = "project/"
 const CREATE_PROJECT_ENDPOINT = "project"
 const DELETE_PROJECT_ENDPOINT = "project/"
