@@ -29,9 +29,6 @@ from services.workflow_service.controllers import (
     compute_block_controller,
     template_controller,
 )
-from services.workflow_service.controllers.project_controller import (
-    read_project,
-)
 from services.workflow_service.models.block import (
     Block,
     block_dependencies,
@@ -45,6 +42,7 @@ from services.workflow_service.schemas.compute_block import (
     BlockStatus,
     ConfigType,
 )
+from services.workflow_service.models import Project
 from services.workflow_service.schemas.workflow import (
     WorfklowValidationError,
     WorkflowEnvsWithBlockInfo,
@@ -478,10 +476,9 @@ def wait_for_dag_registration(
     return False
 
 
-def translate_project_to_dag(project_uuid: UUID) -> str:
+def translate_project_to_dag(project: Project, project_uuid: UUID) -> str:
     """Parses a project and its blocks into a DAG, validates it, and saves
     it."""
-    project = read_project(project_uuid)
     graph = create_graph(project)
     templates = init_templates()
     dag_id = _project_id_to_dag_id(project_uuid)

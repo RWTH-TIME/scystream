@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
-from uuid import UUID
+from fastapi import APIRouter, Depends
 from utils.errors.error import handle_error
 import logging
 from sqlalchemy.orm import Session
@@ -20,6 +19,7 @@ from services.workflow_service.schemas.project import (
 )
 from utils.database.session_injector import get_database
 from utils.security.token import User, get_user
+from utils.security.resources import get_project
 
 router = APIRouter(prefix="/project", tags=["project"])
 
@@ -83,41 +83,36 @@ async def read_projects_by_user(
         raise handle_error(e)
 
 
-@router.get("/{project_id}", response_model=Project)
+@router.get("/{project_uuid}", response_model=Project)
 async def read_project(
-        project_id: UUID | None = None,
+    project: Project = Depends(get_project)
 ):
-    try:
-        if project_id is None:
-            raise HTTPException(status=422, detail="Project ID is required")
-
-        project = project_controller.read_project(project_id)
-        return project
-    except Exception as e:
-        logging.error(f"Error reading project: {e}")
-        raise handle_error(e)
+    return project
 
 
-@router.put("/", response_model=Project)
+@router.put("/{project_uuid}", response_model=Project)
 async def rename_project(
     data: RenameProjectRequest,
+    project: Project = Depends(get_project),
     db: Session = Depends(get_database)
 ):
     try:
-        with db.begin():
-            updated_project = project_controller.rename_project(
-                data.project_uuid, data.new_name, db
-            )
+        updated_project = project_controller.rename_project(
+            db, project, data.new_name)
         return updated_project
     except Exception as e:
         raise handle_error(e)
 
 
-@router.delete("/{project_id}", status_code=200)
-async def delete_project(project_id: UUID, _: User = Depends(get_user)):
+@router.delete("/{project_uuid}", status_code=200)
+async def delete_project(
+    project: Project = Depends(get_project),
+    db: Session = Depends(get_database)
+):
     try:
-        project_controller.delete_project(project_id)
-        workflow_controller.delete_dag_from_airflow(project_id)
+        project_controller.delete_project(db, project)
+        workflow_controller.delete_dag_from_airflow(project.uuid)
     except Exception as e:
-        logging.exception(f"Error deleting project with id {project_id}: {e}")
+        logging.exception(f"Error deleting project with id {
+                          project.uuid}: {e}")
         raise handle_error(e)

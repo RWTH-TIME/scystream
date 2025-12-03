@@ -76,31 +76,15 @@ def create_project_from_template(
         raise e
 
 
-def read_project(project_uuid: UUID) -> Project:
-    logging.debug(f"Reading project with UUID: {project_uuid}")
-    db: Session = next(get_database())
-
-    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
-
-    if not project:
-        logging.error(f"Project {project_uuid} not found")
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    return project
-
-
-def rename_project(project_uuid: UUID, new_name: str, db: Session) -> Project:
-    logging.debug(f"Renaming project {project_uuid} to {new_name}.")
-
-    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
-
-    if not project:
-        logging.error(f"Project {project_uuid} not found.")
-        raise HTTPException(status_code=404, detail="Project not found")
+def rename_project(db: Session, project: Project, new_name: str) -> Project:
+    logging.debug(f"Renaming project {project.uuid} to {new_name}.")
 
     project.name = new_name
 
-    logging.info(f"Project {project_uuid} renamed successfully to {new_name}")
+    db.commit()
+    db.refresh(project)
+
+    logging.debug(f"Project {project.uuid} renamed successfully to {new_name}")
     return project
 
 
@@ -154,20 +138,13 @@ def delete_user(project_uuid: UUID, user_uuid: UUID) -> None:
     logging.info(f"User {user_uuid} removed from project {project_uuid}")
 
 
-def delete_project(project_uuid: UUID) -> None:
-    logging.debug(f"Deleting project with UUID: {project_uuid}")
-    db: Session = next(get_database())
-
-    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
-
-    if not project:
-        logging.error(f"Project {project_uuid} not found")
-        raise HTTPException(status_code=404, detail="Project not found")
+def delete_project(db: Session, project: Project) -> None:
+    logging.debug(f"Deleting project with UUID: {project.uuid}")
 
     db.delete(project)
     db.commit()
 
-    logging.info(f"Project {project_uuid} deleted successfully")
+    logging.debug("Project deleted successfully")
 
 
 def read_all_projects() -> list[Project]:
@@ -187,14 +164,5 @@ def read_projects_by_user_uuid(user_uuid: UUID) -> list[Project]:
         .filter(Project.users.contains([user_uuid]))
         .all()
     )
-
-    if not projects:
-        logging.error(f"No projects found for user {user_uuid}")
-        raise HTTPException(
-            status_code=404,
-            detail="No projects found for user",
-        )
-
-    logging.info(f"Retrieved {len(projects)} projects for user {user_uuid}")
 
     return projects
