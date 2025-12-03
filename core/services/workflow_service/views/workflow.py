@@ -16,6 +16,7 @@ from services.workflow_service.controllers import (
 from services.workflow_service.controllers import (
     project_controller as project_controller,
 )
+from services.workflow_service.models import Project
 from services.workflow_service.controllers import workflow_controller
 from services.workflow_service.schemas.workflow import (
     GetWorkflowConfigurationResponse,
@@ -27,6 +28,7 @@ from services.workflow_service.schemas.workflow import (
 from utils.database.session_injector import get_database
 from utils.errors.error import handle_error
 from utils.security.token import User, get_user, get_user_from_token
+from utils.security.resources import get_project
 
 router = APIRouter(prefix="/workflow", tags=["workflow"])
 
@@ -145,15 +147,11 @@ def update_workflow_configurations(
 
 @router.post("/{project_id}", status_code=200)
 def translate_project_to_dag(
-    project_id: UUID | None = None,
-    _: User = Depends(get_user),
+    project: Project = Depends(get_project)
 ):
-    if not project_id:
-        raise HTTPException(status_code=422, detail="Project ID missing")
-
     try:
-        workflow_controller.validate_workflow(project_id)
-        dag_id = workflow_controller.translate_project_to_dag(project_id)
+        workflow_controller.validate_workflow(project.uuid)
+        dag_id = workflow_controller.translate_project_to_dag(project.uuid)
         # Make sure airflow has enough time to create the dag internally
         if not workflow_controller.wait_for_dag_registration(dag_id):
             logging.error(f"DAG {dag_id} was not registered in time.")
