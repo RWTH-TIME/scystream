@@ -14,30 +14,30 @@
     "@emotion/styled": "11.14.1",
     "@mui/icons-material": "6.5.0",
     "@mui/material": "6.5.0",
-    "@tailwindcss/postcss": "4.1.17",
+    "@tailwindcss/postcss": "4.1.18",
     "@tanstack/react-query": "5.90.12",
     "@xyflow/react": "12.10.0",
     "axios": "1.13.2",
     "next": "15.5.9",
     "next-runtime-env": "3.3.0",
     "oidc-client-ts": "3.4.1",
-    "react": "19.2.1",
-    "react-dom": "19.2.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "uuid": "11.1.0",
     "zod": "3.25.76"
   },
   "devDependencies": {
     "@helpwave/eslint-config": "1.29.0",
     "@stylistic/eslint-plugin": "3.1.0",
-    "@types/node": "22.19.2",
+    "@types/node": "22.19.3",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "@types/uuid": "10.0.0",
-    "eslint": "9.39.1",
-    "eslint-config-next": "15.5.7",
+    "eslint": "9.39.2",
+    "eslint-config-next": "15.5.9",
     "postcss": "8.5.6",
-    "tailwindcss": "4.1.17",
+    "tailwindcss": "4.1.18",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.49.0"
+    "typescript-eslint": "8.50.0"
   }
 }
