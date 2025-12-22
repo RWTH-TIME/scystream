@@ -74,12 +74,14 @@ def replace_minio_host(url: str | None) -> str | None:
 
 class BaseIODTO(BaseModel):
     id: UUID | None = None
+    name: str | None = None
     data_type: DataType
 
     @classmethod
     def from_input_output(cls, io):
         return cls(
             id=io.uuid,
+            name=io.name,
             data_type=io.data_type
         )
 
