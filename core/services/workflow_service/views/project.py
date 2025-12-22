@@ -47,10 +47,12 @@ async def create_project(
 )
 async def create_project_from_template(
     data: CreateProjectFromTemplateRequest,
-    user: User = Depends(get_user)
+    user: User = Depends(get_user),
+    db: Session = Depends(get_database)
 ):
     try:
         id = project_controller.create_project_from_template(
+            db,
             data.name,
             data.template_identifier,
             user.uuid,
@@ -62,9 +64,11 @@ async def create_project_from_template(
 
 
 @router.get("/read_all", response_model=ReadAllResponse)
-async def read_all_projects():
+async def read_all_projects(
+    db: Session = Depends(get_database)
+):
     try:
-        projects = project_controller.read_all_projects()
+        projects = project_controller.read_all_projects(db)
         return ReadAllResponse(projects=projects)
     except Exception as e:
         logging.error(f"Error reading all projects: {e}")
@@ -74,9 +78,10 @@ async def read_all_projects():
 @router.get("/read_by_user", response_model=ReadByUserResponse)
 async def read_projects_by_user(
     user: User = Depends(get_user),
+    db: Session = Depends(get_database)
 ):
     try:
-        projects = project_controller.read_projects_by_user_uuid(user.uuid)
+        projects = project_controller.read_projects_by_user_uuid(db, user.uuid)
         return ReadByUserResponse(projects=projects)
     except Exception as e:
         logging.exception(f"Error reading project by user: {e}")

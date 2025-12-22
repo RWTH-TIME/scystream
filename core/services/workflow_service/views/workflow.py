@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from collections import defaultdict
+from sqlalchemy.orm import Session
 from uuid import UUID
 
 from fastapi import (
@@ -27,29 +28,25 @@ from services.workflow_service.schemas.workflow import (
 )
 from utils.database.session_injector import get_database
 from utils.errors.error import handle_error
-from utils.security.token import User, get_user, get_user_from_token
+from utils.security.token import User, get_user_from_token
 from utils.security.resources import get_project
 
 router = APIRouter(prefix="/workflow", tags=["workflow"])
 
 
 @router.get(
-    "/configurations/{project_id}",
+    "/configurations/{project_uuid}",
     response_model=GetWorkflowConfigurationResponse,
 )
 def get_workflow_configurations(
-    project_id: UUID | None = None,
+    project: Project = Depends(get_project),
+    db: Session = Depends(get_database)
 ):
-    if not project_id:
-        raise HTTPException(
-            status_code=422,
-            detail="Project ID missing",
-        )
-
     try:
         envs, inputs, inter, outputs, presigned, block_by_entry_id = (
             workflow_controller.get_workflow_configurations(
-                project_id,
+                db,
+                project.uuid,
             )
         )
 
@@ -94,26 +91,19 @@ def get_workflow_configurations(
 
 
 @router.put(
-    "/configurations/{project_id}",
+    "/configurations/{project_uuid}",
     status_code=200,
 )
 def update_workflow_configurations(
-    project_id: UUID | None,
     data: UpdateWorkflowConfigurations,
+    project: Project = Depends(get_project),
+    db: Session = Depends(get_database)
 ):
-    if not project_id:
-        raise HTTPException(
-            status_code=422,
-            detail="Project ID missing",
-        )
-
-    db = next(get_database())
-
     try:
         with db.begin():
             if data.project_name:
                 project_controller.rename_project(
-                    project_uuid=project_id,
+                    project_uuid=project.uuid,
                     new_name=data.project_name,
                     db=db,
                 )
@@ -165,15 +155,11 @@ def translate_project_to_dag(
         raise handle_error(e)
 
 
-@router.post("/{project_id}/pause", status_code=200)
+@router.post("/{project_uuid}/pause", status_code=200)
 def pause_dag(
-    project_id: UUID | None = None,
-    _: User = Depends(get_user),
+    project: Project = Depends(get_project)
 ):
-    if not project_id:
-        raise HTTPException(status_code=422, detail="Project ID missing")
-
-    dag_id = f"dag_{str(project_id).replace("-", "_")}"
+    dag_id = f"dag_{str(project.uuid).replace("-", "_")}"
 
     try:
         workflow_controller.unpause_dag(dag_id, True)

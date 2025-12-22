@@ -166,7 +166,7 @@ def _get_unconfigured_ios(ios: list[InputOutput]) -> list[InputOutput]:
     return result
 
 
-def get_workflow_configurations(project_id: UUID) -> tuple[
+def get_workflow_configurations(db: Session, project_id: UUID) -> tuple[
     list[WorkflowEnvsWithBlockInfo],
     list[InputOutput],  # Workflow Inputs
     list[InputOutput],  # Intermediates
@@ -224,8 +224,6 @@ def get_workflow_configurations(project_id: UUID) -> tuple[
             - List of InputOutput for workflow outputs
             - Dictionary mapping entrypoint UUIDs to Block instances
     """
-    db: Session = next(get_database())
-
     # 1. Load blocks
     blocks = compute_block_controller.get_compute_blocks_by_project(project_id)
     block_by_entry_id = {b.selected_entrypoint_uuid: b for b in blocks}

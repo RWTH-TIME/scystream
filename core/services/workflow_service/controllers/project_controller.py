@@ -33,6 +33,7 @@ def create_project(db: Session, name: str, current_user_uuid: UUID) -> UUID:
 
 
 def create_project_from_template(
+        db: Session,
         name: str,
         template_identifier: str,
         current_user_uuid: UUID
@@ -41,8 +42,6 @@ def create_project_from_template(
     This method will handle the creation of project, blocks and edges as
     defined in the template.yaml
     """
-    db: Session = next(get_database())
-
     template: WorkflowTemplate =\
         template_controller.get_workflow_template_by_identifier(
             template_identifier
@@ -147,17 +146,14 @@ def delete_project(db: Session, project: Project) -> None:
     logging.debug("Project deleted successfully")
 
 
-def read_all_projects() -> list[Project]:
-    db: Session = next(get_database())
-
+def read_all_projects(db: Session) -> list[Project]:
     projects = db.query(Project).all()
 
     return projects
 
 
-def read_projects_by_user_uuid(user_uuid: UUID) -> list[Project]:
+def read_projects_by_user_uuid(db: Session, user_uuid: UUID) -> list[Project]:
     logging.debug(f"Fetching projects for user UUID: {user_uuid}")
-    db: Session = next(get_database())
 
     projects = (
         db.query(Project)
