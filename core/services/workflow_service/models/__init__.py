@@ -1,6 +1,6 @@
 from .block import Block
 from .entrypoint import Entrypoint
-from .input_output import InputOutput
+from .input_output import InputOutput, InputOutputType
 from .project import Project
 
 __all__ = [

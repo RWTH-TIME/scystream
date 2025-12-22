@@ -355,7 +355,6 @@ class ComputeBlockInformationResponse(BaseModel):
 
 
 class CreateComputeBlockRequest(BaseModel):
-    project_id: UUID
     cbc_url: str
     name: str
     custom_name: str

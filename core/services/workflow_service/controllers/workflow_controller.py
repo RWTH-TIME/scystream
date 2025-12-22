@@ -50,7 +50,6 @@ from services.workflow_service.schemas.workflow import (
 )
 from utils.config.environment import ENV
 from utils.data.file_handling import bulk_presigned_urls_from_ios
-from utils.database.session_injector import get_database
 
 if TYPE_CHECKING:
     from uuid import UUID
