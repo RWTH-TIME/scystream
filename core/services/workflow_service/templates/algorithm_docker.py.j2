@@ -8,6 +8,9 @@
             docker_url="unix://var/run/docker.sock",
             environment={{ environment }},
             network_mode="{{ network_mode }}",
+            extra_hosts={
+                "host.containers.internal": "host-gateway"
+            },
             force_pull=False,
             mount_tmp_dir=True,
         )
