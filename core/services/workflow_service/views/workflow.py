@@ -145,13 +145,14 @@ def update_workflow_configurations(
         raise handle_error(e)
 
 
-@router.post("/{project_id}", status_code=200)
+@router.post("/{project_uuid}", status_code=200)
 def translate_project_to_dag(
     project: Project = Depends(get_project)
 ):
     try:
         workflow_controller.validate_workflow(project.uuid)
-        dag_id = workflow_controller.translate_project_to_dag(project.uuid)
+        dag_id = workflow_controller.translate_project_to_dag(
+            project, project.uuid)
         # Make sure airflow has enough time to create the dag internally
         if not workflow_controller.wait_for_dag_registration(dag_id):
             logging.error(f"DAG {dag_id} was not registered in time.")
