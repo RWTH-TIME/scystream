@@ -86,7 +86,7 @@ class Block(Base):
         secondaryjoin=foreign(
             block_dependencies.c.upstream_block_uuid) == uuid,
         back_populates="downstream_blocks",
-        cascade="all, delete"
+        passive_deletes=True
     )
 
     downstream_blocks = relationship(
@@ -96,7 +96,7 @@ class Block(Base):
         secondaryjoin=foreign(
             block_dependencies.c.downstream_block_uuid) == uuid,
         back_populates="upstream_blocks",
-        cascade="all, delete"
+        passive_deletes=True
     )
 
     __table_args__ = (
