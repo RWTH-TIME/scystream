@@ -5,6 +5,7 @@ import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import type { ComputeBlock, InputOutput } from "../CreateComputeBlockModal"
 import { ComputeBlockStatus, InputOutputType } from "../CreateComputeBlockModal"
 import { CheckCircle, Error, Warning, Schedule, Autorenew } from "@mui/icons-material"
+import Tooltip from "@mui/material/Tooltip"
 
 export interface ComputeBlockNodeType extends Node {
   id: string,
@@ -67,22 +68,28 @@ export default function ComputeBlockNode({ data }: { data: ComputeBlock }) {
   const renderHandles = (items: InputOutput[], type: "target" | "source", position: Position) => {
     return items.map((item, index) => {
       return (
-        <Handle
-          key={index}
-          type={type}
-          position={position}
-          id={item.id}
-          style={{
-            ...handleStyles[item.data_type] || {
-              backgroundImage: "",
-              backgroundColor: "grey",
-            },
-            width: "15px",
-            height: "15px",
-            borderRadius: "50%",
-            top: `${(index + 1) * 20}%`,
-          }}
-        />
+        <Tooltip
+          key={item.id}
+          title={`${item.name} (${item.data_type})`}
+          placement={type === "target" ? "left" : "right"}
+          arrow
+          disableInteractive
+        >
+          <Handle
+            key={item.id}
+            id={item.id}
+            type={type}
+            position={position}
+            style={{
+              ...handleStyles[item.data_type],
+              width: "15px",
+              height: "15px",
+              borderRadius: "50%",
+              top: `${(index + 1) * 20}%`,
+              pointerEvents: "all",
+            }}
+          />
+        </Tooltip>
       )
     })
   }
