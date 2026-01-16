@@ -4,7 +4,7 @@ pydantic==2.12.5
 pydantic-settings==2.12.0
 SQLAlchemy==2.0.45
 psycopg2-binary==2.9.11
-alembic==1.18.0
+alembic==1.18.1
 bcrypt==4.3.0
 pyjwt==2.10.1
 requests==2.32.5
@@ -14,5 +14,5 @@ Jinja2==3.1.6
 scystream-sdk==1.2.2
 websockets==15.0.1
 python-keycloak==5.12.0
-boto3==1.42.27
+boto3==1.42.30
 GitPython==3.1.46
