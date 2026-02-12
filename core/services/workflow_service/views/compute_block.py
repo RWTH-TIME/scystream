@@ -32,7 +32,17 @@ from services.workflow_service.controllers.compute_block_controller import (
     update_block,
     update_ios_with_uploads
 )
+from services.workflow_service.models import (
+    Project,
+    Entrypoint,
+    InputOutput
+)
 from utils.security.token import User, get_user
+from utils.security.resources import (
+    get_project,
+    get_entrypoint,
+    get_ios_by_entrypoint_uuid
+)
 
 router = APIRouter(prefix="/compute_block", tags=["compute_block"])
 
@@ -94,19 +104,15 @@ async def create(
 
 
 @router.get(
-    "/by_project/{project_id}",
+    "/by_project/{project_uuid}",
     response_model=GetNodesByProjectResponse,
 )
 async def get_by_project(
-    project_id: UUID | None = None,
-    _: User = Depends(get_user),
+    project: Project = Depends(get_project),
 ):
-    if not project_id:
-        raise HTTPException(status_code=422, detail="Project ID is required.")
-
     try:
-        compute_blocks = get_compute_blocks_by_project(project_id)
-        status = workflow_controller.dag_status(project_id)
+        compute_blocks = get_compute_blocks_by_project(project.uuid)
+        status = workflow_controller.dag_status(project.uuid)
 
         block_uuids = [block.uuid for block in compute_blocks]
         dependencies = get_block_dependencies_for_blocks(block_uuids)
@@ -126,21 +132,15 @@ async def get_by_project(
         raise handle_error(e)
 
 
-@router.get("/entrypoint/{entry_id}/envs/", response_model=ConfigType)
+@router.get("/entrypoint/{entrypoint_uuid}/envs/", response_model=ConfigType)
 async def get_envs(
-    entry_id: UUID | None = None,
-    _: User = Depends(get_user),
+    entrypoint: Entrypoint = Depends(get_entrypoint)
 ):
-    if not entry_id:
-        raise HTTPException(
-            status_code=422,
-            detail="Entrypoint ID is required.",
-        )
-
     try:
-        return get_envs_for_entrypoint(entry_id)
+        return get_envs_for_entrypoint(entrypoint.uuid)
     except Exception as e:
-        logging.exception(f"Error getting envs of entrypoint {entry_id}: {e}")
+        logging.exception(f"Error getting envs of entrypoint {
+                          entrypoint.uuid}: {e}")
         raise handle_error(e)
 
 
@@ -169,19 +169,16 @@ async def update_compute_block(
         raise handle_error(e)
 
 
-@router.get("/entrypoint/{entry_id}/io/", response_model=list[InputOutputDTO])
+@router.get(
+    "/entrypoint/{entrypoint_uuid}/io/",
+    response_model=list[InputOutputDTO]
+)
 async def get_io(
-    entry_id: UUID,
     io_type: InputOutputType,
-    _: User = Depends(get_user),
+    entrypoint_uuid: UUID,
+    ios: list[InputOutput] = Depends(get_ios_by_entrypoint_uuid)
 ):
-    if not entry_id:
-        raise HTTPException(
-            status_code=422,
-            detail="Entrypoint ID is required.",
-        )
     try:
-        ios = get_io_for_entrypoint(entry_id, io_type)
         presigned_urls = bulk_presigned_urls_from_ios(ios)
         return [InputOutputDTO.from_input_output(
             io.name,
@@ -190,7 +187,8 @@ async def get_io(
         ]
     except Exception as e:
         logging.exception(
-            f"Error getting {io_type.value}s of entrypoint {entry_id}: {e}",
+            f"Error getting {io_type.value}s of entrypoint {
+                entrypoint_uuid}: {e}",
         )
         raise handle_error(e)
 

@@ -29,9 +29,6 @@ from services.workflow_service.controllers import (
     compute_block_controller,
     template_controller,
 )
-from services.workflow_service.controllers.project_controller import (
-    read_project,
-)
 from services.workflow_service.models.block import (
     Block,
     block_dependencies,
@@ -45,6 +42,7 @@ from services.workflow_service.schemas.compute_block import (
     BlockStatus,
     ConfigType,
 )
+from services.workflow_service.models import Project
 from services.workflow_service.schemas.workflow import (
     WorfklowValidationError,
     WorkflowEnvsWithBlockInfo,
@@ -52,7 +50,6 @@ from services.workflow_service.schemas.workflow import (
 )
 from utils.config.environment import ENV
 from utils.data.file_handling import bulk_presigned_urls_from_ios
-from utils.database.session_injector import get_database
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -168,7 +165,7 @@ def _get_unconfigured_ios(ios: list[InputOutput]) -> list[InputOutput]:
     return result
 
 
-def get_workflow_configurations(project_id: UUID) -> tuple[
+def get_workflow_configurations(db: Session, project_id: UUID) -> tuple[
     list[WorkflowEnvsWithBlockInfo],
     list[InputOutput],  # Workflow Inputs
     list[InputOutput],  # Intermediates
@@ -226,8 +223,6 @@ def get_workflow_configurations(project_id: UUID) -> tuple[
             - List of InputOutput for workflow outputs
             - Dictionary mapping entrypoint UUIDs to Block instances
     """
-    db: Session = next(get_database())
-
     # 1. Load blocks
     blocks = compute_block_controller.get_compute_blocks_by_project(project_id)
     block_by_entry_id = {b.selected_entrypoint_uuid: b for b in blocks}
@@ -478,10 +473,9 @@ def wait_for_dag_registration(
     return False
 
 
-def translate_project_to_dag(project_uuid: UUID) -> str:
+def translate_project_to_dag(project: Project, project_uuid: UUID) -> str:
     """Parses a project and its blocks into a DAG, validates it, and saves
     it."""
-    project = read_project(project_uuid)
     graph = create_graph(project)
     templates = init_templates()
     dag_id = _project_id_to_dag_id(project_uuid)
