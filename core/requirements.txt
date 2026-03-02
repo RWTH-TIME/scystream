@@ -1,8 +1,8 @@
 uvicorn==0.41.0
-fastapi==0.129.0
+fastapi==0.135.1
 pydantic==2.12.5
-pydantic-settings==2.13.0
-SQLAlchemy==2.0.46
+pydantic-settings==2.13.1
+SQLAlchemy==2.0.47
 psycopg2-binary==2.9.11
 alembic==1.18.4
 bcrypt==4.3.0
@@ -14,5 +14,5 @@ Jinja2==3.1.6
 scystream-sdk==1.2.2
 websockets==15.0.1
 python-keycloak==5.12.0
-boto3==1.42.51
+boto3==1.42.59
 GitPython==3.1.46
