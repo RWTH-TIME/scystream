@@ -1,12 +1,12 @@
-uvicorn==0.41.0
-fastapi==0.135.1
+uvicorn==0.42.0
+fastapi==0.135.2
 pydantic==2.12.5
 pydantic-settings==2.13.1
-SQLAlchemy==2.0.47
+SQLAlchemy==2.0.48
 psycopg2-binary==2.9.11
 alembic==1.18.4
 bcrypt==4.3.0
-pyjwt==2.12.0
+pyjwt==2.12.1
 requests==2.32.5
 apache-airflow-client==3.1.6
 networkx==3.6.1
@@ -14,5 +14,5 @@ Jinja2==3.1.6
 scystream-sdk==1.2.2
 websockets==15.0.1
 python-keycloak==5.12.0
-boto3==1.42.59
+boto3==1.42.74
 GitPython==3.1.46
