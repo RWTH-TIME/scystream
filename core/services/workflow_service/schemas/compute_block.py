@@ -2,13 +2,13 @@ from uuid import UUID
 
 from enum import Enum
 from typing import Literal
-from pydantic import BaseModel, validator, model_validator
+from pydantic import BaseModel, validator, model_validator, Field
 from urllib.parse import urlparse
 
 from services.workflow_service.models.input_output import (
     DataType,
     InputOutput,
-    InputOutputType
+    InputOutputType,
 )
 from utils.config.environment import ENV
 from utils.config.defaults import get_file_cfg_defaults_dict
@@ -43,8 +43,7 @@ def _validate_url(url: str):
 
     parsed = urlparse(url)
     if parsed.scheme != "https":
-        raise ValueError(
-            "Insecure URL! Only HTTPS or SSH git URLs are allowed.")
+        raise ValueError("Insecure URL! Only HTTPS or SSH git URLs are allowed.")
 
 
 def _get_io_data_type(type: str) -> str:
@@ -58,8 +57,7 @@ def _get_io_data_type(type: str) -> str:
 def replace_minio_host(url: str | None) -> str | None:
     if url:
         defaults = get_file_cfg_defaults_dict("placeholder")
-        default_minio_url = f"{defaults.get("S3_HOST")}:{
-            defaults.get("S3_PORT")}"
+        default_minio_url = f"{defaults.get('S3_HOST')}:{defaults.get('S3_PORT')}"
         """
         The client can never use the presigned url with the default minio
         host. Therefore we replace the default minio host, if it exists in
@@ -68,6 +66,7 @@ def replace_minio_host(url: str | None) -> str | None:
         """
         return url.replace(default_minio_url, ENV.EXTERNAL_URL_DATA_S3)
     return url
+
 
 # Inputs & Outputs
 
@@ -79,11 +78,7 @@ class BaseIODTO(BaseModel):
 
     @classmethod
     def from_input_output(cls, io):
-        return cls(
-            id=io.uuid,
-            name=io.name,
-            data_type=io.data_type
-        )
+        return cls(id=io.uuid, name=io.name, data_type=io.data_type)
 
 
 class InputOutputDTO(BaseIODTO):
@@ -107,10 +102,10 @@ class InputOutputDTO(BaseIODTO):
 
     @classmethod
     def from_input_output(
-            cls,
-            name: str,
-            input_output,
-            presigned_url: str | None = None,
+        cls,
+        name: str,
+        input_output,
+        presigned_url: str | None = None,
     ):
         return cls(
             id=getattr(input_output, "uuid", None),
@@ -129,26 +124,22 @@ class InputOutputDTO(BaseIODTO):
             name=name,
             data_type=_get_io_data_type(input_output.type),
             description=input_output.description or "",
-            config=input_output.config or {}
+            config=input_output.config or {},
         )
 
     @classmethod
-    def to_input_output(
-        cls,
-        input_output,
-        type: Literal["Input", "Output"]
-    ):
+    def to_input_output(cls, input_output, type: Literal["Input", "Output"]):
         return InputOutput(
-            type=(InputOutputType.INPUT if type ==
-                  "Input" else InputOutputType.OUTPUT),
+            type=(InputOutputType.INPUT if type == "Input" else InputOutputType.OUTPUT),
             name=input_output.name,
             data_type=input_output.data_type,
             description=input_output.description,
-            config=input_output.config
+            config=input_output.config,
         )
 
 
 # Entrypoint
+
 
 class BaseEntrypointDTO(BaseModel):
     id: UUID | None = None
@@ -183,6 +174,7 @@ class EntrypointDTO(BaseEntrypointDTO):
 
 
 # Node:
+
 
 class PositionDTO(BaseModel):
     x: float
@@ -221,11 +213,7 @@ class SimpleNodeDTO(BaseNodeDTO):
     data: SimpleNodeDataDTO
 
     @classmethod
-    def from_compute_block(
-            cls,
-            cb,
-            status: BlockStatus = BlockStatus.IDLE
-    ):
+    def from_compute_block(cls, cb, status: BlockStatus = BlockStatus.IDLE):
         return cls(
             id=cb.uuid,
             position=PositionDTO(
@@ -252,9 +240,9 @@ class SimpleNodeDTO(BaseNodeDTO):
                         BaseIODTO.from_input_output(io)
                         for io in cb.selected_entrypoint.input_outputs
                         if io.type == InputOutputType.OUTPUT
-                    ]
+                    ],
                 ),
-                status=status
+                status=status,
             ),
         )
 
@@ -296,13 +284,14 @@ class NodeDTO(BaseNodeDTO):
                     description=cb.selected_entrypoint.description,
                     envs=cb.selected_entrypoint.envs,
                     inputs=inputs,
-                    outputs=outputs
+                    outputs=outputs,
                 ),
-            )
+            ),
         )
 
 
 # Edge:
+
 
 class EdgeDTO(BaseModel):
     id: str | None = None
@@ -324,8 +313,11 @@ class EdgeDTO(BaseModel):
 
 # Requests & Responses:
 
+
 class ComputeBlockInformationRequest(BaseModel):
+    compute_block_custom_name: str = Field(..., max_length=15)
     cbc_url: str
+    project_name: str
 
     @validator("cbc_url")
     def validate_cbc_url(cls, v):
@@ -350,7 +342,7 @@ class ComputeBlockInformationResponse(BaseModel):
             entrypoints=[
                 EntrypointDTO.from_sdk_entrypoint(name, entrypoint)
                 for name, entrypoint in cb.entrypoints.items()
-            ]
+            ],
         )
 
 
@@ -410,7 +402,7 @@ class UpdateInputOutputResponseDTO(BaseInputOutputDTO):
             type=input_output.type,
             entrypoint_id=input_output.entrypoint_uuid,
             config=input_output.config or {},
-            presigned_url=replace_minio_host(url=presigned_url)
+            presigned_url=replace_minio_host(url=presigned_url),
         )
 
 

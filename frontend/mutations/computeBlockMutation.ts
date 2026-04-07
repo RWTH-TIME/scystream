@@ -20,6 +20,8 @@ const CREATE_EDGE = "compute_block/edge/"
 const DELETE_EDGE = "compute_block/edge/delete"
 
 type ComputeBlockInfoDTO = {
+  compute_block_custom_name: string,
+  project_name: string,
   cbc_url: string,
 }
 

@@ -5,16 +5,21 @@ from sqlalchemy.orm import Session
 from utils.database.session_injector import get_database
 from utils.errors.error import handle_error
 from utils.data.file_handling import bulk_presigned_urls_from_ios
-from services.workflow_service.models.input_output import (
-    InputOutputType
-)
+from services.workflow_service.models.input_output import InputOutputType
 from services.workflow_service.schemas.compute_block import (
-    ComputeBlockInformationRequest, ComputeBlockInformationResponse,
-    CreateComputeBlockRequest, IDResponse,
+    ComputeBlockInformationRequest,
+    ComputeBlockInformationResponse,
+    CreateComputeBlockRequest,
+    IDResponse,
     GetNodesByProjectResponse,
-    EdgeDTO, SimpleNodeDTO, InputOutputDTO, BaseInputOutputDTO,
-    UpdateInputOutputResponseDTO, UpdateComputeBlockDTO, ConfigType,
-    BlockStatus
+    EdgeDTO,
+    SimpleNodeDTO,
+    InputOutputDTO,
+    BaseInputOutputDTO,
+    UpdateInputOutputResponseDTO,
+    UpdateComputeBlockDTO,
+    ConfigType,
+    BlockStatus,
 )
 from fastapi import APIRouter, Depends, HTTPException
 from services.workflow_service.controllers import workflow_controller
@@ -30,7 +35,7 @@ from services.workflow_service.controllers.compute_block_controller import (
     get_io_for_entrypoint,
     request_cb_info,
     update_block,
-    update_ios_with_uploads
+    update_ios_with_uploads,
 )
 from utils.security.token import User, get_user
 
@@ -44,7 +49,7 @@ async def cb_information(
 ):
     try:
         cb = request_cb_info(
-            data.cbc_url,
+            data.cbc_url, data.project_name, data.compute_block_custom_name
         )
         return ComputeBlockInformationResponse.from_sdk_compute_block(cb)
     except Exception as e:
@@ -56,7 +61,7 @@ async def cb_information(
 async def create(
     data: CreateComputeBlockRequest,
     _: User = Depends(get_user),
-    db: Session = Depends(get_database)
+    db: Session = Depends(get_database),
 ):
     try:
         """
@@ -81,10 +86,11 @@ async def create(
                 data.selected_entrypoint.name,
                 data.selected_entrypoint.description,
                 data.selected_entrypoint.envs,
-                [input.to_input_output(input, "Input")
-                 for input in updated_is],
-                [output.to_input_output(output, "Output")
-                 for output in data.selected_entrypoint.outputs],
+                [input.to_input_output(input, "Input") for input in updated_is],
+                [
+                    output.to_input_output(output, "Output")
+                    for output in data.selected_entrypoint.outputs
+                ],
                 data.project_id,
             )
             return SimpleNodeDTO.from_compute_block(cb)
@@ -183,10 +189,11 @@ async def get_io(
     try:
         ios = get_io_for_entrypoint(entry_id, io_type)
         presigned_urls = bulk_presigned_urls_from_ios(ios)
-        return [InputOutputDTO.from_input_output(
-            io.name,
-            io,
-            presigned_urls.get(io.uuid, None)) for io in ios
+        return [
+            InputOutputDTO.from_input_output(
+                io.name, io, presigned_urls.get(io.uuid, None)
+            )
+            for io in ios
         ]
     except Exception as e:
         logging.exception(
@@ -195,8 +202,7 @@ async def get_io(
         raise handle_error(e)
 
 
-@router.put("/entrypoint/io/",
-            response_model=list[UpdateInputOutputResponseDTO])
+@router.put("/entrypoint/io/", response_model=list[UpdateInputOutputResponseDTO])
 async def update_io(data: list[BaseInputOutputDTO]):
     db = next(get_database())
     try:
@@ -248,11 +254,7 @@ def create_io_stream_and_update_io_cfg(
     try:
         with db.begin():
             id = create_stream_and_update_target_cfg(
-                db,
-                data.source,
-                data.sourceHandle,
-                data.target,
-                data.targetHandle
+                db, data.source, data.sourceHandle, data.target, data.targetHandle
             )
         return IDResponse(id=id)
     except Exception as e:

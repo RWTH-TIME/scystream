@@ -43,7 +43,7 @@ export default function CreateProjectModal({
           <Input
             type="text"
             value={projectName}
-            label="Project Name"
+            label="Project Name (max 30 chars)"
             onChange={setProjectName}
           />
         </div>

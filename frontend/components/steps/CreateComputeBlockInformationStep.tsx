@@ -6,6 +6,7 @@ import { useState } from "react"
 import LoadingAndError from "@/components/LoadingAndError"
 import Input from "@/components/inputs/Input"
 import Button, { ButtonSentiment } from "../Button"
+import { useSelectedProject } from "@/hooks/useSelectedProject"
 
 const mapInputOutput = (data: InputOutput, type: IOType) => ({
   type: type,
@@ -19,8 +20,10 @@ export default function CreateComputeBlockInformationStep({
   onNext,
   setComputeBlock
 }: PageProps) {
+  const [computeBlockCustomName, setComputeBlockCustomName] = useState<string>("")
   const [repoURL, setRepoURL] = useState<string>("")
 
+  const { selectedProject } = useSelectedProject()
   const { setAlert } = useAlert()
   const { mutateAsync, isPending: loading } = useGetComputeBlockInfoMutation(setAlert)
 
@@ -29,6 +32,8 @@ export default function CreateComputeBlockInformationStep({
 
     if (repoURL.length > 0) {
       const cb = await mutateAsync({
+        compute_block_custom_name: computeBlockCustomName,
+        project_name: selectedProject!.name,
         cbc_url: repoURL,
       })
 
@@ -36,7 +41,7 @@ export default function CreateComputeBlockInformationStep({
         const mappedComputeBlock: ComputeBlockDraft = {
           name: cb.name,
           description: cb.description,
-          custom_name: "",
+          custom_name: computeBlockCustomName,
           author: cb.author,
           image: cb.image,
           entrypoints: cb.entrypoints.map((entrypoint: Entrypoint) => ({
@@ -60,6 +65,7 @@ export default function CreateComputeBlockInformationStep({
 
   return (
     <form onSubmit={createComputeBlock} className="mt-4 space-y-4 text-sm">
+      <Input type="text" value={computeBlockCustomName} onChange={setComputeBlockCustomName} label="Compute Block Name (max 15 chars)" />
       <Input type="text" value={repoURL} onChange={setRepoURL} label="Compute Block Config URL" />
       <div className="flex justify-end">
         <Button

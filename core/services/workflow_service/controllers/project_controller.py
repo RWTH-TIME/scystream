@@ -6,18 +6,13 @@ from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from services.workflow_service.models.project import Project
-import services.workflow_service.controllers.compute_block_controller as \
-    compute_block_controller
-import services.workflow_service.controllers.template_controller as \
-    template_controller
-from services.workflow_service.schemas.workflow import (
-    WorkflowTemplate
-)
+import services.workflow_service.controllers.compute_block_controller as compute_block_controller
+import services.workflow_service.controllers.template_controller as template_controller
+from services.workflow_service.schemas.workflow import WorkflowTemplate
 
 
 def create_project(db: Session, name: str, current_user_uuid: UUID) -> UUID:
-    logging.debug(f"Creating project with name: {
-        name} for user: {current_user_uuid}")
+    logging.debug(f"Creating project with name: {name} for user: {current_user_uuid}")
 
     project: Project = Project()
 
@@ -33,9 +28,7 @@ def create_project(db: Session, name: str, current_user_uuid: UUID) -> UUID:
 
 
 def create_project_from_template(
-        name: str,
-        template_identifier: str,
-        current_user_uuid: UUID
+    name: str, template_identifier: str, current_user_uuid: UUID, project_name: str
 ) -> UUID:
     """
     This method will handle the creation of project, blocks and edges as
@@ -43,32 +36,24 @@ def create_project_from_template(
     """
     db: Session = next(get_database())
 
-    template: WorkflowTemplate =\
-        template_controller.get_workflow_template_by_identifier(
-            template_identifier
-        )
-    required_blocks = template_controller.extract_block_urls_from_template(
-        template
+    template: WorkflowTemplate = (
+        template_controller.get_workflow_template_by_identifier(template_identifier)
     )
-    unconfigured_blocks = compute_block_controller.bulk_query_blocks(
-        required_blocks
-    )
+    required_blocks = template_controller.extract_block_urls_from_template(template)
+    unconfigured_blocks = compute_block_controller.bulk_query_blocks(required_blocks)
 
     G = template_controller.build_workflow_graph(template)
 
     try:
         with db.begin():
             project_id = create_project(db, name, current_user_uuid)
-            block_name_to_model, block_outputs_by_name, block_inputs_by_name =\
+            block_name_to_model, block_outputs_by_name, block_inputs_by_name = (
                 template_controller.configure_and_create_blocks(
-                    G, db, unconfigured_blocks, project_id
+                    G, db, unconfigured_blocks, project_id, project_name
                 )
+            )
             template_controller.create_edges_from_template(
-                G,
-                db,
-                block_name_to_model,
-                block_outputs_by_name,
-                block_inputs_by_name
+                G, db, block_name_to_model, block_outputs_by_name, block_inputs_by_name
             )
         return project_id
     except Exception as e:
@@ -182,11 +167,7 @@ def read_projects_by_user_uuid(user_uuid: UUID) -> list[Project]:
     logging.debug(f"Fetching projects for user UUID: {user_uuid}")
     db: Session = next(get_database())
 
-    projects = (
-        db.query(Project)
-        .filter(Project.users.contains([user_uuid]))
-        .all()
-    )
+    projects = db.query(Project).filter(Project.users.contains([user_uuid])).all()
 
     if not projects:
         logging.error(f"No projects found for user {user_uuid}")
