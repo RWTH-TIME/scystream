@@ -32,14 +32,18 @@ async def create_project(
 ):
     try:
         with db.begin():
-            project_uuid = project_controller.create_project(db, data.name, user.uuid)
+            project_uuid = project_controller.create_project(
+                db, data.name, user.uuid
+            )
         return CreateProjectResponse(project_uuid=project_uuid)
     except Exception as e:
         logging.exception(f"Error creating project: {e}")
         raise handle_error(e)
 
 
-@router.post("/from_template", response_model=CreateProjectFromTemplateResponse)
+@router.post(
+    "/from_template", response_model=CreateProjectFromTemplateResponse
+)
 async def create_project_from_template(
     data: CreateProjectFromTemplateRequest, user: User = Depends(get_user)
 ):

@@ -55,7 +55,9 @@ def get_workflow_template_by_identifier(identifier: str) -> WorkflowTemplate:
         if not os.path.isfile(file_path):
             raise HTTPException(
                 status_code=404,
-                detail=f"Template file '{identifier}' not found in repository.",
+                detail=(
+                    f"Template file '{identifier}' not found in repository."
+                ),
             )
 
         with open(file_path, "r") as f:
@@ -64,7 +66,9 @@ def get_workflow_template_by_identifier(identifier: str) -> WorkflowTemplate:
             return WorkflowTemplate.model_validate(data)
     except ValidationError as ve:
         logging.warning(f"Validation failed for {identifier}: {ve}")
-        raise HTTPException(status_code=422, detail=f"Template validation failed: {ve}")
+        raise HTTPException(
+            status_code=422, detail=f"Template validation failed: {ve}"
+        )
 
 
 def get_workflow_templates() -> list[WorkflowTemplate]:
@@ -321,7 +325,9 @@ def configure_and_create_blocks(
     unconfigured_blocks: dict[str, ComputeBlock],
     project_id: UUID,
     project_name: str,
-) -> tuple[dict[str, Block], dict[str, dict[str, UUID]], dict[str, dict[str, UUID]]]:
+) -> tuple[
+    dict[str, Block], dict[str, dict[str, UUID]], dict[str, dict[str, UUID]]
+]:
     """
     Configures and creates blocks defined in the template graph.
 
@@ -390,8 +396,12 @@ def configure_and_create_blocks(
         # 4. Create the maps that "connect" template to database representation
         # We use them to create the edges in the database
         block_name_to_model[block_template.name] = created_block
-        block_outputs_by_name[block_template.name] = {o.name: o.uuid for o in outputs}
-        block_inputs_by_name[block_template.name] = {i.name: i.uuid for i in inputs}
+        block_outputs_by_name[block_template.name] = {
+            o.name: o.uuid for o in outputs
+        }
+        block_inputs_by_name[block_template.name] = {
+            i.name: i.uuid for i in inputs
+        }
 
     return block_name_to_model, block_outputs_by_name, block_inputs_by_name
 
@@ -427,5 +437,9 @@ def create_edges_from_template(
             )
 
         create_stream_and_update_target_cfg(
-            db, upstream_block.uuid, output_uuid, downstream_block.uuid, input_uuid
+            db,
+            upstream_block.uuid,
+            output_uuid,
+            downstream_block.uuid,
+            input_uuid,
         )

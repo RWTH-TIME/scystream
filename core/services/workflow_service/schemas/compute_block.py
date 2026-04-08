@@ -43,7 +43,9 @@ def _validate_url(url: str):
 
     parsed = urlparse(url)
     if parsed.scheme != "https":
-        raise ValueError("Insecure URL! Only HTTPS or SSH git URLs are allowed.")
+        raise ValueError(
+            "Insecure URL! Only HTTPS or SSH git URLs are allowed."
+        )
 
 
 def _get_io_data_type(type: str) -> str:
@@ -57,7 +59,9 @@ def _get_io_data_type(type: str) -> str:
 def replace_minio_host(url: str | None) -> str | None:
     if url:
         defaults = get_file_cfg_defaults_dict("placeholder")
-        default_minio_url = f"{defaults.get('S3_HOST')}:{defaults.get('S3_PORT')}"
+        default_minio_url = (
+            f"{defaults.get('S3_HOST')}:{defaults.get('S3_PORT')}"
+        )
         """
         The client can never use the presigned url with the default minio
         host. Therefore we replace the default minio host, if it exists in
@@ -130,7 +134,11 @@ class InputOutputDTO(BaseIODTO):
     @classmethod
     def to_input_output(cls, input_output, type: Literal["Input", "Output"]):
         return InputOutput(
-            type=(InputOutputType.INPUT if type == "Input" else InputOutputType.OUTPUT),
+            type=(
+                InputOutputType.INPUT
+                if type == "Input"
+                else InputOutputType.OUTPUT
+            ),
             name=input_output.name,
             data_type=input_output.data_type,
             description=input_output.description,

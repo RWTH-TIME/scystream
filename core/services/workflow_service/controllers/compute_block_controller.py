@@ -68,7 +68,9 @@ def request_cb_info(
             )
 
             # Update the config with default values
-            output.config = updated_configs_with_values(output, default_values, o_type)
+            output.config = updated_configs_with_values(
+                output, default_values, o_type
+            )
 
     return cb
 
@@ -88,7 +90,8 @@ def updated_configs_with_values(
     - A new config dictionary with updated values.
     """
     logging.debug(
-        f"Get update configs for source config {io.config} and values {default_values}."
+        f"Get update configs for source config {io.config} and \
+        values {default_values}."
     )
     new_config = io.config.copy() if io.config else {}
 
@@ -248,7 +251,11 @@ def get_io_for_entrypoint(
 ) -> list[InputOutput]:
     db: Session = next(get_database())
 
-    return db.query(InputOutput).filter_by(entrypoint_uuid=e_id, type=io_type).all()
+    return (
+        db.query(InputOutput)
+        .filter_by(entrypoint_uuid=e_id, type=io_type)
+        .all()
+    )
 
 
 def get_compute_blocks_by_project(project_id: UUID) -> list[Block]:
@@ -318,7 +325,9 @@ def do_config_keys_match(
     return True
 
 
-def _update_io(db: Session, io: InputOutput, new_config: ConfigType) -> list[UUID]:
+def _update_io(
+    db: Session, io: InputOutput, new_config: ConfigType
+) -> list[UUID]:
     """
     Returns a list of IO uuids that were automatically updated (downstreams).
     """
@@ -328,7 +337,8 @@ def _update_io(db: Session, io: InputOutput, new_config: ConfigType) -> list[UUI
         io.config = {**io.config, **new_config}
     else:
         raise HTTPException(
-            status_code=422, detail=f"Config Keys of io with id {io.uuid} do not match."
+            status_code=422,
+            detail=f"Config Keys of io with id {io.uuid} do not match.",
         )
 
     # Only Update Outputs of type File & PgTable
@@ -347,7 +357,9 @@ def _update_io(db: Session, io: InputOutput, new_config: ConfigType) -> list[UUI
         return []
 
     downstream_ios = (
-        db.query(InputOutput).filter(InputOutput.uuid.in_(downstream_inputs)).all()
+        db.query(InputOutput)
+        .filter(InputOutput.uuid.in_(downstream_inputs))
+        .all()
     )
     logging.debug(f"Updating connected input configs: {downstream_ios}.")
 
@@ -365,20 +377,26 @@ def _update_io(db: Session, io: InputOutput, new_config: ConfigType) -> list[UUI
     return updated_downstream_ids
 
 
-def update_ios(update_dict: dict[UUID, ConfigType], db: Session) -> list[InputOutput]:
+def update_ios(
+    update_dict: dict[UUID, ConfigType], db: Session
+) -> list[InputOutput]:
     logging.debug("Updating input/outputs.")
 
     ids = list(update_dict.keys())
     ios = db.query(InputOutput).filter(InputOutput.uuid.in_(ids)).all()
 
     if len(ios) == 0:
-        raise HTTPException(status_code=400, detail="Provided Inputs do not exist.")
+        raise HTTPException(
+            status_code=400, detail="Provided Inputs do not exist."
+        )
 
     for io in ios:
         updated_downstreams = _update_io(db, io, update_dict.get(io.uuid))
         ids.extend(updated_downstreams)
 
-    updated = db.query(InputOutput).filter(InputOutput.uuid.in_(set(ids))).all()
+    updated = (
+        db.query(InputOutput).filter(InputOutput.uuid.in_(set(ids))).all()
+    )
 
     return updated
 
@@ -425,12 +443,16 @@ def bulk_update_block_envs(updates: list[BulkBlockEnvsUpdate], db: Session):
         block = block_map.get(block_id)
 
         if not block:
-            raise HTTPException(status_code=404, detail=f"Block not found: {block_id}")
+            raise HTTPException(
+                status_code=404, detail=f"Block not found: {block_id}"
+            )
 
         envs = item.envs
 
         if envs:
-            if do_config_keys_match("envs", block.selected_entrypoint.envs, envs):
+            if do_config_keys_match(
+                "envs", block.selected_entrypoint.envs, envs
+            ):
                 block.selected_entrypoint.envs = {
                     **block.selected_entrypoint.envs,
                     **envs,
@@ -464,9 +486,14 @@ def update_block(
 
     if envs:
         if do_config_keys_match("envs", block.selected_entrypoint.envs, envs):
-            block.selected_entrypoint.envs = {**block.selected_entrypoint.envs, **envs}
+            block.selected_entrypoint.envs = {
+                **block.selected_entrypoint.envs,
+                **envs,
+            }
         else:
-            raise HTTPException(status_code=422, detail="Env-Keys do not match.")
+            raise HTTPException(
+                status_code=422, detail="Env-Keys do not match."
+            )
 
     if x_pos is not None:
         block.x_pos = x_pos
@@ -517,8 +544,12 @@ def create_stream_and_update_target_cfg(
     db.execute(block_dependencies.insert().values(dependency))
 
     # Compare the cfgs, overwrite the cfgs
-    target_io = db.query(InputOutput).filter_by(uuid=to_input_uuid).one_or_none()
-    source_io = db.query(InputOutput).filter_by(uuid=from_output_uuid).one_or_none()
+    target_io = (
+        db.query(InputOutput).filter_by(uuid=to_input_uuid).one_or_none()
+    )
+    source_io = (
+        db.query(InputOutput).filter_by(uuid=from_output_uuid).one_or_none()
+    )
 
     if target_io.data_type != source_io.data_type:
         # Data types do not match, dont allow connection
@@ -553,8 +584,8 @@ def delete_edge(
     to_input_uuid: UUID,
 ):
     logging.debug(
-        f"Deleting Edge from block {from_block_uuid} output {from_output_uuid} to \
-                         {to_block_uuid} with input {to_input_uuid}."
+        f"Deleting Edge from block {from_block_uuid} output {from_output_uuid}\
+            to {to_block_uuid} with input {to_input_uuid}."
     )
     db: Session = next(get_database())
 

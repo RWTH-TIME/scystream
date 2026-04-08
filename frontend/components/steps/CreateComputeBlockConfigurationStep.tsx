@@ -27,7 +27,6 @@ export default function CreateComputeBlockConfigurationStep({
   onPrev,
   selectedEntrypoint,
   computeBlock,
-  setComputeBlock,
   setSelectedEntrypoint,
   loading
 }: PageProps) {

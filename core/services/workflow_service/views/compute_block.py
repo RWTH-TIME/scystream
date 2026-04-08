@@ -86,7 +86,10 @@ async def create(
                 data.selected_entrypoint.name,
                 data.selected_entrypoint.description,
                 data.selected_entrypoint.envs,
-                [input.to_input_output(input, "Input") for input in updated_is],
+                [
+                    input.to_input_output(input, "Input")
+                    for input in updated_is
+                ],
                 [
                     output.to_input_output(output, "Output")
                     for output in data.selected_entrypoint.outputs
@@ -202,7 +205,9 @@ async def get_io(
         raise handle_error(e)
 
 
-@router.put("/entrypoint/io/", response_model=list[UpdateInputOutputResponseDTO])
+@router.put(
+    "/entrypoint/io/", response_model=list[UpdateInputOutputResponseDTO]
+)
 async def update_io(data: list[BaseInputOutputDTO]):
     db = next(get_database())
     try:
@@ -254,7 +259,11 @@ def create_io_stream_and_update_io_cfg(
     try:
         with db.begin():
             id = create_stream_and_update_target_cfg(
-                db, data.source, data.sourceHandle, data.target, data.targetHandle
+                db,
+                data.source,
+                data.sourceHandle,
+                data.target,
+                data.targetHandle,
             )
         return IDResponse(id=id)
     except Exception as e:

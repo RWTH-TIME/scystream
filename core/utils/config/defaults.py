@@ -6,7 +6,8 @@ from services.workflow_service.models.input_output import InputOutput, DataType
 from scystream.sdk.env.settings import PostgresSettings, FileSettings
 
 
-SETTINGS_CLASS = {DataType.FILE: FileSettings, DataType.PGTABLE: PostgresSettings}
+SETTINGS_CLASS = {DataType.FILE: FileSettings,
+                  DataType.PGTABLE: PostgresSettings}
 
 
 def _normalize_identifier(value: str) -> str:
@@ -40,7 +41,8 @@ def _normalize_table_name(
 
     project_name = _normalize_identifier(project_name)
     io_name = _normalize_identifier(io_name)
-    compute_block_custom_name = _normalize_identifier(compute_block_custom_name)
+    compute_block_custom_name = _normalize_identifier(
+        compute_block_custom_name)
 
     io_len = remaining - (len(compute_block_custom_name) + len(project_name))
 
