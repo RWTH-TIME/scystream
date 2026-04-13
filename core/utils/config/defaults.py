@@ -75,10 +75,11 @@ def get_pg_cfg_defaults_dict(
     project_name: str, io_name: str, compute_block_custom_name: str
 ) -> dict:
     return {
-        "PG_USER": ENV.DEFAULT_CB_CONFIG_PG_USER,
-        "PG_PASS": ENV.DEFAULT_CB_CONFIG_PG_PASS,
-        "PG_HOST": ENV.DEFAULT_CB_CONFIG_PG_HOST,
-        "PG_PORT": ENV.DEFAULT_CB_CONFIG_PG_PORT,
+        "DB_DSN": f"postgresql://{ENV.DEFAULT_CB_CONFIG_PG_USER}:{
+            ENV.DEFAULT_CB_CONFIG_PG_PASS
+        }@{ENV.DEFAULT_CB_CONFIG_PG_HOST}:{
+            ENV.DEFAULT_CB_CONFIG_PG_PORT
+        }/postgres",
         "DB_TABLE": _normalize_table_name(
             project_name, io_name, compute_block_custom_name
         ),
