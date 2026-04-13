@@ -51,7 +51,7 @@ def _validate_url(url: str):
 def _get_io_data_type(type: str) -> str:
     data_type_map = {
         DataType.FILE.value: DataType.FILE.value,
-        DataType.PGTABLE.value: DataType.PGTABLE.value,
+        DataType.DBTABLE.value: DataType.DBTABLE.value,
     }
     return data_type_map.get(type, DataType.CUSTOM.value)
 

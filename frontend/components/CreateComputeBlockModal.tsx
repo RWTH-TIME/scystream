@@ -17,7 +17,7 @@ type CreateComputeBlockModalProps = Omit<ModalProps, "children"> & {
 
 export enum InputOutputType {
   FILE = "file",
-  DB = "pg_table",
+  DB = "database_table",
   CUSTOM = "custom"
 }
 export enum IOType {

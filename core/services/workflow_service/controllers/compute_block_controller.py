@@ -263,7 +263,7 @@ def get_compute_blocks_by_project(project_id: UUID) -> list[Block]:
 
     order_case = case(
         (InputOutput.data_type == DataType.FILE, 1),
-        (InputOutput.data_type == DataType.PGTABLE, 2),
+        (InputOutput.data_type == DataType.DBTABLE, 2),
         (InputOutput.data_type == DataType.CUSTOM, 3),
         else_=4,
     )
@@ -343,7 +343,7 @@ def _update_io(
 
     # Only Update Outputs of type File & PgTable
     if io.type != InputOutputType.OUTPUT and (
-        io.data_type != DataType.FILE or io.data_type != DataType.PGTABLE
+        io.data_type != DataType.FILE or io.data_type != DataType.DBTABLE
     ):
         return []
 

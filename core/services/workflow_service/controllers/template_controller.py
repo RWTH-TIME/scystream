@@ -72,7 +72,7 @@ def get_workflow_template_by_identifier(identifier: str) -> WorkflowTemplate:
 
 
 def get_workflow_templates() -> list[WorkflowTemplate]:
-    templates: WorkflowTemplate = []
+    templates: list[WorkflowTemplate] = []
 
     registry = RepoRegistry()
     repo_path = registry.get_repo(ENV.WORKFLOW_TEMPLATE_REPO)
