@@ -22,10 +22,10 @@ const emptyMetadataForm: MetadataFormType = {
 }
 
 type MetadataTabProps = {
-  projectId: string
+  projectId: string,
 }
 
-export default function MetadataTab({projectId}: MetadataTabProps) {
+export default function MetadataTab({ projectId }: MetadataTabProps) {
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { setAlert } = useAlert()
 

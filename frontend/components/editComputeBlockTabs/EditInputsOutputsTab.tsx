@@ -6,11 +6,11 @@ import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import type { UpdateInputOutputDTO } from "@/mutations/computeBlockMutation"
 import { useComputeBlocksIOsQuery, useUpdateComputeBlocksIOsMutation } from "@/mutations/computeBlockMutation"
 import { useEffect, useState } from "react"
-import { Project } from "@/utils/types"
+import type { Project } from "@/utils/types"
 
 type EditInputsOutputsTabProps = {
   type: IOType,
-  project: Project
+  project: Project,
 }
 
 export default function EditInputsOutputsTab({ type, project }: EditInputsOutputsTabProps) {

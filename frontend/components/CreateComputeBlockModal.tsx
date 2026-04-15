@@ -8,12 +8,12 @@ import type { CreateComputeBlockDTO, InputOutputDTO } from "@/mutations/computeB
 import { useCreateComputeBlockMutation } from "@/mutations/computeBlockMutation"
 import { useAlert } from "@/hooks/useAlert"
 import type { XYPosition } from "@xyflow/react"
-import { Project } from "@/utils/types"
+import type { Project } from "@/utils/types"
 
 
 type CreateComputeBlockModalProps = Omit<ModalProps, "children"> & {
   dropCoordinates: XYPosition,
-  project: Project
+  project: Project,
 };
 
 export enum InputOutputType {
@@ -27,6 +27,16 @@ export enum IOType {
 }
 export type RecordValueType = string | number | boolean | string[] | number[] | boolean[] | null
 
+export type PageProps = {
+  onNext: () => void,
+  onPrev?: () => void,
+  computeBlock?: ComputeBlockDraft,
+  setComputeBlock?: React.Dispatch<React.SetStateAction<ComputeBlockDraft>>,
+  setSelectedEntrypoint?: React.Dispatch<React.SetStateAction<Entrypoint | undefined>>,
+  selectedEntrypoint?: Entrypoint,
+  loading?: boolean,
+  project: Project,
+}
 
 export type InputOutput = {
   id?: string,
@@ -198,11 +208,11 @@ export default function CreateComputeBlockModal({
   function getStepContent() {
     switch (activeStep) {
       case 0:
-        return <CreateComputeBlockInformationStep onNext={handleNext} setComputeBlock={setComputeBlockDraft} projectName={project.name} />
+        return <CreateComputeBlockInformationStep onNext={handleNext} setComputeBlock={setComputeBlockDraft} project={project} />
       case 1:
-        return <CreateComputeBlockEntrypointStep onNext={handleNext} onPrev={handleBack} computeBlock={computeBlockDraft} setSelectedEntrypoint={setSelectedEntrypoint} selectedEntrypoint={selectedEntrypoint} />
+        return <CreateComputeBlockEntrypointStep onNext={handleNext} onPrev={handleBack} computeBlock={computeBlockDraft} setSelectedEntrypoint={setSelectedEntrypoint} selectedEntrypoint={selectedEntrypoint} project={project} />
       case 2:
-        return <CreateComputeBlockConfigurationStep onNext={handleCreate} onPrev={handleBack} computeBlock={computeBlockDraft} setComputeBlock={setComputeBlockDraft} selectedEntrypoint={selectedEntrypoint} setSelectedEntrypoint={setSelectedEntrypoint} loading={loading} />
+        return <CreateComputeBlockConfigurationStep onNext={handleCreate} onPrev={handleBack} computeBlock={computeBlockDraft} setComputeBlock={setComputeBlockDraft} selectedEntrypoint={selectedEntrypoint} setSelectedEntrypoint={setSelectedEntrypoint} loading={loading} project={project} />
     }
   };
 

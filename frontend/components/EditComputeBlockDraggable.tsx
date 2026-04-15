@@ -3,7 +3,7 @@ import ProjectCBSettingsDraggable from "./ProjectCBSettingsDraggable"
 import MetadataTab from "@/components/editComputeBlockTabs/MetadataTab"
 import EditInputsOutputsTab from "@/components/editComputeBlockTabs/EditInputsOutputsTab"
 import { IOType } from "@/components/CreateComputeBlockModal"
-import { Project } from "@/utils/types"
+import type { Project } from "@/utils/types"
 
 const TABS = [
   { key: "metadata", label: "Metadata" },
@@ -12,10 +12,10 @@ const TABS = [
 ]
 
 type EditComputeBlockDraggableProps = {
-  project: Project
+  project: Project,
 }
 
-export default function EditComputeBlockDraggable({project}: EditComputeBlockDraggableProps) {
+export default function EditComputeBlockDraggable({ project }: EditComputeBlockDraggableProps) {
   const [activeTab, setActiveTab] = useState<string>("metadata")
 
   return (

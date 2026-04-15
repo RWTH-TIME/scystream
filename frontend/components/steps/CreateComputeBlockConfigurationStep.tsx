@@ -28,7 +28,8 @@ export default function CreateComputeBlockConfigurationStep({
   selectedEntrypoint,
   computeBlock,
   setSelectedEntrypoint,
-  loading
+  loading,
+  project
 }: PageProps) {
   const [formValid, setFormValid] = useState<boolean>(false)
 
@@ -107,6 +108,7 @@ export default function CreateComputeBlockConfigurationStep({
           description="Configure the Compute Blocks environment here"
           config={selectedEntrypoint?.envs}
           updateConfig={(key, value) => updateConfig("envs", key, value)}
+          projectId={project.uuid}
         />
       )}
 
@@ -117,6 +119,7 @@ export default function CreateComputeBlockConfigurationStep({
           config={selectedEntrypoint?.inputs}
           updateConfig={(key, value) => updateConfig("inputs", key, value)}
           updateSelectedFile={updateSelectedFile}
+          projectId={project.uuid}
         />
       )}
 
@@ -126,6 +129,7 @@ export default function CreateComputeBlockConfigurationStep({
           description="Configure the Compute Blocks outputs here"
           config={selectedEntrypoint?.outputs}
           updateConfig={(key, value) => updateConfig("outputs", key, value)}
+          projectId={project.uuid}
         />
       )}
 

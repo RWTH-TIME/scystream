@@ -5,7 +5,7 @@ import ProjectCBSettingsDraggable from "./ProjectCBSettingsDraggable"
 import { useUpdateProjectMutation } from "@/mutations/projectMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import { MIN_LEN_PROJECT_NAME } from "./CreateProjectModal"
-import { Project } from "@/utils/types"
+import type { Project } from "@/utils/types"
 
 const TABS = [
   { key: "metadata", label: "Metadata" },
@@ -13,10 +13,10 @@ const TABS = [
 
 
 type EditProjectDraggableProps = {
-  project: Project
+  project: Project,
 }
 
-export default function EditProjectDraggable({project}: EditProjectDraggableProps) {
+export default function EditProjectDraggable({ project }: EditProjectDraggableProps) {
   const { setAlert } = useAlert()
   const [projectName, setProjectName] = useState<string>(project.name)
   const [activeTab, setActiveTab] = useState<string>("metadata") // Single tab for now

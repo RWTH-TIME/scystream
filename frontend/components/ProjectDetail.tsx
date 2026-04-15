@@ -1,11 +1,10 @@
-import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { ActionButtons } from "./Workbench"
 import DeleteModal from "./DeleteModal"
 import { useEffect, useState } from "react"
 import type { SimpleUpdateEnvsDTO, SimpleUpdateIOSDTO, UpdateWorkflowConfigurationsDTO } from "@/mutations/workflowMutations"
 import { useGetComputeBlocksConfigurationByProjectQuery, useUpdateWorkflowConfigurationsMutation } from "@/mutations/workflowMutations"
 import { ProjectStatusIndicator } from "./ProjectStatusIndicator"
-import { Project, ProjectStatus } from "@/utils/types"
+import { type Project, ProjectStatus } from "@/utils/types"
 import ConfigBox, { ConfigBoxVariant } from "./ConfigBox"
 import LoadingAndError from "./LoadingAndError"
 import { encodeFileToBase64, type InputOutput, type RecordValueType } from "./CreateComputeBlockModal"
@@ -19,7 +18,7 @@ type ProjectDetailProps = {
   isProjectDeleteLoading: boolean,
   triggerWorkflow: (project_id: string) => void,
   isTriggerWorkflowLoading: boolean,
-  project: Project
+  project: Project,
 }
 
 type WorkflowEnvType = {

@@ -19,7 +19,7 @@ type ConfigBoxProps = {
   config: InputOutput[] | Record<string, RecordValueType>,
   headline: string,
   description: string,
-  projectId: string
+  projectId: string,
   updateConfig: (key: string, newValue: RecordValueType, io_id?: string) => void,
   updateSelectedFile?: (name: string, file?: File, io_id?: string) => void,
   variant?: ConfigBoxVariant,

@@ -25,7 +25,7 @@ import { AlertType, useAlert } from "@/hooks/useAlert"
 import DeleteModal from "./DeleteModal"
 import { useComputeBlockStatusWS } from "@/mutations/workflowMutations"
 import { CircularProgress } from "@mui/material"
-import { Project } from "@/utils/types"
+import type { Project } from "@/utils/types"
 
 
 export function useGraphData(selectedProjectUUID: string) {
@@ -119,7 +119,7 @@ type WorkbenchProps = {
   isProjectDeleteLoading: boolean,
   triggerWorkflow: (project_id: string) => void,
   isTriggerWorkflowLoading: boolean,
-  project: Project
+  project: Project,
 }
 
 export function Workbench({
@@ -131,7 +131,7 @@ export function Workbench({
 }: WorkbenchProps) {
   const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
 
-  const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
+  const { setSelectedComputeBlock } = useSelectedComputeBlock()
 
   const { nodes, edges, selectedEdge, setSelectedEdge, isLoading, isError, setNodes, setAlert } = useGraphData(project.uuid)
 
