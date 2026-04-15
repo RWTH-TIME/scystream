@@ -1,12 +1,11 @@
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import { useGetComputeBlockInfoMutation } from "@/mutations/computeBlockMutation"
 import { IOType } from "@/components/CreateComputeBlockModal"
-import { type PageProps, type Entrypoint, type InputOutput, type ComputeBlockDraft } from "@/components/CreateComputeBlockModal"
+import { type Entrypoint, type InputOutput, type ComputeBlockDraft } from "@/components/CreateComputeBlockModal"
 import { useState } from "react"
 import LoadingAndError from "@/components/LoadingAndError"
 import Input from "@/components/inputs/Input"
 import Button, { ButtonSentiment } from "../Button"
-import { useSelectedProject } from "@/hooks/useSelectedProject"
 
 const mapInputOutput = (data: InputOutput, type: IOType) => ({
   type: type,
@@ -16,14 +15,25 @@ const mapInputOutput = (data: InputOutput, type: IOType) => ({
   config: data.config || {},
 })
 
+export type PageProps = {
+  onNext: () => void,
+  onPrev?: () => void,
+  computeBlock?: ComputeBlockDraft,
+  setComputeBlock?: React.Dispatch<React.SetStateAction<ComputeBlockDraft>>,
+  setSelectedEntrypoint?: React.Dispatch<React.SetStateAction<Entrypoint | undefined>>,
+  selectedEntrypoint?: Entrypoint,
+  loading?: boolean,
+  projectName: string
+}
+
 export default function CreateComputeBlockInformationStep({
   onNext,
-  setComputeBlock
+  setComputeBlock,
+  projectName
 }: PageProps) {
   const [computeBlockCustomName, setComputeBlockCustomName] = useState<string>("")
   const [repoURL, setRepoURL] = useState<string>("")
 
-  const { selectedProject } = useSelectedProject()
   const { setAlert } = useAlert()
   const { mutateAsync, isPending: loading } = useGetComputeBlockInfoMutation(setAlert)
 
@@ -33,7 +43,7 @@ export default function CreateComputeBlockInformationStep({
     if (repoURL.length > 0) {
       const cb = await mutateAsync({
         compute_block_custom_name: computeBlockCustomName,
-        project_name: selectedProject!.name,
+        project_name: projectName,
         cbc_url: repoURL,
       })
 

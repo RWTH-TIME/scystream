@@ -6,12 +6,14 @@ import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import type { UpdateInputOutputDTO } from "@/mutations/computeBlockMutation"
 import { useComputeBlocksIOsQuery, useUpdateComputeBlocksIOsMutation } from "@/mutations/computeBlockMutation"
 import { useEffect, useState } from "react"
+import { Project } from "@/utils/types"
 
 type EditInputsOutputsTabProps = {
   type: IOType,
+  project: Project
 }
 
-export default function EditInputsOutputsTab({ type }: EditInputsOutputsTabProps) {
+export default function EditInputsOutputsTab({ type, project }: EditInputsOutputsTabProps) {
   const { selectedComputeBlock } = useSelectedComputeBlock()
   const { data: io, isLoading: ioLoading, isError: ioError } = useComputeBlocksIOsQuery(type, selectedComputeBlock?.selected_entrypoint.id)
   const { mutateAsync } = useUpdateComputeBlocksIOsMutation()
@@ -105,6 +107,7 @@ export default function EditInputsOutputsTab({ type }: EditInputsOutputsTabProps
           config={ios}
           updateConfig={handleConfigChange}
           updateSelectedFile={handleFileChange}
+          projectId={project.uuid}
         />
         <div className="flex justify-end py-5">
           <Button
