@@ -15,4 +15,4 @@ scystream-sdk==1.4.0
 websockets==15.0.1
 python-keycloak==5.12.0
 boto3==1.42.91
-GitPython==3.1.46
+GitPython==3.1.47
