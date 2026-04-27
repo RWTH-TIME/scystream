@@ -371,7 +371,7 @@ def configure_and_create_blocks(
 
         # 2. Configure the Block
         configured_envs, inputs, outputs = _configure_block(
-            block_template, entrypoint, project_id, compute_block.name
+            block_template, entrypoint, project_id, block_template.name
         )
 
         # 3. Create the Block
