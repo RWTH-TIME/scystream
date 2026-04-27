@@ -6,7 +6,7 @@ import { useState } from "react"
 import LoadingAndError from "@/components/LoadingAndError"
 import Input from "@/components/inputs/Input"
 import Button, { ButtonSentiment } from "../Button"
-import { UUID } from "crypto"
+import { type UUID } from "crypto"
 
 const mapInputOutput = (data: InputOutput, type: IOType) => ({
   type: type,
