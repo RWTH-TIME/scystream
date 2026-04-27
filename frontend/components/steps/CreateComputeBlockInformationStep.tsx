@@ -6,6 +6,7 @@ import { useState } from "react"
 import LoadingAndError from "@/components/LoadingAndError"
 import Input from "@/components/inputs/Input"
 import Button, { ButtonSentiment } from "../Button"
+import { UUID } from "crypto"
 
 const mapInputOutput = (data: InputOutput, type: IOType) => ({
   type: type,
@@ -32,7 +33,7 @@ export default function CreateComputeBlockInformationStep({
     if (repoURL.length > 0) {
       const cb = await mutateAsync({
         compute_block_custom_name: computeBlockCustomName,
-        project_name: project.name,
+        project_uuid: project.uuid as UUID,
         cbc_url: repoURL,
       })
 

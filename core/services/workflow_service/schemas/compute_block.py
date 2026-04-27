@@ -325,7 +325,7 @@ class EdgeDTO(BaseModel):
 class ComputeBlockInformationRequest(BaseModel):
     compute_block_custom_name: str = Field(..., max_length=15)
     cbc_url: str
-    project_name: str
+    project_uuid: UUID
 
     @validator("cbc_url")
     def validate_cbc_url(cls, v):

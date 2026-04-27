@@ -37,7 +37,7 @@ from services.workflow_service.controllers.compute_block_controller import (
 )
 from utils.config.defaults import (
     get_file_cfg_defaults_dict,
-    get_pg_cfg_defaults_dict,
+    get_pg_cfg_defaults_dict_with_setup,
 )
 
 
@@ -166,7 +166,7 @@ def _build_io(
     data_type: DataType,
     description: str,
     config: dict,
-    project_name: str,
+    project_uuid: UUID,
     block_name: str,
     template_settings: dict | None = None,
 ) -> InputOutput:
@@ -187,7 +187,9 @@ def _build_io(
         default_values = (
             get_file_cfg_defaults_dict(identifier)
             if data_type is DataType.FILE
-            else get_pg_cfg_defaults_dict(project_name, identifier, block_name)
+            else get_pg_cfg_defaults_dict_with_setup(
+                project_uuid, identifier, block_name
+            )
         )
         io.config = updated_configs_with_values(io, default_values, data_type)
 
@@ -201,7 +203,7 @@ def _configure_io_items(
     template_ios: list[InputTemplate] | list[OutputTemplate],
     unconfigured_ios: dict[str, InputOutputModel],
     io_type: InputOutputType,
-    project_name: str,
+    project_uuid: UUID,
     block_name: str,
 ) -> list[InputOutput]:
     """
@@ -246,7 +248,7 @@ def _configure_io_items(
                     description=unconfigured_io.description,
                     config=unconfigured_io.config,
                     template_settings=template.settings,
-                    project_name=project_name,
+                    project_uuid=project_uuid,
                     block_name=block_name,
                 )
             )
@@ -258,7 +260,7 @@ def _configure_io_items(
                     data_type=data_type,
                     description=unconfigured_io.description,
                     config=unconfigured_io.config,
-                    project_name=project_name,
+                    project_uuid=project_uuid,
                     block_name=block_name,
                 )
             )
@@ -269,7 +271,7 @@ def _configure_io_items(
 def _configure_block(
     block_template: BlockTemplate,
     unconfigured_entry: SDKEntrypoint,
-    project_name: str,
+    project_uuid: UUID,
     block_name: str,
 ) -> (ConfigType, list[InputOutput], list[InputOutput]):
     """
@@ -304,7 +306,7 @@ def _configure_block(
         block_template.inputs or [],
         unconfigured_entry.inputs or {},
         InputOutputType.INPUT,
-        project_name,
+        project_uuid,
         block_name,
     )
 
@@ -312,7 +314,7 @@ def _configure_block(
         block_template.outputs or [],
         unconfigured_entry.outputs or {},
         InputOutputType.OUTPUT,
-        project_name,
+        project_uuid,
         block_name,
     )
 
@@ -324,7 +326,6 @@ def configure_and_create_blocks(
     db: Session,
     unconfigured_blocks: dict[str, ComputeBlock],
     project_id: UUID,
-    project_name: str,
 ) -> tuple[
     dict[str, Block], dict[str, dict[str, UUID]], dict[str, dict[str, UUID]]
 ]:
@@ -370,7 +371,7 @@ def configure_and_create_blocks(
 
         # 2. Configure the Block
         configured_envs, inputs, outputs = _configure_block(
-            block_template, entrypoint, project_name, compute_block.name
+            block_template, entrypoint, project_id, compute_block.name
         )
 
         # 3. Create the Block

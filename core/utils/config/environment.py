@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     DEFAULT_CB_CONFIG_PG_HOST: str = "data-postgres"
     DEFAULT_CB_CONFIG_PG_PORT: int = 5432
 
+    DEFAULT_CB_CONFIG_PG_HOST_DEV: str = "localhost"
+    DEFAULT_CB_CONFIG_PG_PORT_DEV: int = 9999
+
     AIRFLOW_HOST: str = "http://localhost:8080"
     AIRFLOW_USER: str = "airflow"
     AIRFLOW_PASS: str = "airflow"

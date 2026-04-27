@@ -11,9 +11,9 @@ from typing import Literal
 from sqlalchemy import select, case, asc, delete
 from utils.config.defaults import (
     get_file_cfg_defaults_dict,
-    get_pg_cfg_defaults_dict,
     SETTINGS_CLASS,
     extract_default_keys_from_io,
+    get_pg_cfg_defaults_dict_with_setup,
 )
 import utils.data.file_handling as fh
 from utils.config.registry import RepoRegistry
@@ -50,7 +50,7 @@ def _get_cb_info_from_repo(repo_url: str) -> SDKComputeBlock:
 
 
 def request_cb_info(
-    repo_url: str, project_name: str, compute_block_custom_name: str
+    repo_url: str, project_uuid: UUID, compute_block_custom_name: str
 ) -> SDKComputeBlock:
     logging.debug(f"Requesting ComputeBlock info for: {repo_url}")
     cb = _get_cb_info_from_repo(repo_url)
@@ -62,8 +62,8 @@ def request_cb_info(
             default_values = (
                 get_file_cfg_defaults_dict(on)
                 if o_type is DataType.FILE
-                else get_pg_cfg_defaults_dict(
-                    project_name, on, compute_block_custom_name
+                else get_pg_cfg_defaults_dict_with_setup(
+                    project_uuid, on, compute_block_custom_name
                 )
             )
 

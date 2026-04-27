@@ -49,7 +49,9 @@ async def cb_information(
 ):
     try:
         cb = request_cb_info(
-            data.cbc_url, data.project_name, data.compute_block_custom_name
+            data.cbc_url,
+            data.project_uuid,
+            data.compute_block_custom_name,
         )
         return ComputeBlockInformationResponse.from_sdk_compute_block(cb)
     except Exception as e:

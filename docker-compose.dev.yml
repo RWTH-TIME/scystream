@@ -253,6 +253,8 @@ services:
 
   data-postgres:
     image: postgres
+    ports:
+      - "9999:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres

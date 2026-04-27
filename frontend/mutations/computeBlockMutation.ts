@@ -7,6 +7,7 @@ import type { InputOutputType } from "@/components/CreateComputeBlockModal"
 import { IOType, type RecordValueType } from "@/components/CreateComputeBlockModal"
 import type { ComputeBlockNodeType } from "@/components/nodes/ComputeBlockNode"
 import { QueryKeys } from "./queryKeys"
+import { UUID } from "crypto"
 
 const GET_COMPUTE_BLOCK_INFO = "compute_block/information"
 const CREATE_COMPUTE_BLOCK = "compute_block/"
@@ -21,7 +22,7 @@ const DELETE_EDGE = "compute_block/edge/delete"
 
 type ComputeBlockInfoDTO = {
   compute_block_custom_name: string,
-  project_name: string,
+  project_uuid: UUID,
   cbc_url: string,
 }
 

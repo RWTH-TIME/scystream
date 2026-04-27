@@ -35,7 +35,6 @@ def create_project_from_template(
     name: str,
     template_identifier: str,
     current_user_uuid: UUID,
-    project_name: str,
 ) -> UUID:
     """
     This method will handle the creation of project, blocks and edges as
@@ -65,7 +64,7 @@ def create_project_from_template(
                 block_outputs_by_name,
                 block_inputs_by_name,
             ) = template_controller.configure_and_create_blocks(
-                G, db, unconfigured_blocks, project_id, project_name
+                G, db, unconfigured_blocks, project_id
             )
             template_controller.create_edges_from_template(
                 G,

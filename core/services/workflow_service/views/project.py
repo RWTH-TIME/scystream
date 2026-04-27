@@ -49,7 +49,7 @@ async def create_project_from_template(
 ):
     try:
         id = project_controller.create_project_from_template(
-            data.name, data.template_identifier, user.uuid, data.name
+            data.name, data.template_identifier, user.uuid
         )
         return CreateProjectResponse(project_uuid=id)
     except Exception as e:
