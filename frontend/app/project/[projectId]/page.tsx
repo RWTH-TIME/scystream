@@ -2,11 +2,10 @@
 
 import PageWithHeader from "@/components/layout/PageWithHeader"
 import LoadingAndError from "@/components/LoadingAndError"
-import { use, useEffect, useState } from "react"
+import { use, useState } from "react"
 import Tabs from "@/components/Tabs"
 import ProjectDetail from "@/components/ProjectDetail"
 import { useDeleteProjectMutation, useProjectQuery } from "@/mutations/projectMutation"
-import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useAlert } from "@/hooks/useAlert"
 import { useProjectStatusWS, useTriggerWorkflowMutation } from "@/mutations/workflowMutations"
 import { ReactFlowProvider } from "@xyflow/react"
@@ -32,9 +31,7 @@ function ProjectPage({ params }: ProjectPageProps) {
   const { setAlert } = useAlert()
   const router = useRouter()
 
-  // TODO: #166 remove useSelectedProject
-  const { selectedProject, setSelectedProject } = useSelectedProject()
-  const { data: project, isLoading: projectLoading, isError: projectError } = useProjectQuery(projectId, !selectedProject)
+  const { data: project, isLoading: projectLoading, isError: projectError } = useProjectQuery(projectId, true)
 
   const { mutate: deleteMutate, isPending: deleteLoading } = useDeleteProjectMutation(setAlert)
   const { mutateAsync: triggerWorkflow, isPending: triggerLoading } = useTriggerWorkflowMutation(setAlert)
@@ -46,14 +43,6 @@ function ProjectPage({ params }: ProjectPageProps) {
     deleteMutate(project_id)
   }
 
-  // TODO: #166 Remove setSelectedProject => Use Params Instead
-  useEffect(() => {
-    if (project) {
-      setSelectedProject(project)
-    }
-  }, [project, setSelectedProject])
-
-
   const [activeTab, setActiveTab] = useState<string>("project")
 
   return (
@@ -61,19 +50,20 @@ function ProjectPage({ params }: ProjectPageProps) {
       <PageWithHeader breadcrumbs={[
         { text: "Dashboard", link: "/" },
         { text: "Project", link: "/" },
-        { text: selectedProject?.name ?? "", link: `/project/${projectId}` }
+        { text: project?.name ?? "", link: `/project/${projectId}` }
       ]}>
         <div className="flex flex-col h-full">
           <Tabs activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
-          {activeTab === "project" && selectedProject !== undefined && (
+          {activeTab === "project" && project !== undefined && (
             <ProjectDetail
               deleteProject={deleteProject}
               isProjectDeleteLoading={deleteLoading}
               triggerWorkflow={triggerWorkflow}
               isTriggerWorkflowLoading={triggerLoading}
+              project={project}
             />
           )}
-          {activeTab === "editor" && selectedProject != undefined && (
+          {activeTab === "editor" && project != undefined && (
             <div className="flex h-full">
               <div className="flex-grow h-full">
                 <ReactFlowProvider>
@@ -82,6 +72,7 @@ function ProjectPage({ params }: ProjectPageProps) {
                     isProjectDeleteLoading={deleteLoading}
                     triggerWorkflow={triggerWorkflow}
                     isTriggerWorkflowLoading={triggerLoading}
+                    project={project}
                   />
                 </ReactFlowProvider>
               </div>

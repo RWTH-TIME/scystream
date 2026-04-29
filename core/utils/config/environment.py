@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     CB_NETWORK_MODE: str = "scystream_data_processing"
 
     DEFAULT_CB_CONFIG_S3_HOST: str = "http://data-minio"
-    DEFAULT_CB_CONFIG_S3_PORT: str = "9000"
+    DEFAULT_CB_CONFIG_S3_PORT: int = 9000
     DEFAULT_CB_CONFIG_S3_ACCESS_KEY: str = "minioadmin"
     DEFAULT_CB_CONFIG_S3_SECRET_KEY: str = "minioadmin"
     DEFAULT_CB_CONFIG_S3_BUCKET_NAME: str = "data"
@@ -39,7 +39,10 @@ class Settings(BaseSettings):
     DEFAULT_CB_CONFIG_PG_USER: str = "postgres"
     DEFAULT_CB_CONFIG_PG_PASS: str = "postgres"
     DEFAULT_CB_CONFIG_PG_HOST: str = "data-postgres"
-    DEFAULT_CB_CONFIG_PG_PORT: str = "5432"
+    DEFAULT_CB_CONFIG_PG_PORT: int = 5432
+
+    DEFAULT_CB_CONFIG_PG_HOST_DEV: str = "localhost"
+    DEFAULT_CB_CONFIG_PG_PORT_DEV: int = 9999
 
     AIRFLOW_HOST: str = "http://localhost:8080"
     AIRFLOW_USER: str = "airflow"

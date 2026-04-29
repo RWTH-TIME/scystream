@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
-import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useComputeBlockEnvsQuery, useDeleteComputeBlockMutation, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation"
 import { useAlert } from "@/hooks/useAlert"
 
@@ -22,14 +21,16 @@ const emptyMetadataForm: MetadataFormType = {
   envs: {},
 }
 
-export default function MetadataTab() {
+type MetadataTabProps = {
+  projectId: string,
+}
+
+export default function MetadataTab({ projectId }: MetadataTabProps) {
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
-  // TODO: #166
-  const { selectedProject } = useSelectedProject()
   const { setAlert } = useAlert()
 
-  const { mutateAsync: deleteMutate, isPending: deleteLoading } = useDeleteComputeBlockMutation(setAlert, selectedProject?.uuid)
-  const { mutateAsync: updateMutate, isPending: updateLoading } = useUpdateComputeBlockMutation(setAlert, selectedProject?.uuid)
+  const { mutateAsync: deleteMutate, isPending: deleteLoading } = useDeleteComputeBlockMutation(setAlert, projectId)
+  const { mutateAsync: updateMutate, isPending: updateLoading } = useUpdateComputeBlockMutation(setAlert, projectId)
   const { data: envs, isLoading: envsLoading, isError: envsError } = useComputeBlockEnvsQuery(selectedComputeBlock?.selected_entrypoint.id)
 
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
@@ -118,6 +119,7 @@ export default function MetadataTab() {
             description="Edit the Compute Blocks Envs here"
             config={metadataForm.envs}
             updateConfig={handleEnvChange}
+            projectId={projectId}
           />
         </div>
 

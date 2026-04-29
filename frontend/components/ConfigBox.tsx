@@ -6,7 +6,6 @@ import {
 } from "@/components/CreateComputeBlockModal"
 import ConfigEnvsInputs from "@/components/inputs/ConfigEnvsInputs"
 import Button, { ButtonSentiment } from "./Button"
-import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { useGraphData } from "./Workbench"
 import { useState } from "react"
 import FileUploadModal from "./ConfigureFileModal"
@@ -20,6 +19,7 @@ type ConfigBoxProps = {
   config: InputOutput[] | Record<string, RecordValueType>,
   headline: string,
   description: string,
+  projectId: string,
   updateConfig: (key: string, newValue: RecordValueType, io_id?: string) => void,
   updateSelectedFile?: (name: string, file?: File, io_id?: string) => void,
   variant?: ConfigBoxVariant,
@@ -65,12 +65,11 @@ export default function ConfigBox({
   updateSelectedFile,
   variant = ConfigBoxVariant.COMPLEX,
   hasIOChanged,
+  projectId
 }: ConfigBoxProps) {
   const [selectedFiles, setSelectedFiles] = useState<{ [key: string]: { selectedFile: File } }>({})
 
-  // TODO: #166 dont use useSelectedProject anymore
-  const { selectedProject } = useSelectedProject()
-  const { edges } = useGraphData(selectedProject!.uuid)
+  const { edges } = useGraphData(projectId)
   const [modalIO, setModalIO] = useState<InputOutput | null>(null)
 
   function setModalOpenFor(io: InputOutput) {

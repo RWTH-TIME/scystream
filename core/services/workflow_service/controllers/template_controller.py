@@ -21,21 +21,23 @@ from services.workflow_service.schemas.workflow import (
 from scystream.sdk.config.models import (
     ComputeBlock,
     Entrypoint as SDKEntrypoint,
-    InputOutputModel
+    InputOutputModel,
 )
-from services.workflow_service.models.block import (
-    Block
-)
+from services.workflow_service.models.block import Block
 from services.workflow_service.models.input_output import (
-    InputOutput, InputOutputType, DataType
+    InputOutput,
+    InputOutputType,
+    DataType,
 )
 from services.workflow_service.controllers.compute_block_controller import (
-    updated_configs_with_values, do_config_keys_match, create_compute_block,
-    create_stream_and_update_target_cfg
+    updated_configs_with_values,
+    do_config_keys_match,
+    create_compute_block,
+    create_stream_and_update_target_cfg,
 )
 from utils.config.defaults import (
     get_file_cfg_defaults_dict,
-    get_pg_cfg_defaults_dict,
+    get_pg_cfg_defaults_dict_with_setup,
 )
 
 
@@ -47,16 +49,15 @@ def get_workflow_template_by_identifier(identifier: str) -> WorkflowTemplate:
     """
     try:
         registry = RepoRegistry()
-        repo_path = registry.get_repo(
-            ENV.WORKFLOW_TEMPLATE_REPO
-        )
+        repo_path = registry.get_repo(ENV.WORKFLOW_TEMPLATE_REPO)
 
         file_path = os.path.join(repo_path, identifier)
         if not os.path.isfile(file_path):
             raise HTTPException(
                 status_code=404,
-                detail=f"Template file '{
-                    identifier}' not found in repository."
+                detail=(
+                    f"Template file '{identifier}' not found in repository."
+                ),
             )
 
         with open(file_path, "r") as f:
@@ -66,18 +67,15 @@ def get_workflow_template_by_identifier(identifier: str) -> WorkflowTemplate:
     except ValidationError as ve:
         logging.warning(f"Validation failed for {identifier}: {ve}")
         raise HTTPException(
-            status_code=422,
-            detail=f"Template validation failed: {ve}"
+            status_code=422, detail=f"Template validation failed: {ve}"
         )
 
 
 def get_workflow_templates() -> list[WorkflowTemplate]:
-    templates: WorkflowTemplate = []
+    templates: list[WorkflowTemplate] = []
 
     registry = RepoRegistry()
-    repo_path = registry.get_repo(
-        ENV.WORKFLOW_TEMPLATE_REPO
-    )
+    repo_path = registry.get_repo(ENV.WORKFLOW_TEMPLATE_REPO)
 
     for file in os.listdir(repo_path):
         if not file.endswith((".yaml", ".yml")):
@@ -134,11 +132,12 @@ def build_workflow_graph(template: WorkflowTemplate):
                     from_block,
                     to_block,
                     input_identifier=inp.identifier,
-                    output_identifier=inp.depends_on.output
+                    output_identifier=inp.depends_on.output,
                 )
     if not nx.is_directed_acyclic_graph(G):
         raise HTTPException(
-            status_code=422, detail="Template defines a cyclic dependency.")
+            status_code=422, detail="Template defines a cyclic dependency."
+        )
 
     # Assigning Positions
     level_map = {}
@@ -167,7 +166,9 @@ def _build_io(
     data_type: DataType,
     description: str,
     config: dict,
-    template_settings: dict | None = None
+    project_uuid: UUID,
+    block_name: str,
+    template_settings: dict | None = None,
 ) -> InputOutput:
     """
     Constructs an InputOutput object, applying default values for outputs
@@ -179,14 +180,16 @@ def _build_io(
         name=identifier,
         data_type=data_type,
         description=description,
-        config=config
+        config=config,
     )
 
     if io_type is InputOutputType.OUTPUT:
         default_values = (
             get_file_cfg_defaults_dict(identifier)
             if data_type is DataType.FILE
-            else get_pg_cfg_defaults_dict(identifier)
+            else get_pg_cfg_defaults_dict_with_setup(
+                project_uuid, identifier, block_name
+            )
         )
         io.config = updated_configs_with_values(io, default_values, data_type)
 
@@ -199,7 +202,9 @@ def _build_io(
 def _configure_io_items(
     template_ios: list[InputTemplate] | list[OutputTemplate],
     unconfigured_ios: dict[str, InputOutputModel],
-    io_type: InputOutputType
+    io_type: InputOutputType,
+    project_uuid: UUID,
+    block_name: str,
 ) -> list[InputOutput]:
     """
     Iterates over the compute blocks ios.
@@ -229,9 +234,10 @@ def _configure_io_items(
                     status_code=421,
                     detail=(
                         f"The keys used in the template to configure IO '{
-                            template.identifier}' "
+                            template.identifier
+                        }' "
                         f"do not match those in the compute block definition."
-                    )
+                    ),
                 )
 
             configured.append(
@@ -241,7 +247,9 @@ def _configure_io_items(
                     data_type=data_type,
                     description=unconfigured_io.description,
                     config=unconfigured_io.config,
-                    template_settings=template.settings
+                    template_settings=template.settings,
+                    project_uuid=project_uuid,
+                    block_name=block_name,
                 )
             )
         else:
@@ -251,7 +259,9 @@ def _configure_io_items(
                     io_type=io_type,
                     data_type=data_type,
                     description=unconfigured_io.description,
-                    config=unconfigured_io.config
+                    config=unconfigured_io.config,
+                    project_uuid=project_uuid,
+                    block_name=block_name,
                 )
             )
 
@@ -260,12 +270,10 @@ def _configure_io_items(
 
 def _configure_block(
     block_template: BlockTemplate,
-    unconfigured_entry: SDKEntrypoint
-) -> (
-    ConfigType,
-    list[InputOutput],
-    list[InputOutput]
-):
+    unconfigured_entry: SDKEntrypoint,
+    project_uuid: UUID,
+    block_name: str,
+) -> (ConfigType, list[InputOutput], list[InputOutput]):
     """
     This method returns:
         :dict: the configuration from the template applied to the configuration
@@ -291,19 +299,23 @@ def _configure_block(
                 The Config-Keys provided by the template
                 do not match with the configs that the block
                 {block_template.name} offers.
-                """
+                """,
         )
 
     configured_inputs: list[InputOutput] = _configure_io_items(
         block_template.inputs or [],
         unconfigured_entry.inputs or {},
-        InputOutputType.INPUT
+        InputOutputType.INPUT,
+        project_uuid,
+        block_name,
     )
 
     configured_outputs: list[InputOutput] = _configure_io_items(
         block_template.outputs or [],
         unconfigured_entry.outputs or {},
-        InputOutputType.OUTPUT
+        InputOutputType.OUTPUT,
+        project_uuid,
+        block_name,
     )
 
     return (configured_envs, configured_inputs, configured_outputs)
@@ -313,11 +325,9 @@ def configure_and_create_blocks(
     G: nx.DiGraph,
     db: Session,
     unconfigured_blocks: dict[str, ComputeBlock],
-    project_id: UUID
+    project_id: UUID,
 ) -> tuple[
-    dict[str, Block],
-    dict[str, dict[str, UUID]],
-    dict[str, dict[str, UUID]]
+    dict[str, Block], dict[str, dict[str, UUID]], dict[str, dict[str, UUID]]
 ]:
     """
     Configures and creates blocks defined in the template graph.
@@ -344,13 +354,11 @@ def configure_and_create_blocks(
     for block_name in nx.topological_sort(G):
         block_template = G.nodes[block_name]["block"]
         # 1. Validate wether Template Definition of Compute Block is correct
-        compute_block = unconfigured_blocks.get(
-            block_template.repo_url
-        )
+        compute_block = unconfigured_blocks.get(block_template.repo_url)
         if compute_block is None:
             raise HTTPException(
                 status_code=422,
-                detail=f"Block repo '{block_template.repo_url}' not found."
+                detail=f"Block repo '{block_template.repo_url}' not found.",
             )
 
         entrypoint = compute_block.entrypoints.get(block_template.entrypoint)
@@ -358,12 +366,12 @@ def configure_and_create_blocks(
             raise HTTPException(
                 status_code=422,
                 detail=f"Entrypoint '{block_template.entrypoint}' not found in\
-                        block '{block_template.name}'."
+                        block '{block_template.name}'.",
             )
 
         # 2. Configure the Block
         configured_envs, inputs, outputs = _configure_block(
-            block_template, entrypoint
+            block_template, entrypoint, project_id, block_template.name
         )
 
         # 3. Create the Block
@@ -383,7 +391,7 @@ def configure_and_create_blocks(
             envs=configured_envs,
             inputs=inputs,
             outputs=outputs,
-            project_id=project_id
+            project_id=project_id,
         )
 
         # 4. Create the maps that "connect" template to database representation
@@ -426,7 +434,7 @@ def create_edges_from_template(
                     Dependency resolution failed for edge:
                     "{from_block} -> {to_block}
                     "({output_identifier}-> {input_identifier})
-                """
+                """,
             )
 
         create_stream_and_update_target_cfg(
@@ -434,5 +442,5 @@ def create_edges_from_template(
             upstream_block.uuid,
             output_uuid,
             downstream_block.uuid,
-            input_uuid
+            input_uuid,
         )

@@ -1,11 +1,10 @@
-import { useSelectedProject } from "@/hooks/useSelectedProject"
 import { ActionButtons } from "./Workbench"
 import DeleteModal from "./DeleteModal"
 import { useEffect, useState } from "react"
 import type { SimpleUpdateEnvsDTO, SimpleUpdateIOSDTO, UpdateWorkflowConfigurationsDTO } from "@/mutations/workflowMutations"
 import { useGetComputeBlocksConfigurationByProjectQuery, useUpdateWorkflowConfigurationsMutation } from "@/mutations/workflowMutations"
 import { ProjectStatusIndicator } from "./ProjectStatusIndicator"
-import { ProjectStatus } from "@/utils/types"
+import { type Project, ProjectStatus } from "@/utils/types"
 import ConfigBox, { ConfigBoxVariant } from "./ConfigBox"
 import LoadingAndError from "./LoadingAndError"
 import { encodeFileToBase64, type InputOutput, type RecordValueType } from "./CreateComputeBlockModal"
@@ -19,6 +18,7 @@ type ProjectDetailProps = {
   isProjectDeleteLoading: boolean,
   triggerWorkflow: (project_id: string) => void,
   isTriggerWorkflowLoading: boolean,
+  project: Project,
 }
 
 type WorkflowEnvType = {
@@ -46,15 +46,15 @@ export default function ProjectDetail({
   deleteProject,
   isProjectDeleteLoading,
   triggerWorkflow,
-  isTriggerWorkflowLoading
+  isTriggerWorkflowLoading,
+  project
 }: ProjectDetailProps) {
-  const { selectedProject, setSelectedProject } = useSelectedProject()
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(false)
   const { setAlert } = useAlert()
 
-  const { data, isLoading, isError } = useGetComputeBlocksConfigurationByProjectQuery(selectedProject?.uuid)
-  const { mutateAsync, isPending: loadingUpdateConfigs } = useUpdateWorkflowConfigurationsMutation(setAlert, selectedProject!.uuid)
+  const { data, isLoading, isError } = useGetComputeBlocksConfigurationByProjectQuery(project.uuid)
+  const { mutateAsync, isPending: loadingUpdateConfigs } = useUpdateWorkflowConfigurationsMutation(setAlert, project.uuid)
 
   const [projectDetailForm, setProjectDetailForm] = useState<ProjectDetailFormType>(emptyProjectDetailForm)
   const [initialProjectDetailForm, setInitialProjectDetailForm] = useState<ProjectDetailFormType>(emptyProjectDetailForm)
@@ -251,9 +251,9 @@ export default function ProjectDetail({
 
 
   useEffect(() => {
-    if (data && selectedProject) {
+    if (data && project) {
       const newForm: ProjectDetailFormType = {
-        name: selectedProject.name,
+        name: project.name,
         envs: data.envs,
         workflow_inputs: data.workflow_inputs,
         workflow_outputs: data.workflow_outputs,
@@ -263,12 +263,11 @@ export default function ProjectDetail({
       setProjectDetailForm(newForm)
       setInitialProjectDetailForm(newForm)
     }
-  }, [data, selectedProject])
+  }, [data, project])
 
   function onProjectDelete() {
-    deleteProject(selectedProject!.uuid)
+    deleteProject(project.uuid)
     setDeleteApproveOpen(false)
-    setSelectedProject(undefined)
   }
 
   return (
@@ -279,17 +278,17 @@ export default function ProjectDetail({
         onDelete={onProjectDelete}
         loading={isProjectDeleteLoading}
         header="Delete Project"
-        desc={`Are you sure you want to delete the project: ${selectedProject?.name}?`}
+        desc={`Are you sure you want to delete the project: ${project.name}?`}
       />
 
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <span className="text-lg font-semibold">Project:</span>
-          <span className="text-lg font-semibold text-blue-500">{selectedProject?.name}</span>
+          <span className="text-lg font-semibold text-blue-500">{project.name}</span>
         </div>
 
         <div className="flex items-center space-x-2">
-          <ProjectStatusIndicator s={selectedProject?.status || ProjectStatus.IDLE} />
+          <ProjectStatusIndicator s={project.status || ProjectStatus.IDLE} />
         </div>
 
         <div className="flex justify-between gap-3">
@@ -301,7 +300,7 @@ export default function ProjectDetail({
             {loadingUpdateConfigs ? <CircularProgress /> : <Save />}
           </button>
           <ActionButtons
-            onPlayClick={() => triggerWorkflow(selectedProject!.uuid)}
+            onPlayClick={() => triggerWorkflow(project.uuid)}
             onDeleteClick={() => setDeleteApproveOpen(true)}
             isTriggerLoading={isTriggerWorkflowLoading}
             allWorkflowInputsConfigured={allWorkflowInputsConfigured}
@@ -357,6 +356,7 @@ export default function ProjectDetail({
                 updateSelectedFile={(name, file, id) => { handleFileChange("workflow_inputs", name, file, id) }}
                 variant={ConfigBoxVariant.SIMPLE}
                 hasIOChanged={ioHasUnsavedChanges}
+                projectId={project.uuid}
               />
             </LoadingAndError>
           </div>
@@ -372,6 +372,7 @@ export default function ProjectDetail({
                 updateSelectedFile={(name, file, id) => { handleFileChange("workflow_outputs", name, file, id) }}
                 variant={ConfigBoxVariant.SIMPLE}
                 hasIOChanged={ioHasUnsavedChanges}
+                projectId={project.uuid}
               />
             </LoadingAndError>
           </div>
@@ -410,6 +411,7 @@ export default function ProjectDetail({
                   handleFileChange("workflow_intermediates", name, file, id)
                 }}
                 variant={ConfigBoxVariant.SIMPLE}
+                projectId={project.uuid}
               />
             )}
           </LoadingAndError>

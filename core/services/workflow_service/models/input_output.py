@@ -13,7 +13,7 @@ class InputOutputType(enum.Enum):
 
 
 class DataType(enum.Enum):
-    PGTABLE = "pg_table"
+    DBTABLE = "database_table"
     FILE = "file"
     CUSTOM = "custom"
 
@@ -28,6 +28,9 @@ class InputOutput(Base):
     description = Column(String(500), nullable=True)
     config = Column(JSON, nullable=False)
 
-    entrypoint_uuid = Column(UUID(as_uuid=True), ForeignKey(
-        'entrypoints.uuid', ondelete="CASCADE"), nullable=False)
+    entrypoint_uuid = Column(
+        UUID(as_uuid=True),
+        ForeignKey("entrypoints.uuid", ondelete="CASCADE"),
+        nullable=False,
+    )
     entrypoint = relationship("Entrypoint", back_populates="input_outputs")

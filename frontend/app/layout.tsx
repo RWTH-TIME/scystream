@@ -4,7 +4,6 @@ import "./globals.css"
 import QueryProvider from "@/hooks/useQueryClient"
 import { AlertProvider } from "@/hooks/useAlert"
 import Alert from "@/components/Alert"
-import { SelectedProjectProvider } from "@/hooks/useSelectedProject"
 import { SelectedComputeBlockProvider } from "@/hooks/useSelectedComputeBlock"
 import { PublicEnvScript } from "next-runtime-env"
 
@@ -28,12 +27,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <QueryProvider>
           <AlertProvider>
-            <SelectedProjectProvider>
-              <SelectedComputeBlockProvider>
-                {children}
-                <Alert />
-              </SelectedComputeBlockProvider>
-            </SelectedProjectProvider>
+            <SelectedComputeBlockProvider>
+              {children}
+              <Alert />
+            </SelectedComputeBlockProvider>
           </AlertProvider>
         </QueryProvider>
       </body>

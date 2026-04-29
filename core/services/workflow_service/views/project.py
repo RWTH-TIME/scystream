@@ -28,7 +28,7 @@ router = APIRouter(prefix="/project", tags=["project"])
 async def create_project(
     data: CreateProjectRequest,
     user: User = Depends(get_user),
-    db: Session = Depends(get_database)
+    db: Session = Depends(get_database),
 ):
     try:
         with db.begin():
@@ -42,18 +42,14 @@ async def create_project(
 
 
 @router.post(
-    "/from_template",
-    response_model=CreateProjectFromTemplateResponse
+    "/from_template", response_model=CreateProjectFromTemplateResponse
 )
 async def create_project_from_template(
-    data: CreateProjectFromTemplateRequest,
-    user: User = Depends(get_user)
+    data: CreateProjectFromTemplateRequest, user: User = Depends(get_user)
 ):
     try:
         id = project_controller.create_project_from_template(
-            data.name,
-            data.template_identifier,
-            user.uuid,
+            data.name, data.template_identifier, user.uuid
         )
         return CreateProjectResponse(project_uuid=id)
     except Exception as e:
@@ -85,7 +81,7 @@ async def read_projects_by_user(
 
 @router.get("/{project_id}", response_model=Project)
 async def read_project(
-        project_id: UUID | None = None,
+    project_id: UUID | None = None,
 ):
     try:
         if project_id is None:
@@ -100,8 +96,7 @@ async def read_project(
 
 @router.put("/", response_model=Project)
 async def rename_project(
-    data: RenameProjectRequest,
-    db: Session = Depends(get_database)
+    data: RenameProjectRequest, db: Session = Depends(get_database)
 ):
     try:
         with db.begin():

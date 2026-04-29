@@ -1,5 +1,5 @@
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 
 
@@ -15,7 +15,7 @@ class Project(BaseModel):
 
 
 class CreateProjectRequest(BaseModel):
-    name: str
+    name: str = Field(..., max_length=30)
 
 
 class CreateProjectResponse(BaseModel):
@@ -23,7 +23,7 @@ class CreateProjectResponse(BaseModel):
 
 
 class CreateProjectFromTemplateRequest(BaseModel):
-    name: str
+    name: str = Field(..., max_length=30)
     template_identifier: str  # File Name of yaml definition of DAG-Template
 
 

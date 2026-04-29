@@ -25,10 +25,10 @@ import { AlertType, useAlert } from "@/hooks/useAlert"
 import DeleteModal from "./DeleteModal"
 import { useComputeBlockStatusWS } from "@/mutations/workflowMutations"
 import { CircularProgress } from "@mui/material"
-import { useSelectedProject } from "@/hooks/useSelectedProject"
+import type { Project } from "@/utils/types"
 
 
-export function useGraphData(selectedProjectUUID: string | undefined) {
+export function useGraphData(selectedProjectUUID: string) {
   const { data: projectDetails, isLoading, isError } = useComputeBlocksByProjectQuery(selectedProjectUUID)
   const [nodes, setNodes] = useState<ComputeBlockNodeType[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
@@ -119,39 +119,39 @@ type WorkbenchProps = {
   isProjectDeleteLoading: boolean,
   triggerWorkflow: (project_id: string) => void,
   isTriggerWorkflowLoading: boolean,
+  project: Project,
 }
 
 export function Workbench({
   deleteProject,
   isProjectDeleteLoading,
   triggerWorkflow,
-  isTriggerWorkflowLoading
+  isTriggerWorkflowLoading,
+  project
 }: WorkbenchProps) {
   const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
 
-  // TODO: #166 dont use useSelectedProject
-  const { selectedProject, setSelectedProject } = useSelectedProject()
-  const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
+  const { setSelectedComputeBlock } = useSelectedComputeBlock()
 
-  const { nodes, edges, selectedEdge, setSelectedEdge, isLoading, isError, setNodes, setAlert } = useGraphData(selectedProject?.uuid)
+  const { nodes, edges, selectedEdge, setSelectedEdge, isLoading, isError, setNodes, setAlert } = useGraphData(project.uuid)
 
   const { screenToFlowPosition, fitView } = useReactFlow()
 
-  const { mutate: deleteEdgeMutate } = useDeleteEdgeMutation(setAlert, selectedProject?.uuid)
-  const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, selectedProject?.uuid)
-  const { mutate: updateBlockMutate } = useUpdateComputeBlockMutation(setAlert, selectedProject?.uuid)
+  const { mutate: deleteEdgeMutate } = useDeleteEdgeMutation(setAlert, project.uuid)
+  const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, project.uuid)
+  const { mutate: updateBlockMutate } = useUpdateComputeBlockMutation(setAlert, project.uuid)
 
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
   const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false)
   const [dropCoordinates, setDropCoordinates] = useState({ x: 0, y: 0 })
 
-  useComputeBlockStatusWS(setAlert, selectedProject?.uuid)
+  useComputeBlockStatusWS(setAlert, project.uuid)
 
   useEffect(() => {
     setTimeout(() => {
       fitView()
     }, 50)
-  }, [fitView, selectedProject?.uuid])
+  }, [fitView, project.uuid])
 
   useEffect(() => {
     const onDeleteEdge = () => {
@@ -174,9 +174,8 @@ export function Workbench({
 
 
   function onProjectDelete() {
-    deleteProject(selectedProject!.uuid)
+    deleteProject(project.uuid)
     setDeleteApproveOpen(false)
-    setSelectedProject(undefined)
   }
 
   const onDragStart = (event: React.DragEvent<HTMLButtonElement>) => {
@@ -257,7 +256,7 @@ export function Workbench({
   )
 
   function onPlayClicked() {
-    triggerWorkflow(selectedProject!.uuid)
+    triggerWorkflow(project.uuid)
   }
 
   return (
@@ -268,16 +267,17 @@ export function Workbench({
         onDelete={onProjectDelete}
         loading={isProjectDeleteLoading}
         header="Delete Project"
-        desc={`Are you sure you want to delete the project: ${selectedProject?.name}?`}
+        desc={`Are you sure you want to delete the project: ${project.name}?`}
       />
 
       <CreateComputeBlockModal
         isOpen={createComputeBlockOpen}
         onClose={() => setCreateComputeBlockOpen(false)}
         dropCoordinates={dropCoordinates}
+        project={project}
       />
 
-      {selectedComputeBlock ? <EditComputeBlockDraggable /> : <EditProjectDraggable />}
+      {project ? <EditComputeBlockDraggable project={project} /> : <EditProjectDraggable project={project} />}
 
       <div className="flex absolute justify-between flex-row p-5 gap-3 right-0 bg-inherit z-30">
         <NodeControls onDragStart={onDragStart} />
