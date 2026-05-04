@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     KEYCLOAK_CLIENT_SECRET: str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     KEYCLOAK_REDIRECT_URL: str | None = None
 
+    INVITE_SECRET_KEY: str = "key"
+    INVITE_SALT: str = "salt"
+    INVITE_MAX_AGE_SECONDS: int = 60 * 60 * 24 * 7  # 7 days
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

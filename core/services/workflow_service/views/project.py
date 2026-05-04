@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from services.workflow_service.controllers import (
     project_controller,
+    share_controller,
     workflow_controller,
 )
 from services.workflow_service.schemas.project import (
@@ -89,6 +90,42 @@ async def read_project(
 
         project = project_controller.read_project(project_id)
         return project
+    except Exception as e:
+        logging.error(f"Error reading project: {e}")
+        raise handle_error(e)
+
+
+@router.post("/{project_id}/invite")
+async def invite_to_project(
+    project_id: UUID | None = None,
+    user: User = Depends(get_user),
+    db: Session = Depends(get_database),
+):
+    try:
+        if project_id is None:
+            raise HTTPException(status=422, detail="Project ID is required")
+
+        token = share_controller.generate_invite_token(
+            db, project_id, user.uuid
+        )
+        return {"token": token}
+    except Exception as e:
+        logging.error(f"Error reading project: {e}")
+        raise handle_error(e)
+
+
+@router.post("/invite/{token}/accept")
+async def accept_invite(
+    token: str | None = None,
+    user: User = Depends(get_user),
+    db: Session = Depends(get_database),
+):
+    try:
+        if token is None:
+            raise HTTPException(status=422, detail="Project ID is required")
+
+        response = share_controller.accept_invite(db, token, user.uuid)
+        return response
     except Exception as e:
         logging.error(f"Error reading project: {e}")
         raise handle_error(e)

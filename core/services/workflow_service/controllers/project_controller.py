@@ -107,31 +107,6 @@ def rename_project(project_uuid: UUID, new_name: str, db: Session) -> Project:
     return project
 
 
-def add_user(project_uuid: UUID, user_uuid: UUID) -> None:
-    logging.debug(f"Adding user {user_uuid} to project {project_uuid}.")
-    db: Session = next(get_database())
-
-    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
-
-    if not project:
-        logging.error(f"Project {project_uuid} not found.")
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    if user_uuid in project.users:
-        logging.warning(
-            f"User {user_uuid} is already part of project {project_uuid}.",
-        )
-        raise HTTPException(
-            status_code=404,
-            detail="User is already added to the project",
-        )
-
-    project.users.append(user_uuid)
-
-    db.commit()
-    logging.info(f"User {user_uuid} added to project {project_uuid}.")
-
-
 def delete_user(project_uuid: UUID, user_uuid: UUID) -> None:
     logging.debug(f"Removing user {user_uuid} from {project_uuid}")
     db: Session = next(get_database())
@@ -188,13 +163,6 @@ def read_projects_by_user_uuid(user_uuid: UUID) -> list[Project]:
     projects = (
         db.query(Project).filter(Project.users.contains([user_uuid])).all()
     )
-
-    if not projects:
-        logging.error(f"No projects found for user {user_uuid}")
-        raise HTTPException(
-            status_code=404,
-            detail="No projects found for user",
-        )
 
     logging.info(f"Retrieved {len(projects)} projects for user {user_uuid}")
 

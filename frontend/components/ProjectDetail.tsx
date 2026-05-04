@@ -1,5 +1,4 @@
 import { ActionButtons } from "./Workbench"
-import DeleteModal from "./DeleteModal"
 import { useEffect, useState } from "react"
 import type { SimpleUpdateEnvsDTO, SimpleUpdateIOSDTO, UpdateWorkflowConfigurationsDTO } from "@/mutations/workflowMutations"
 import { useGetComputeBlocksConfigurationByProjectQuery, useUpdateWorkflowConfigurationsMutation } from "@/mutations/workflowMutations"
@@ -12,6 +11,8 @@ import ConfigEnvsInputs from "./inputs/ConfigEnvsInputs"
 import { Save } from "@mui/icons-material"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import { CircularProgress } from "@mui/material"
+import ProjectModals from "./ProjectModals"
+import { useProjectModals } from "@/hooks/useProjectModals"
 
 type ProjectDetailProps = {
   deleteProject: (project_id: string) => void,
@@ -49,9 +50,16 @@ export default function ProjectDetail({
   isTriggerWorkflowLoading,
   project
 }: ProjectDetailProps) {
-  const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(false)
   const { setAlert } = useAlert()
+
+  const {
+    deleteApproveOpen,
+    setDeleteApproveOpen,
+    shareModalOpen,
+    setShareModalOpen,
+    onProjectDelete,
+  } = useProjectModals({ deleteProject, project_uuid: project.uuid })
 
   const { data, isLoading, isError } = useGetComputeBlocksConfigurationByProjectQuery(project.uuid)
   const { mutateAsync, isPending: loadingUpdateConfigs } = useUpdateWorkflowConfigurationsMutation(setAlert, project.uuid)
@@ -59,9 +67,9 @@ export default function ProjectDetail({
   const [projectDetailForm, setProjectDetailForm] = useState<ProjectDetailFormType>(emptyProjectDetailForm)
   const [initialProjectDetailForm, setInitialProjectDetailForm] = useState<ProjectDetailFormType>(emptyProjectDetailForm)
 
-  const [modifiedEnvKeys, setModifiedEnvKeys] = useState<Map<string, Set<string>>>(new Map()) // block_uuid -> changed keys
-  const [modifiedIOKeys, setModifiedIOKeys] = useState<Map<string, Set<string>>>(new Map()) // io.id -> changed keys
-  const [changedIOFiles, setChangedIOFiles] = useState<Set<string>>(new Set()) // io.id with changed files
+  const [modifiedEnvKeys, setModifiedEnvKeys] = useState<Map<string, Set<string>>>(new Map())
+  const [modifiedIOKeys, setModifiedIOKeys] = useState<Map<string, Set<string>>>(new Map())
+  const [changedIOFiles, setChangedIOFiles] = useState<Set<string>>(new Set())
 
   const hasChanged = JSON.stringify(projectDetailForm) !== JSON.stringify(initialProjectDetailForm)
 
@@ -74,20 +82,15 @@ export default function ProjectDetail({
   }
 
   const allWorkflowInputsConfigured = projectDetailForm.workflow_inputs.every(io => {
-    // Checks if all workflow inputs are configured / file uploaded
     if (io.presigned_url) return true
-
     if (!io.config || Object.values(io.config).length === 0) return true
-
     if (io.config && Object.values(io.config).length > 0) {
       return Object.values(io.config).every(
         v => v !== null && v !== undefined && v !== ""
       )
     }
-
     return false
   })
-
 
   function handleFieldConfigChange(
     field: "envs" | "workflow_inputs" | "workflow_outputs" | "workflow_intermediates",
@@ -100,7 +103,6 @@ export default function ProjectDetail({
         ...prev,
         [field]: prev[field].map((item) => {
           if (field === "envs") {
-            // Handle Envs
             const envItem = item as WorkflowEnvType
             if (envItem.block_uuid !== identifier) return envItem
 
@@ -120,7 +122,6 @@ export default function ProjectDetail({
               },
             }
           } else {
-            // Handle InputOutputs
             const ioItem = item as InputOutput
             if (ioItem.id !== identifier) return ioItem
 
@@ -172,12 +173,10 @@ export default function ProjectDetail({
   async function getChangedPayload() {
     const payload: UpdateWorkflowConfigurationsDTO = {}
 
-    // 1. Project Name
     if (initialProjectDetailForm.name !== projectDetailForm.name) {
       payload.project_name = projectDetailForm.name
     }
 
-    // 2. Envs
     const envsPayload = Array.from(modifiedEnvKeys.entries()).map(([block_uuid, keys]) => {
       const current = projectDetailForm.envs.find(e => e.block_uuid === block_uuid)
       if (!current) return null
@@ -190,7 +189,6 @@ export default function ProjectDetail({
       return { block_uuid, envs: changedEnvs }
     }).filter(Boolean) as SimpleUpdateEnvsDTO[]
 
-    // 3. IOs (inputs + outputs + intermediates)
     const allIOs = [
       ...projectDetailForm.workflow_inputs,
       ...projectDetailForm.workflow_outputs,
@@ -230,7 +228,6 @@ export default function ProjectDetail({
     return payload
   }
 
-
   async function onSave() {
     const payload = await getChangedPayload()
     try {
@@ -245,10 +242,8 @@ export default function ProjectDetail({
       setAlert("Workflow configurations saved.", AlertType.SUCCESS)
     } catch (error) {
       console.error("Saving workflow configurations failed:", error)
-      // Errors are already handled in `onError`
     }
   }
-
 
   useEffect(() => {
     if (data && project) {
@@ -265,20 +260,16 @@ export default function ProjectDetail({
     }
   }, [data, project])
 
-  function onProjectDelete() {
-    deleteProject(project.uuid)
-    setDeleteApproveOpen(false)
-  }
-
   return (
     <div className="flex flex-col h-full px-4 py-4 space-y-4">
-      <DeleteModal
-        isOpen={deleteApproveOpen}
-        onClose={() => setDeleteApproveOpen(false)}
-        onDelete={onProjectDelete}
-        loading={isProjectDeleteLoading}
-        header="Delete Project"
-        desc={`Are you sure you want to delete the project: ${project.name}?`}
+      <ProjectModals
+        project={project}
+        deleteApproveOpen={deleteApproveOpen}
+        setDeleteApproveOpen={setDeleteApproveOpen}
+        shareModalOpen={shareModalOpen}
+        setShareModalOpen={setShareModalOpen}
+        onProjectDelete={onProjectDelete}
+        isProjectDeleteLoading={isProjectDeleteLoading}
       />
 
       <div className="flex items-center justify-between">
@@ -302,6 +293,7 @@ export default function ProjectDetail({
           <ActionButtons
             onPlayClick={() => triggerWorkflow(project.uuid)}
             onDeleteClick={() => setDeleteApproveOpen(true)}
+            onShareClick={() => setShareModalOpen(true)}
             isTriggerLoading={isTriggerWorkflowLoading}
             allWorkflowInputsConfigured={allWorkflowInputsConfigured}
           />
@@ -339,7 +331,6 @@ export default function ProjectDetail({
           </div>
         </LoadingAndError>
       </div>
-
 
       <div className="border-t border-gray-200" />
 
@@ -420,4 +411,3 @@ export default function ProjectDetail({
     </div>
   )
 }
-
