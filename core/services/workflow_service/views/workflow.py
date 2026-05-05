@@ -174,7 +174,7 @@ def pause_dag(
     if not project_id:
         raise HTTPException(status_code=422, detail="Project ID missing")
 
-    dag_id = f"dag_{str(project_id).replace("-", "_")}"
+    dag_id = f"dag_{str(project_id).replace('-', '_')}"
 
     try:
         workflow_controller.unpause_dag(dag_id, True)

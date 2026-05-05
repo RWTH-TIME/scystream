@@ -6,6 +6,8 @@ import logging
 from pydantic import ValidationError
 import yaml
 
+from services.workflow_service.models.entrypoint import Entrypoint
+from services.workflow_service.models.project import Project
 from utils.config.registry import RepoRegistry
 from sqlalchemy.orm import Session
 from utils.config.environment import ENV
@@ -13,6 +15,8 @@ from services.workflow_service.schemas.compute_block import (
     ConfigType,
 )
 from services.workflow_service.schemas.workflow import (
+    DependsOn,
+    PipelineMetadata,
     WorkflowTemplate,
     Block as BlockTemplate,
     Input as InputTemplate,
@@ -23,7 +27,7 @@ from scystream.sdk.config.models import (
     Entrypoint as SDKEntrypoint,
     InputOutputModel,
 )
-from services.workflow_service.models.block import Block
+from services.workflow_service.models.block import Block, block_dependencies
 from services.workflow_service.models.input_output import (
     InputOutput,
     InputOutputType,
@@ -444,3 +448,107 @@ def create_edges_from_template(
             downstream_block.uuid,
             input_uuid,
         )
+
+
+def export_workflow_to_template(
+    db: Session, project_id: UUID
+) -> WorkflowTemplate:
+    project = db.query(Project).filter(Project.uuid == project_id).first()
+    if not project:
+        raise ValueError("Project not found")
+
+    blocks: list[Block] = (
+        db.query(Block).filter(Block.project_uuid == project_id).all()
+    )
+
+    block_map = {b.uuid: b for b in blocks}
+    name_map = {b.uuid: b.custom_name for b in blocks}
+
+    entrypoints = {b.uuid: b.selected_entrypoint for b in blocks}
+
+    ios: list[InputOutput] = (
+        db.query(InputOutput)
+        .join(Entrypoint)
+        .filter(Entrypoint.uuid.in_([e.uuid for e in entrypoints.values()]))
+        .all()
+    )
+
+    inputs_by_block = {}
+    outputs_by_block = {}
+
+    for io in ios:
+        block_uuid = io.entrypoint.block.uuid
+
+        if io.type == InputOutputType.INPUT:
+            inputs_by_block.setdefault(block_uuid, []).append(io)
+        else:
+            outputs_by_block.setdefault(block_uuid, []).append(io)
+
+    block_ids = set(block_map.keys())
+
+    deps = db.execute(
+        block_dependencies.select().where(
+            block_dependencies.c.upstream_block_uuid.in_(block_ids),
+            block_dependencies.c.downstream_block_uuid.in_(block_ids),
+        )
+    ).fetchall()
+
+    input_dependencies = {}
+
+    for d in deps:
+        input_dependencies[d.downstream_input_uuid] = {
+            "block": name_map[d.upstream_block_uuid],
+            "output": next(
+                o.name
+                for o in outputs_by_block[d.upstream_block_uuid]
+                if o.uuid == d.upstream_output_uuid
+            ),
+        }
+
+    template_blocks: list[BlockTemplate] = []
+
+    for block in blocks:
+        entry = entrypoints[block.uuid]
+
+        inputs: list[InputTemplate] = []
+        for inp in inputs_by_block.get(block.uuid, []):
+            depends_on = None
+
+            if inp.uuid in input_dependencies:
+                dep = input_dependencies[inp.uuid]
+                depends_on = DependsOn(
+                    block=dep["block"],
+                    output=dep["output"],
+                )
+
+            inputs.append(
+                InputTemplate(
+                    identifier=inp.name,
+                    depends_on=depends_on,
+                )
+            )
+
+        outputs: list[OutputTemplate] = [
+            OutputTemplate(identifier=out.name)
+            for out in outputs_by_block.get(block.uuid, [])
+        ]
+
+        template_blocks.append(
+            BlockTemplate(
+                name=block.custom_name,
+                repo_url=block.cbc_url,
+                entrypoint=entry.name,
+                settings=entry.envs,
+                inputs=inputs,
+                outputs=outputs,
+            )
+        )
+
+    return WorkflowTemplate(
+        pipeline=PipelineMetadata(
+            name=project.name,
+            description=f"Exported from project {project.name}",
+            tags=[],
+        ),
+        blocks=template_blocks,
+    )

@@ -1,3 +1,7 @@
+from services.workflow_service.controllers import (
+    project_controller,
+    template_controller,
+)
 from services.workflow_service.models.project import Project
 from utils.config.environment import ENV
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
@@ -7,6 +11,7 @@ from sqlalchemy import update
 from fastapi import HTTPException
 
 from uuid import UUID
+
 
 serializer = URLSafeTimedSerializer(ENV.INVITE_SECRET_KEY)
 
@@ -29,7 +34,7 @@ def _read_token(token: str) -> UUID:
         raise HTTPException(status_code=400, detail="Invalid invite link.")
 
 
-def generate_invite_token(
+def generate_project_token(
     db: Session, project_uuid: UUID, user_id: UUID
 ) -> str:
     """
@@ -81,3 +86,25 @@ def accept_invite(
         "detail": "Successfully joined the project.",
         "project_uuid": str(project_uuid),
     }
+
+
+def accept_from_template_share(
+    db: Session,
+    token: str,
+    project_name: str,
+    user_uuid: UUID,
+) -> UUID:
+    project_uuid = _read_token(token)
+
+    generated_template = template_controller.export_workflow_to_template(
+        db, project_uuid
+    )
+
+    created_project_id = project_controller.build_project_from_template(
+        db,
+        generated_template,
+        user_uuid,
+        project_name,
+    )
+
+    return created_project_id

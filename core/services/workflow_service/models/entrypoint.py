@@ -14,9 +14,14 @@ class Entrypoint(Base):
     envs = Column(JSON, nullable=False)
 
     block = relationship(
-        "Block", back_populates="selected_entrypoint",
-        cascade="all, delete-orphan"
+        "Block",
+        back_populates="selected_entrypoint",
+        cascade="all, delete-orphan",
+        uselist=False,
     )
 
-    input_outputs = relationship("InputOutput", back_populates="entrypoint",
-                                 cascade="all, delete-orphan")
+    input_outputs = relationship(
+        "InputOutput",
+        back_populates="entrypoint",
+        cascade="all, delete-orphan",
+    )

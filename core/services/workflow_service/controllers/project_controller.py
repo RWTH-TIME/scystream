@@ -31,22 +31,14 @@ def create_project(db: Session, name: str, current_user_uuid: UUID) -> UUID:
     return project.uuid
 
 
-def create_project_from_template(
-    name: str,
-    template_identifier: str,
-    current_user_uuid: UUID,
-) -> UUID:
+def build_project_from_template(
+    db: Session, template: WorkflowTemplate, user_uuid: UUID, project_name: str
+):
     """
     This method will handle the creation of project, blocks and edges as
     defined in the template.yaml
     """
-    db: Session = next(get_database())
 
-    template: WorkflowTemplate = (
-        template_controller.get_workflow_template_by_identifier(
-            template_identifier
-        )
-    )
     required_blocks = template_controller.extract_block_urls_from_template(
         template
     )
@@ -57,26 +49,43 @@ def create_project_from_template(
     G = template_controller.build_workflow_graph(template)
 
     try:
-        with db.begin():
-            project_id = create_project(db, name, current_user_uuid)
-            (
-                block_name_to_model,
-                block_outputs_by_name,
-                block_inputs_by_name,
-            ) = template_controller.configure_and_create_blocks(
-                G, db, unconfigured_blocks, project_id
-            )
-            template_controller.create_edges_from_template(
-                G,
-                db,
-                block_name_to_model,
-                block_outputs_by_name,
-                block_inputs_by_name,
-            )
+        project_id = create_project(db, project_name, user_uuid)
+        (
+            block_name_to_model,
+            block_outputs_by_name,
+            block_inputs_by_name,
+        ) = template_controller.configure_and_create_blocks(
+            G, db, unconfigured_blocks, project_id
+        )
+        template_controller.create_edges_from_template(
+            G,
+            db,
+            block_name_to_model,
+            block_outputs_by_name,
+            block_inputs_by_name,
+        )
         return project_id
     except Exception as e:
         logging.exception(f"Error creating project from template: {e}")
         raise e
+
+
+def create_project_from_template_file(
+    db: Session,
+    name: str,
+    template_identifier: str,
+    current_user_uuid: UUID,
+) -> UUID:
+    """
+    This method will load the workflow template from a file and then
+    pass it into the creation method
+    """
+    template: WorkflowTemplate = (
+        template_controller.get_workflow_template_by_identifier(
+            template_identifier
+        )
+    )
+    return build_project_from_template(db, template, current_user_uuid, name)
 
 
 def read_project(project_uuid: UUID) -> Project:

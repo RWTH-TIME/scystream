@@ -13,6 +13,7 @@ import { AlertType, useAlert } from "@/hooks/useAlert"
 import { CircularProgress } from "@mui/material"
 import ProjectModals from "./ProjectModals"
 import { useProjectModals } from "@/hooks/useProjectModals"
+import { useExportProjectMutation } from "@/mutations/projectMutation"
 
 type ProjectDetailProps = {
   deleteProject: (project_id: string) => void,
@@ -63,6 +64,7 @@ export default function ProjectDetail({
 
   const { data, isLoading, isError } = useGetComputeBlocksConfigurationByProjectQuery(project.uuid)
   const { mutateAsync, isPending: loadingUpdateConfigs } = useUpdateWorkflowConfigurationsMutation(setAlert, project.uuid)
+  const { mutate: exportProject } = useExportProjectMutation()
 
   const [projectDetailForm, setProjectDetailForm] = useState<ProjectDetailFormType>(emptyProjectDetailForm)
   const [initialProjectDetailForm, setInitialProjectDetailForm] = useState<ProjectDetailFormType>(emptyProjectDetailForm)
@@ -293,6 +295,7 @@ export default function ProjectDetail({
           <ActionButtons
             onPlayClick={() => triggerWorkflow(project.uuid)}
             onDeleteClick={() => setDeleteApproveOpen(true)}
+            onExportClick={() => exportProject(project.uuid)}
             onShareClick={() => setShareModalOpen(true)}
             isTriggerLoading={isTriggerWorkflowLoading}
             allWorkflowInputsConfigured={allWorkflowInputsConfigured}

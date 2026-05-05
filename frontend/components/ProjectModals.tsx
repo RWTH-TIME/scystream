@@ -3,7 +3,7 @@ import DeleteModal from "./DeleteModal"
 import ShareModal from "./ShareModal"
 import type { Project } from "@/utils/types"
 
-import { useGenerateInviteLinkMutation } from "@/mutations/shareMutations"
+import { useGenerateShareLinkMutation } from "@/mutations/shareMutations"
 
 type ProjectModalsProps = {
   project: Project
@@ -26,16 +26,18 @@ export default function ProjectModals({
 }: ProjectModalsProps) {
   const { setAlert } = useAlert()
 
-  const generateInviteMutation = useGenerateInviteLinkMutation(setAlert)
+  const generateInviteMutation = useGenerateShareLinkMutation(setAlert)
 
   return (
     <>
       <ShareModal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
-        onGenerateTemplateLink={() => new Promise((resolve) => resolve("test"))}
+        onGenerateTemplateLink={async () => {
+          return await generateInviteMutation.mutateAsync({project_id: project.uuid, type: "template"})
+        }}
         onGenerateInviteLink={async () => {
-          return await generateInviteMutation.mutateAsync(project.uuid)
+          return await generateInviteMutation.mutateAsync({project_id: project.uuid, type: "invite"})
         }}
       />
       <DeleteModal

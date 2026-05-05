@@ -8,7 +8,7 @@ import {
   useReactFlow,
   ConnectionMode
 } from "@xyflow/react"
-import { PlayArrow, Widgets, Delete, Share } from "@mui/icons-material"
+import { PlayArrow, Widgets, Delete, Share, ExitToApp } from "@mui/icons-material"
 import type { ComputeBlockNodeType } from "./nodes/ComputeBlockNode"
 import ComputeBlockNode from "./nodes/ComputeBlockNode"
 import "@xyflow/react/dist/style.css"
@@ -26,6 +26,7 @@ import { CircularProgress } from "@mui/material"
 import type { Project } from "@/utils/types"
 import ProjectModals from "./ProjectModals"
 import { useProjectModals } from "@/hooks/useProjectModals"
+import { useExportProjectMutation } from "@/mutations/projectMutation"
 
 export function useGraphData(selectedProjectUUID: string) {
   const { data: projectDetails, isLoading, isError } = useComputeBlocksByProjectQuery(selectedProjectUUID)
@@ -80,6 +81,7 @@ type ActionButtonsProps = {
   onPlayClick: () => void,
   onDeleteClick: () => void,
   onShareClick: () => void,
+  onExportClick: () => void,
   isTriggerLoading: boolean,
   allWorkflowInputsConfigured: boolean,
 }
@@ -88,11 +90,18 @@ export function ActionButtons({
   onPlayClick,
   onDeleteClick,
   onShareClick,
+  onExportClick,
   isTriggerLoading,
   allWorkflowInputsConfigured,
 }: ActionButtonsProps) {
   return (
     <div className="flex justify-self-end gap-3">
+      <button
+        onClick={onExportClick}
+        className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200 cursor-pointer"
+      >
+        <ExitToApp />
+      </button>
       <button
         onClick={onShareClick}
         className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200 cursor-pointer"
@@ -141,6 +150,7 @@ export function Workbench({
   const { mutate: deleteEdgeMutate } = useDeleteEdgeMutation(setAlert, project.uuid)
   const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, project.uuid)
   const { mutate: updateBlockMutate } = useUpdateComputeBlockMutation(setAlert, project.uuid)
+  const { mutate: exportProject } = useExportProjectMutation()
 
   const {
     deleteApproveOpen,
@@ -270,6 +280,7 @@ export function Workbench({
         <NodeControls onDragStart={onDragStart} />
         <ActionButtons
           onPlayClick={onPlayClicked}
+          onExportClick={() => exportProject(project.uuid)}
           onDeleteClick={() => setDeleteApproveOpen(true)}
           onShareClick={() => setShareModalOpen(true)}
           isTriggerLoading={isTriggerWorkflowLoading}
