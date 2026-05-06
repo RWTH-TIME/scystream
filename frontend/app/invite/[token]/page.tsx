@@ -24,7 +24,7 @@ function InvitePage() {
 
     return (
       <PageWithHeader breadcrumbs={[]}>
-        <LoadingAndError loading={isPending} error={isError}>
+        <LoadingAndError loading={isPending}>
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
 

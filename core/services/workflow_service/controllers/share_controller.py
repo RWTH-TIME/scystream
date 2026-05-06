@@ -70,10 +70,9 @@ def accept_invite(
     current_users: list[UUID] = project.users or []
 
     if user_id in current_users:
-        return {
-            "detail": "User already member of the project",
-            "project_uuid": str(project_uuid),
-        }
+        raise HTTPException(
+            status_code=409, detail="User is already member of the project."
+        )
 
     db.execute(
         update(Project)

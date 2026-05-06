@@ -56,7 +56,7 @@ async def create_project_from_template(
 ):
     try:
         with db.begin():
-            id = project_controller.create_project_from_template(
+            id = project_controller.create_project_from_template_file(
                 db, data.name, data.template_identifier, user.uuid
             )
         return CreateProjectResponse(project_uuid=id)
@@ -93,7 +93,9 @@ async def read_project(
 ):
     try:
         if project_id is None:
-            raise HTTPException(status=422, detail="Project ID is required")
+            raise HTTPException(
+                status_code=422, detail="Project ID is required"
+            )
 
         project = project_controller.read_project(project_id)
         return project

@@ -3,7 +3,7 @@ import displayStandardAxiosErrors from "@/utils/errors"
 import { useMutation } from "@tanstack/react-query"
 
 import type { AxiosError } from "axios"
-import type { SetAlertType } from "@/hooks/useAlert"
+import { AlertType, type SetAlertType } from "@/hooks/useAlert"
 
 export function useGenerateShareLinkMutation(
   setAlert: SetAlertType
@@ -17,6 +17,8 @@ export function useGenerateShareLinkMutation(
     },
 
     onError: (error: AxiosError) => {
+
+
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Generating share link failed: ${error}`)
     }
@@ -31,6 +33,14 @@ export function useAcceptInviteMutation(setAlert: SetAlertType) {
     },
 
     onError: (error: AxiosError) => {
+      const status = error.response?.status
+      console.log("Status", status)
+
+      if (status === 409) {
+        setAlert("You are already a member of this project", AlertType.DEFAULT)
+        return
+      }
+
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Accepting invite failed: ${error}`)
     }
