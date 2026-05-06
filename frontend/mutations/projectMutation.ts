@@ -46,6 +46,45 @@ function useProjectsQuery() {
   })
 }
 
+function useExportProjectMutation() {
+  return useMutation({
+    mutationFn: async (projectId: string) => {
+      const response = await api.get(`project/${projectId}/export`, {
+        responseType: "blob",
+      })
+
+      return response
+    },
+    onSuccess: (response, projectId) => {
+      // Create file from response
+      const blob = new Blob([response.data], {
+        type: "application/x-yaml",
+      })
+
+      const url = window.URL.createObjectURL(blob)
+
+      const a = document.createElement("a")
+      a.href = url
+
+      // Try to extract filename from header
+      const contentDisposition = response.headers["content-disposition"]
+      let filename = `${projectId}.yaml`
+
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/)
+        if (match) filename = match[1]
+      }
+
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+
+      window.URL.revokeObjectURL(url)
+    },
+  })
+}
+
 function useCreateProjectMutation(setAlert: SetAlertType) {
   const queryClient = useQueryClient()
 
@@ -155,6 +194,7 @@ function useDeleteProjectMutation(setAlert: SetAlertType) {
 export {
   useProjectQuery,
   useProjectsQuery,
+  useExportProjectMutation,
   useCreateProjectMutation,
   useUpdateProjectMutation,
   useDeleteProjectMutation,

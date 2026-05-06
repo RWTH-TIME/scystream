@@ -10,6 +10,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from sqlalchemy.orm import Session
 from services.workflow_service.controllers import (
     compute_block_controller as compute_block_controller,
 )
@@ -147,21 +148,23 @@ def update_workflow_configurations(
 def translate_project_to_dag(
     project_id: UUID | None = None,
     _: User = Depends(get_user),
+    db: Session = Depends(get_database),
 ):
     if not project_id:
         raise HTTPException(status_code=422, detail="Project ID missing")
 
     try:
-        workflow_controller.validate_workflow(project_id)
-        dag_id = workflow_controller.translate_project_to_dag(project_id)
-        # Make sure airflow has enough time to create the dag internally
-        if not workflow_controller.wait_for_dag_registration(dag_id):
-            logging.error(f"DAG {dag_id} was not registered in time.")
-            raise HTTPException(
-                status_code=500,
-                detail="DAG was not registered in time.",
-            )
-        workflow_controller.trigger_workflow_run(dag_id)
+        with db.begin():
+            workflow_controller.validate_workflow(db, project_id)
+            dag_id = workflow_controller.translate_project_to_dag(project_id)
+            # Make sure airflow has enough time to create the dag internally
+            if not workflow_controller.wait_for_dag_registration(dag_id):
+                logging.error(f"DAG {dag_id} was not registered in time.")
+                raise HTTPException(
+                    status_code=500,
+                    detail="DAG was not registered in time.",
+                )
+            workflow_controller.trigger_workflow_run(dag_id)
     except Exception as e:
         raise handle_error(e)
 
@@ -174,7 +177,7 @@ def pause_dag(
     if not project_id:
         raise HTTPException(status_code=422, detail="Project ID missing")
 
-    dag_id = f"dag_{str(project_id).replace("-", "_")}"
+    dag_id = f"dag_{str(project_id).replace('-', '_')}"
 
     try:
         workflow_controller.unpause_dag(dag_id, True)

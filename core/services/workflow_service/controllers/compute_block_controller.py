@@ -258,9 +258,9 @@ def get_io_for_entrypoint(
     )
 
 
-def get_compute_blocks_by_project(project_id: UUID) -> list[Block]:
-    db: Session = next(get_database())
-
+def get_compute_blocks_by_project(
+    db: Session, project_id: UUID
+) -> list[Block]:
     order_case = case(
         (InputOutput.data_type == DataType.FILE, 1),
         (InputOutput.data_type == DataType.DBTABLE, 2),
@@ -285,8 +285,9 @@ def get_compute_blocks_by_project(project_id: UUID) -> list[Block]:
     return blocks
 
 
-def get_block_dependencies_for_blocks(block_ids: list[UUID]) -> list:
-    db: Session = next(get_database())
+def get_block_dependencies_for_blocks(
+    db: Session, block_ids: list[UUID]
+) -> list:
 
     query = select(
         block_dependencies.c.upstream_block_uuid,

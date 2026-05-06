@@ -22,6 +22,10 @@ class CreateProjectResponse(BaseModel):
     project_uuid: UUID
 
 
+class AcceptTemplateRequest(BaseModel):
+    project_name: str
+
+
 class CreateProjectFromTemplateRequest(BaseModel):
     name: str = Field(..., max_length=30)
     template_identifier: str  # File Name of yaml definition of DAG-Template

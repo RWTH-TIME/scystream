@@ -1,5 +1,4 @@
-import type { DragEvent } from "react"
-import { useState, useCallback, useMemo, useEffect } from "react"
+import { type DragEvent, useState, useCallback, useMemo, useEffect } from "react"
 import type { Edge, Connection } from "@xyflow/react"
 import {
   ReactFlow,
@@ -9,7 +8,7 @@ import {
   useReactFlow,
   ConnectionMode
 } from "@xyflow/react"
-import { PlayArrow, Widgets, Delete } from "@mui/icons-material"
+import { PlayArrow, Widgets, Delete, Share, ExitToApp } from "@mui/icons-material"
 import type { ComputeBlockNodeType } from "./nodes/ComputeBlockNode"
 import ComputeBlockNode from "./nodes/ComputeBlockNode"
 import "@xyflow/react/dist/style.css"
@@ -22,11 +21,12 @@ import { useSelectedComputeBlock } from "@/hooks/useSelectedComputeBlock"
 import type { EdgeDTO } from "@/mutations/computeBlockMutation"
 import { useComputeBlocksByProjectQuery, useCreateEdgeMutation, useDeleteEdgeMutation, useUpdateComputeBlockMutation } from "@/mutations/computeBlockMutation"
 import { AlertType, useAlert } from "@/hooks/useAlert"
-import DeleteModal from "./DeleteModal"
 import { useComputeBlockStatusWS } from "@/mutations/workflowMutations"
 import { CircularProgress } from "@mui/material"
 import type { Project } from "@/utils/types"
-
+import ProjectModals from "./ProjectModals"
+import { useProjectModals } from "@/hooks/useProjectModals"
+import { useExportProjectMutation } from "@/mutations/projectMutation"
 
 export function useGraphData(selectedProjectUUID: string) {
   const { data: projectDetails, isLoading, isError } = useComputeBlocksByProjectQuery(selectedProjectUUID)
@@ -36,14 +36,12 @@ export function useGraphData(selectedProjectUUID: string) {
   const { selectedComputeBlock, setSelectedComputeBlock } = useSelectedComputeBlock()
   const { setAlert } = useAlert()
 
-
   useEffect(() => {
     if (projectDetails) {
       setNodes(projectDetails.blocks)
       setEdges(projectDetails.edges)
     }
   }, [projectDetails])
-
 
   return {
     nodes,
@@ -82,6 +80,8 @@ function NodeControls({ onDragStart }: NodeControlProps) {
 type ActionButtonsProps = {
   onPlayClick: () => void,
   onDeleteClick: () => void,
+  onShareClick: () => void,
+  onExportClick: () => void,
   isTriggerLoading: boolean,
   allWorkflowInputsConfigured: boolean,
 }
@@ -89,11 +89,25 @@ type ActionButtonsProps = {
 export function ActionButtons({
   onPlayClick,
   onDeleteClick,
+  onShareClick,
+  onExportClick,
   isTriggerLoading,
-  allWorkflowInputsConfigured
+  allWorkflowInputsConfigured,
 }: ActionButtonsProps) {
   return (
     <div className="flex justify-self-end gap-3">
+      <button
+        onClick={onExportClick}
+        className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200 cursor-pointer"
+      >
+        <ExitToApp />
+      </button>
+      <button
+        onClick={onShareClick}
+        className="flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all duration-200 cursor-pointer"
+      >
+        <Share />
+      </button>
       <button
         disabled={isTriggerLoading || !allWorkflowInputsConfigured}
         onClick={onPlayClick}
@@ -130,18 +144,22 @@ export function Workbench({
   project
 }: WorkbenchProps) {
   const nodeTypes = useMemo(() => ({ computeBlock: ComputeBlockNode }), [])
-
   const { setSelectedComputeBlock } = useSelectedComputeBlock()
-
   const { nodes, edges, selectedEdge, setSelectedEdge, isLoading, isError, setNodes, setAlert } = useGraphData(project.uuid)
-
   const { screenToFlowPosition, fitView } = useReactFlow()
-
   const { mutate: deleteEdgeMutate } = useDeleteEdgeMutation(setAlert, project.uuid)
   const { mutateAsync: edgeMutate } = useCreateEdgeMutation(setAlert, project.uuid)
   const { mutate: updateBlockMutate } = useUpdateComputeBlockMutation(setAlert, project.uuid)
+  const { mutate: exportProject } = useExportProjectMutation()
 
-  const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
+  const {
+    deleteApproveOpen,
+    setDeleteApproveOpen,
+    shareModalOpen,
+    setShareModalOpen,
+    onProjectDelete,
+  } = useProjectModals({ deleteProject, project_uuid: project.uuid })
+
   const [createComputeBlockOpen, setCreateComputeBlockOpen] = useState(false)
   const [dropCoordinates, setDropCoordinates] = useState({ x: 0, y: 0 })
 
@@ -167,16 +185,9 @@ export function Workbench({
         }
       }
     }
-
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [selectedEdge, deleteEdgeMutate, setSelectedEdge])
-
-
-  function onProjectDelete() {
-    deleteProject(project.uuid)
-    setDeleteApproveOpen(false)
-  }
 
   const onDragStart = (event: React.DragEvent<HTMLButtonElement>) => {
     event.dataTransfer.effectAllowed = "move"
@@ -213,23 +224,15 @@ export function Workbench({
 
   const onConnect = useCallback(
     (connection: Connection) => {
-
       const existingEdge = edges.find(
-        (edge) =>
-          edge.targetHandle === connection.targetHandle
+        (edge) => edge.targetHandle === connection.targetHandle
       )
-
-      // If a connection already exists, do not add it
       if (existingEdge) {
         setAlert("This output is already connected to an input.", AlertType.ERROR)
         return
       }
-
-
-      // Proceed with adding the connection if it's not already present
       const sourceNode = nodes.find((node) => node.id === connection.source)
       const targetNode = nodes.find((node) => node.id === connection.target)
-
       if (sourceNode && targetNode) {
         const sourceHandle = sourceNode.data.selected_entrypoint?.outputs?.find(
           (output: InputOutput) => output.id === connection.sourceHandle
@@ -237,16 +240,12 @@ export function Workbench({
         const targetHandle = targetNode.data.selected_entrypoint?.inputs?.find(
           (input: InputOutput) => input.id === connection.targetHandle
         )
-
-        // Check if types are compatible
         if (sourceHandle && targetHandle) {
           const sourceType = sourceHandle.data_type
           const targetType = targetHandle.data_type
-
           if (sourceType === targetType) {
             edgeMutate(connection as EdgeDTO)
           } else {
-            // Handle the case where types do not match
             setAlert("Incompatible connection types!", AlertType.ERROR)
           }
         }
@@ -261,34 +260,33 @@ export function Workbench({
 
   return (
     <LoadingAndError loading={isLoading} error={isError}>
-      <DeleteModal
-        isOpen={deleteApproveOpen}
-        onClose={() => setDeleteApproveOpen(false)}
-        onDelete={onProjectDelete}
-        loading={isProjectDeleteLoading}
-        header="Delete Project"
-        desc={`Are you sure you want to delete the project: ${project.name}?`}
+      <ProjectModals
+        project={project}
+        deleteApproveOpen={deleteApproveOpen}
+        setDeleteApproveOpen={setDeleteApproveOpen}
+        shareModalOpen={shareModalOpen}
+        setShareModalOpen={setShareModalOpen}
+        onProjectDelete={onProjectDelete}
+        isProjectDeleteLoading={isProjectDeleteLoading}
       />
-
       <CreateComputeBlockModal
         isOpen={createComputeBlockOpen}
         onClose={() => setCreateComputeBlockOpen(false)}
         dropCoordinates={dropCoordinates}
         project={project}
       />
-
       {project ? <EditComputeBlockDraggable project={project} /> : <EditProjectDraggable project={project} />}
-
       <div className="flex absolute justify-between flex-row p-5 gap-3 right-0 bg-inherit z-30">
         <NodeControls onDragStart={onDragStart} />
         <ActionButtons
           onPlayClick={onPlayClicked}
+          onExportClick={() => exportProject(project.uuid)}
           onDeleteClick={() => setDeleteApproveOpen(true)}
+          onShareClick={() => setShareModalOpen(true)}
           isTriggerLoading={isTriggerWorkflowLoading}
-          allWorkflowInputsConfigured={true} // Expert-Mode can trigger workflow run always
+          allWorkflowInputsConfigured={true}
         />
       </div>
-
       <div className="h-full">
         <ReactFlow
           nodeTypes={nodeTypes}

@@ -1,12 +1,12 @@
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from enum import Enum
 
 from services.workflow_service.schemas.compute_block import (
     ConfigType,
     InputOutputDTO,
     BaseInputOutputDTO,
-    replace_minio_host
+    replace_minio_host,
 )
 
 from airflow_client.client.models.dag_run_state import DagRunState
@@ -14,19 +14,18 @@ from airflow_client.client.models.dag_run_state import DagRunState
 
 class WorkflowStatus(Enum):
     RUNNING = "RUNNING"
-    IDLE = "IDLE",
+    IDLE = ("IDLE",)
     FINISHED = "FINISHED"
     FAILED = "FAILED"
 
     @classmethod
     def from_airflow_state(
-            cls,
-            airflow_state: DagRunState
+        cls, airflow_state: DagRunState
     ) -> "WorkflowStatus":
         state_mapping = {
             airflow_state.RUNNING: cls.RUNNING,
             airflow_state.SUCCESS: cls.FINISHED,
-            airflow_state.FAILED: cls.FAILED
+            airflow_state.FAILED: cls.FAILED,
         }
         return state_mapping.get(airflow_state.lower(), cls.IDLE)
 
@@ -121,6 +120,6 @@ class PipelineMetadata(BaseModel):
 
 
 class WorkflowTemplate(BaseModel):
-    file_identifier: str
+    file_identifier: str | None = Field(default=None, exclude=True)
     pipeline: PipelineMetadata
     blocks: list[Block]
