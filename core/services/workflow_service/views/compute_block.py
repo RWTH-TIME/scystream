@@ -111,16 +111,17 @@ async def create(
 async def get_by_project(
     project_id: UUID | None = None,
     _: User = Depends(get_user),
+    db: Session = Depends(get_database),
 ):
     if not project_id:
         raise HTTPException(status_code=422, detail="Project ID is required.")
 
     try:
-        compute_blocks = get_compute_blocks_by_project(project_id)
+        compute_blocks = get_compute_blocks_by_project(db, project_id)
         status = workflow_controller.dag_status(project_id)
 
         block_uuids = [block.uuid for block in compute_blocks]
-        dependencies = get_block_dependencies_for_blocks(block_uuids)
+        dependencies = get_block_dependencies_for_blocks(db, block_uuids)
 
         return GetNodesByProjectResponse(
             blocks=[

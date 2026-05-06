@@ -2,6 +2,10 @@ from services.workflow_service.controllers import (
     project_controller,
     template_controller,
 )
+from services.workflow_service.controllers.compute_block_controller import (
+    get_block_dependencies_for_blocks,
+    get_compute_blocks_by_project,
+)
 from services.workflow_service.models.project import Project
 from utils.config.environment import ENV
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
@@ -70,9 +74,11 @@ def accept_invite(
     current_users: list[UUID] = project.users or []
 
     if user_id in current_users:
-        raise HTTPException(
-            status_code=409, detail="User is already member of the project."
-        )
+        return {
+            "detail": "User already member of the project.",
+            "is_already_member": True,
+            "project_uuid": str(project_uuid),
+        }
 
     db.execute(
         update(Project)
@@ -107,3 +113,14 @@ def accept_from_template_share(
     )
 
     return created_project_id
+
+
+def load_blocks_and_dependencies_from_token(db: Session, token: str):
+    project_uuid = _read_token(token)
+
+    blocks = get_compute_blocks_by_project(db, project_uuid)
+
+    block_uuids = [block.uuid for block in blocks]
+    dependencies = get_block_dependencies_for_blocks(db, block_uuids)
+
+    return blocks, dependencies

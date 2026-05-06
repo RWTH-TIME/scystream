@@ -102,7 +102,7 @@ def get_airflow_config() -> Configuration:
 
 
 def _project_id_to_dag_id(pi: UUID | str) -> str:
-    return f"dag_{str(pi).replace("-", "_")}"
+    return f"dag_{str(pi).replace('-', '_')}"
 
 
 def dag_id_to_project_id(di: str) -> str:
@@ -168,7 +168,9 @@ def _get_unconfigured_ios(ios: list[InputOutput]) -> list[InputOutput]:
     return result
 
 
-def get_workflow_configurations(project_id: UUID) -> tuple[
+def get_workflow_configurations(
+    project_id: UUID,
+) -> tuple[
     list[WorkflowEnvsWithBlockInfo],
     list[InputOutput],  # Workflow Inputs
     list[InputOutput],  # Intermediates
@@ -229,7 +231,9 @@ def get_workflow_configurations(project_id: UUID) -> tuple[
     db: Session = next(get_database())
 
     # 1. Load blocks
-    blocks = compute_block_controller.get_compute_blocks_by_project(project_id)
+    blocks = compute_block_controller.get_compute_blocks_by_project(
+        db, project_id
+    )
     block_by_entry_id = {b.selected_entrypoint_uuid: b for b in blocks}
     entry_ids = list(block_by_entry_id.keys())
 
@@ -413,12 +417,13 @@ def validate_value(value: str | list | None) -> bool:
     return value is None or value in ("", [])
 
 
-def validate_workflow(project_uuid: UUID) -> None:
+def validate_workflow(db: Session, project_uuid: UUID) -> None:
     """Checks:
     - Are there compute blocks?
     - Are all envs and configs set?
     """
     blocks_in_project = compute_block_controller.get_compute_blocks_by_project(
+        db,
         project_uuid,
     )
 

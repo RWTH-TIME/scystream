@@ -2,6 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from uuid import UUID
 
 import yaml
+from services.workflow_service.schemas.compute_block import (
+    BlockStatus,
+    EdgeDTO,
+    GetNodesByProjectResponse,
+    SimpleNodeDTO,
+)
 from utils.errors.error import handle_error
 import logging
 from sqlalchemy.orm import Session
@@ -159,7 +165,7 @@ async def workflow_template_export(
         raise handle_error(e)
 
 
-@router.post("/invite/{token}/accept")
+@router.get("/invite/{token}/accept")
 async def accept_invite(
     token: str | None = None,
     user: User = Depends(get_user),
@@ -174,6 +180,34 @@ async def accept_invite(
         return response
     except Exception as e:
         logging.error(f"Error accepting invite: {e}")
+        raise handle_error(e)
+
+
+@router.get("/template/{token}/preview")
+async def preview_template(
+    token: str | None = None,
+    db: Session = Depends(get_database),
+):
+    try:
+        if token is None:
+            raise HTTPException(status_code=422, detail="Token is required.")
+
+        with db.begin():
+            compute_blocks, dependencies = (
+                share_controller.load_blocks_and_dependencies_from_token(
+                    db, token
+                )
+            )
+
+        return GetNodesByProjectResponse(
+            blocks=[
+                SimpleNodeDTO.from_compute_block(cb, BlockStatus.IDLE)
+                for cb in compute_blocks
+            ],
+            edges=[EdgeDTO.from_block_dependencies(dp) for dp in dependencies],
+        )
+    except Exception as e:
+        logging.error(f"Error generating preview: {e}")
         raise handle_error(e)
 
 

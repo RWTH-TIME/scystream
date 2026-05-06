@@ -1,9 +1,9 @@
 import { api } from "@/utils/axios"
 import displayStandardAxiosErrors from "@/utils/errors"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, type UseMutationOptions, useQuery } from "@tanstack/react-query"
 
 import type { AxiosError } from "axios"
-import { AlertType, type SetAlertType } from "@/hooks/useAlert"
+import { type SetAlertType } from "@/hooks/useAlert"
 
 export function useGenerateShareLinkMutation(
   setAlert: SetAlertType
@@ -17,39 +17,54 @@ export function useGenerateShareLinkMutation(
     },
 
     onError: (error: AxiosError) => {
-
-
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Generating share link failed: ${error}`)
     }
   })
 }
 
-export function useAcceptInviteMutation(setAlert: SetAlertType) {
-  return useMutation({
-    mutationFn: async function acceptInvite(token: string) {
-      const response = await api.post(`project/invite/${token}/accept`)
+export function useTemplatePreviewQuery(token: string) {
+  return useQuery({
+    queryKey: ["templatePrev", token],
+    queryFn: async function requestTemplatePreview() {
+      if (!token) return
+      const response = await api.get(`project/template/${token}/preview`)
       return response.data
     },
-
-    onError: (error: AxiosError) => {
-      const status = error.response?.status
-      console.log("Status", status)
-
-      if (status === 409) {
-        setAlert("You are already a member of this project", AlertType.DEFAULT)
-        return
-      }
-
-      displayStandardAxiosErrors(error, setAlert)
-      console.error(`Accepting invite failed: ${error}`)
-    }
+    enabled: !!token
   })
 }
 
-export function useAcceptTemplateMutation(setAlert: SetAlertType) {
+type AcceptInviteQueryResponse = {
+  detail: string,
+  is_already_member?: boolean,
+  project_uuid: string
+}
+
+export function useAcceptInviteQuery(token: string, options?: UseMutationOptions<AcceptInviteQueryResponse>) {
+  return useQuery({
+    queryKey: ["inviteAccept", token],
+    queryFn: async () => {
+        const response = await api.get(`project/invite/${token}/accept`)
+        return response.data
+      },
+      retry: false,
+      ...options,
+    })
+}
+
+type AcceptTemplatePayload = {
+  token: string,
+  project_name: string
+}
+
+type AcceptTemplateMutationResponse = {
+  project_uuid: string
+}
+
+export function useAcceptTemplateMutation(setAlert: SetAlertType, options?: UseMutationOptions<AcceptTemplateMutationResponse, AxiosError, AcceptTemplatePayload>) {
   return useMutation({
-    mutationFn: async function acceptInvite({token, project_name}: {token: string, project_name: string}) {
+    mutationFn: async function acceptInvite({token, project_name}: AcceptTemplatePayload) {
       const response = await api.post(`project/template/${token}/accept`, {project_name})
       return response.data
     },
@@ -57,6 +72,7 @@ export function useAcceptTemplateMutation(setAlert: SetAlertType) {
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
       console.error(`Accepting invite failed: ${error}`)
-    }
+    },
+    ...options,
   })
 }
