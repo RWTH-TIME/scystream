@@ -13,6 +13,16 @@ volumes:
   core-postgres:
   minio-data:
   keycloak-postgres-data:
+  glitchtip-postgres:
+
+x-glitchtip-env: &default-env
+  DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
+  REDIS_URL: redis://redis:6379/0
+  SECRET_KEY: "7814b2284d10657e5a20d1595101dcb135b6e152499ed47791f58f732f1e7214"
+  PORT: 8000
+  GLITCHTIP_DOMAIN: https://your-glitchtip-domain.com
+  DEFAULT_FROM_EMAIL: "glitchtip@example.com"
+  ENABLE_OPEN_USER_REGISTRATION: "True"
 
 x-airflow-common:
   &airflow-common
@@ -358,3 +368,42 @@ services:
       - keycloak-postgres
     volumes:
       - ./.keycloak-config:/opt/keycloak/data/import
+
+  gltichtip-postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: "trust"
+    restart: unless-stopped
+    volumes:
+      - glitchtip-postgres:/var/lib/postgresql/data
+
+  glitchtip-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  glitchtip:
+    image: glitchtip/glitchtip:latest
+    depends_on:
+      - glitchtip-postgres
+      - glitchtip-redis
+    ports:
+      - "1234:8000"
+    environment: *default-env
+    restart: unless-stopped
+
+  glitchtip-worker:
+    image: glitchtip/glitchtip:latest
+    command: ./bin/run-celery-with-beat.sh
+    depends_on:
+      - glitchtip-postgres
+      - glitchtip-redis
+    environment: *default-env
+    restart: unless-stopped
+
+  glitchtip-migrate:
+    image: glitchtip/glitchtip:latest
+    depends_on:
+      - glitchtip-postgres
+    command: ./manage.py migrate
+    environment: *default-env
+
