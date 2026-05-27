@@ -195,3 +195,43 @@ def get_presigned_post_url(
         ExpiresIn=expiration
     )
     return url
+
+
+def get_default_data_s3_client() -> BaseClient:
+    s3_url = get_minio_url(
+        ENV.DEFAULT_CB_CONFIG_S3_HOST,
+        ENV.DEFAULT_CB_CONFIG_S3_PORT,
+    )
+    client = get_s3_client(
+        s3_url=s3_url,
+        access_key=ENV.DEFAULT_CB_CONFIG_S3_ACCESS_KEY,
+        secret_key=ENV.DEFAULT_CB_CONFIG_S3_SECRET_KEY,
+    )
+    if not client:
+        raise RuntimeError("Could not create default data S3 client")
+    return client
+
+
+def project_superset_export_key(project_uuid: UUID) -> str:
+    return (
+        f"{ENV.SUPERSET_EXPORT_S3_PREFIX.strip('/')}/"
+        f"{project_uuid.hex}/superset/export.zip"
+    )
+
+
+def put_project_bytes(key: str, body: bytes) -> None:
+    client = get_default_data_s3_client()
+    client.put_object(
+        Bucket=ENV.DEFAULT_CB_CONFIG_S3_BUCKET_NAME,
+        Key=key,
+        Body=body,
+    )
+
+
+def get_project_bytes(key: str) -> bytes:
+    client = get_default_data_s3_client()
+    response = client.get_object(
+        Bucket=ENV.DEFAULT_CB_CONFIG_S3_BUCKET_NAME,
+        Key=key,
+    )
+    return response["Body"].read()

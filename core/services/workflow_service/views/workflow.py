@@ -17,6 +17,9 @@ from services.workflow_service.controllers import (
     project_controller as project_controller,
 )
 from services.workflow_service.controllers import workflow_controller
+from services.superset_service.dashboard_import_controller import (
+    process_pending_dashboard_imports,
+)
 from services.workflow_service.schemas.workflow import (
     GetWorkflowConfigurationResponse,
     InputOutputWithBlockInfo,
@@ -227,6 +230,24 @@ async def ws_project_status(
                 )
 
                 all_proj_status[project_id] = status.value
+
+            finished_project_ids = {
+                project_id
+                for project_id, status in all_proj_status.items()
+                if status == WorkflowStatus.FINISHED.value
+            }
+            if finished_project_ids:
+                pending_ids = (
+                    project_controller
+                    .read_pending_superset_import_project_ids()
+                )
+                eligible = [
+                    project_id
+                    for project_id in pending_ids
+                    if str(project_id) in finished_project_ids
+                ]
+                if eligible:
+                    process_pending_dashboard_imports(eligible)
 
             await websocket.send_json(all_proj_status)
             await asyncio.sleep(2)

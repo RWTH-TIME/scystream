@@ -1,41 +1,78 @@
-from fastapi import APIRouter, Depends, HTTPException
-from uuid import UUID
-from utils.errors.error import handle_error
 import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from services.superset_service.export_adapter import ExportAdapterError
 from services.workflow_service.controllers import (
     project_controller,
     workflow_controller,
 )
 from services.workflow_service.schemas.project import (
-    CreateProjectRequest,
     CreateProjectResponse,
-    ReadByUserResponse,
-    ReadAllResponse,
-    RenameProjectRequest,
     CreateProjectFromTemplateResponse,
-    CreateProjectFromTemplateRequest,
     Project,
+    ReadAllResponse,
+    ReadByUserResponse,
+    RenameProjectRequest,
 )
 from utils.database.session_injector import get_database
+from utils.errors.error import handle_error
 from utils.security.token import User, get_user
 
 router = APIRouter(prefix="/project", tags=["project"])
 
+MAX_DASHBOARD_EXPORT_SIZE = 50 * 1024 * 1024
+
+
+async def _read_dashboard_export(
+    dashboard_export: UploadFile | None,
+) -> bytes | None:
+    if dashboard_export is None or not dashboard_export.filename:
+        return None
+
+    if not dashboard_export.filename.lower().endswith(".zip"):
+        raise HTTPException(
+            status_code=422,
+            detail="Dashboard export must be a .zip file",
+        )
+
+    content = await dashboard_export.read()
+    if len(content) > MAX_DASHBOARD_EXPORT_SIZE:
+        raise HTTPException(
+            status_code=422,
+            detail="Dashboard export exceeds maximum allowed size",
+        )
+    if not content:
+        raise HTTPException(
+            status_code=422,
+            detail="Dashboard export is empty",
+        )
+
+    return content
+
 
 @router.post("/", response_model=CreateProjectResponse)
 async def create_project(
-    data: CreateProjectRequest,
+    name: str = Form(...),
+    dashboard_export: UploadFile | None = File(None),
     user: User = Depends(get_user),
     db: Session = Depends(get_database),
 ):
     try:
+        export_bytes = await _read_dashboard_export(dashboard_export)
         with db.begin():
             project_uuid = project_controller.create_project(
-                db, data.name, user.uuid
+                db,
+                name,
+                user.uuid,
+                owner_email=user.email,
+                dashboard_export_zip=export_bytes,
             )
         return CreateProjectResponse(project_uuid=project_uuid)
+    except ExportAdapterError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logging.exception(f"Error creating project: {e}")
         raise handle_error(e)
@@ -45,13 +82,23 @@ async def create_project(
     "/from_template", response_model=CreateProjectFromTemplateResponse
 )
 async def create_project_from_template(
-    data: CreateProjectFromTemplateRequest, user: User = Depends(get_user)
+    name: str = Form(...),
+    template_identifier: str = Form(...),
+    dashboard_export: UploadFile | None = File(None),
+    user: User = Depends(get_user),
 ):
     try:
-        id = project_controller.create_project_from_template(
-            data.name, data.template_identifier, user.uuid
+        export_bytes = await _read_dashboard_export(dashboard_export)
+        project_id = project_controller.create_project_from_template(
+            name,
+            template_identifier,
+            user.uuid,
+            owner_email=user.email,
+            dashboard_export_zip=export_bytes,
         )
-        return CreateProjectResponse(project_uuid=id)
+        return CreateProjectResponse(project_uuid=project_id)
+    except ExportAdapterError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logging.error(f"Error creating project from template: {e}")
         raise handle_error(e)
@@ -85,7 +132,10 @@ async def read_project(
 ):
     try:
         if project_id is None:
-            raise HTTPException(status=422, detail="Project ID is required")
+            raise HTTPException(
+                status_code=422,
+                detail="Project ID is required",
+            )
 
         project = project_controller.read_project(project_id)
         return project

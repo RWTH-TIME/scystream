@@ -60,6 +60,23 @@ class Settings(BaseSettings):
     KEYCLOAK_CLIENT_SECRET: str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     KEYCLOAK_REDIRECT_URL: str | None = None
 
+    SUPERSET_HOST: str = "http://superset"
+    SUPERSET_PUBLIC_URL: str = ""
+    SUPERSET_KEYCLOAK_CLIENT_ID: str = "superset-service"
+    SUPERSET_KEYCLOAK_CLIENT_SECRET: str = ""
+    SUPERSET_EXPORT_S3_PREFIX: str = "projects"
+
+    @property
+    def superset_public_url(self) -> str:
+        return self.SUPERSET_PUBLIC_URL or self.SUPERSET_HOST
+
+    @property
+    def keycloak_token_url(self) -> str:
+        return (
+            f"{self.KEYCLOAK_SERVER_URL}/realms/{self.KEYCLOAK_REALM}"
+            f"/protocol/openid-connect/token"
+        )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

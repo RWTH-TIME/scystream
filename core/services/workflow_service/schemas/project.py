@@ -3,15 +3,24 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 
 
-# TODO:Still missing some field validation (empty name...)
+class SupersetImportStatusSchema(str):
+    NONE = "none"
+    PENDING = "pending"
+    IMPORTING = "importing"
+    IMPORTED = "imported"
+    FAILED = "failed"
+
+
 class Project(BaseModel):
     uuid: UUID
     name: str
     created_at: datetime
+    superset_dashboard_url: str | None = None
+    superset_import_status: str = SupersetImportStatusSchema.NONE
+    superset_import_error: str | None = None
 
     class Config:
         from_attributes = True
-        # helps with converting sqlalchemy models into pydantic models
 
 
 class CreateProjectRequest(BaseModel):
