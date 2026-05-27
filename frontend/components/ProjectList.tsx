@@ -58,7 +58,7 @@ export default function ProjectList() {
         onClose={() => setCreateProjectOpen(false)}
         title="Create Project"
         loading={loading}
-        onSubmit={(name) => createProjectMutate({ name })}
+        onSubmit={(name, dashboardExport) => createProjectMutate({ name, dashboard_export: dashboardExport })}
       />
     </LoadingAndError>
   )

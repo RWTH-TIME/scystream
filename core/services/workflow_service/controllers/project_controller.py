@@ -6,14 +6,27 @@ from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from services.workflow_service.models.project import Project
+from services.workflow_service.models.superset_import_status import (
+    SupersetImportStatus,
+)
+from services.superset_service.export_adapter import (
+    validate_dashboard_export_zip,
+)
 from services.workflow_service.controllers import (
     compute_block_controller,
     template_controller,
 )
 from services.workflow_service.schemas.workflow import WorkflowTemplate
+from utils.data import file_handling as fh
 
 
-def create_project(db: Session, name: str, current_user_uuid: UUID) -> UUID:
+def create_project(
+    db: Session,
+    name: str,
+    current_user_uuid: UUID,
+    owner_email: str | None = None,
+    dashboard_export_zip: bytes | None = None,
+) -> UUID:
     logging.debug(
         f"Creating project with name: {name} for user: {current_user_uuid}"
     )
@@ -24,6 +37,15 @@ def create_project(db: Session, name: str, current_user_uuid: UUID) -> UUID:
     project.name = name
     project.created_at = datetime.now(timezone.utc)
     project.users = [current_user_uuid]
+    project.owner_email = owner_email
+    project.superset_import_status = SupersetImportStatus.NONE.value
+
+    if dashboard_export_zip:
+        validate_dashboard_export_zip(dashboard_export_zip)
+        s3_key = fh.project_superset_export_key(project.uuid)
+        fh.put_project_bytes(s3_key, dashboard_export_zip)
+        project.superset_export_s3_key = s3_key
+        project.superset_import_status = SupersetImportStatus.PENDING.value
 
     db.add(project)
 
@@ -35,6 +57,8 @@ def create_project_from_template(
     name: str,
     template_identifier: str,
     current_user_uuid: UUID,
+    owner_email: str | None = None,
+    dashboard_export_zip: bytes | None = None,
 ) -> UUID:
     """
     This method will handle the creation of project, blocks and edges as
@@ -58,7 +82,13 @@ def create_project_from_template(
 
     try:
         with db.begin():
-            project_id = create_project(db, name, current_user_uuid)
+            project_id = create_project(
+                db,
+                name,
+                current_user_uuid,
+                owner_email=owner_email,
+                dashboard_export_zip=dashboard_export_zip,
+            )
             (
                 block_name_to_model,
                 block_outputs_by_name,
@@ -199,3 +229,15 @@ def read_projects_by_user_uuid(user_uuid: UUID) -> list[Project]:
     logging.info(f"Retrieved {len(projects)} projects for user {user_uuid}")
 
     return projects
+
+
+def read_pending_superset_import_project_ids() -> list[UUID]:
+    db: Session = next(get_database())
+    rows = (
+        db.query(Project.uuid)
+        .filter(
+            Project.superset_import_status == SupersetImportStatus.PENDING.value
+        )
+        .all()
+    )
+    return [row[0] for row in rows]

@@ -148,6 +148,9 @@ export function useProjectStatusWS(setAlert: SetAlertType) {
           if (!old) return
           return { ...old, status: newStatus ?? old.status }
         })
+        if (newStatus === ProjectStatus.FINISHED) {
+          queryClient.invalidateQueries({ queryKey: [uuid] })
+        }
       })
     }
 

@@ -53,6 +53,11 @@ alembic upgrade head
 | JWT_REFRESH_TOKEN_EXPIRE_DAYS     | 30                        | refresh token expire time in days         |
 | EXTERNAL_URL_DATA_S3              | http://localhost:9000     | Externally reachable URL with Port of Minio provided for compute block storage. Make sure that this reaches the same Minio provided by the following config defaults. |
 | WORKFLOW_TEMPLATE_REPO            | git@git.rwth-aachen.de:tim-institute/pipeline-templates.git | The URL to the git repository that contains your template workflow definitions | 
+| SUPERSET_HOST                     | http://superset             | Internal Superset base URL used for API calls |
+| SUPERSET_PUBLIC_URL               | (same as SUPERSET_HOST)     | Browser-facing Superset URL for dashboard links |
+| SUPERSET_KEYCLOAK_CLIENT_ID       | superset-service            | Keycloak client id for Superset API service account |
+| SUPERSET_KEYCLOAK_CLIENT_SECRET   |                             | Keycloak client secret for Superset API service account |
+| SUPERSET_EXPORT_S3_PREFIX         | projects                    | S3 key prefix for per-project Superset export zips inside the data bucket |
 
 #### File Output Defaults
 
