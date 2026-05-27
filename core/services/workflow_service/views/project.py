@@ -56,19 +56,16 @@ async def _read_dashboard_export(
 @router.post("/", response_model=CreateProjectResponse)
 async def create_project(
     name: str = Form(...),
-    dashboard_export: UploadFile | None = File(None),
     user: User = Depends(get_user),
     db: Session = Depends(get_database),
 ):
     try:
-        export_bytes = await _read_dashboard_export(dashboard_export)
         with db.begin():
             project_uuid = project_controller.create_project(
                 db,
                 name,
                 user.uuid,
                 owner_email=user.email,
-                dashboard_export_zip=export_bytes,
             )
         return CreateProjectResponse(project_uuid=project_uuid)
     except ExportAdapterError as e:
@@ -84,17 +81,14 @@ async def create_project(
 async def create_project_from_template(
     name: str = Form(...),
     template_identifier: str = Form(...),
-    dashboard_export: UploadFile | None = File(None),
     user: User = Depends(get_user),
 ):
     try:
-        export_bytes = await _read_dashboard_export(dashboard_export)
         project_id = project_controller.create_project_from_template(
             name,
             template_identifier,
             user.uuid,
             owner_email=user.email,
-            dashboard_export_zip=export_bytes,
         )
         return CreateProjectResponse(project_uuid=project_id)
     except ExportAdapterError as e:

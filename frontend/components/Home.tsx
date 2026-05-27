@@ -22,12 +22,11 @@ export default function Home() {
         onClose={() => setCreateProjectOpen(false)}
         title="Create Project from Template"
         loading={createLoading}
-        onSubmit={(name, dashboardExport) => {
+        onSubmit={(name) => {
           if (selectedTemplate) {
             createProjectMutate({
               name,
               template_identifier: selectedTemplate,
-              dashboard_export: dashboardExport,
             })
           }
         }}

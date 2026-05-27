@@ -1,4 +1,5 @@
 import { useRef, useState } from "react"
+import { OpenInNew } from "@mui/icons-material"
 import Button, { ButtonSentiment } from "./Button"
 import LoadingAndError from "./LoadingAndError"
 import { SupersetImportStatus, type Project } from "@/utils/types"
@@ -19,6 +20,13 @@ export default function SupersetDashboardUpload({ project }: SupersetDashboardUp
   )
 
   const hasExport = project.superset_import_status !== SupersetImportStatus.NONE
+  const isPendingImport =
+    project.superset_import_status === SupersetImportStatus.PENDING
+    || project.superset_import_status === SupersetImportStatus.IMPORTING
+  const isImported =
+    project.superset_import_status === SupersetImportStatus.IMPORTED
+    && project.superset_dashboard_url
+  const isFailed = project.superset_import_status === SupersetImportStatus.FAILED
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null
@@ -39,13 +47,42 @@ export default function SupersetDashboardUpload({ project }: SupersetDashboardUp
   }
 
   return (
-    <div className="border rounded p-4 bg-white">
-      <p className="text-lg font-semibold mb-1">Superset Dashboard Export</p>
-      <p className="text-sm text-gray-600 mb-4">
-        Upload a Superset dashboard export zip. It is stored in S3 and imported
-        into Superset after the first successful pipeline run. Upload again to
-        replace the existing export.
-      </p>
+    <div className="p-4 border rounded relative">
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <h3 className="text-lg font-semibold">Superset Dashboard</h3>
+          <p className="text-gray-700">
+            Upload a Superset dashboard export zip. It is stored in S3 and imported
+            into Superset after the first successful pipeline run. Upload again to
+            replace the existing export.
+          </p>
+        </div>
+        {isImported && (
+          <Button
+            type="button"
+            sentiment={ButtonSentiment.POSITIVE}
+            onClick={() => window.open(project.superset_dashboard_url!, "_blank")}
+          >
+            <span className="inline-flex items-center gap-1">
+              <OpenInNew fontSize="small" />
+              Open Dashboard
+            </span>
+          </Button>
+        )}
+      </div>
+
+      {isPendingImport && (
+        <p className="mb-4 text-sm text-gray-600">
+          Dashboard will be available after the first successful run.
+        </p>
+      )}
+
+      {isFailed && (
+        <p className="mb-4 text-sm text-red-600">
+          Dashboard import failed
+          {project.superset_import_error ? `: ${project.superset_import_error}` : ""}
+        </p>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="flex-1">
@@ -84,5 +121,4 @@ export default function SupersetDashboardUpload({ project }: SupersetDashboardUp
       </div>
     </div>
   )
-
 }

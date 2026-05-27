@@ -17,7 +17,6 @@ const UPLOAD_DASHBOARD_EXPORT_ENDPOINT = "project/"
 
 type ProjectDTO = {
   name: string,
-  dashboard_export?: File | null,
 }
 
 type UpdateProjectDTO = {
@@ -28,9 +27,6 @@ type UpdateProjectDTO = {
 function buildCreateProjectFormData(data: ProjectDTO): FormData {
   const formData = new FormData()
   formData.append("name", data.name)
-  if (data.dashboard_export) {
-    formData.append("dashboard_export", data.dashboard_export)
-  }
   return formData
 }
 
@@ -88,9 +84,7 @@ function useCreateProjectMutation(setAlert: SetAlertType) {
         ...data,
         created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
         uuid: new_id,
-        superset_import_status: data.dashboard_export
-          ? SupersetImportStatus.PENDING
-          : SupersetImportStatus.NONE,
+        superset_import_status: SupersetImportStatus.NONE,
       }
 
       queryClient.setQueryData([QueryKeys.projects], (oldData: Project[] | undefined) => {
@@ -110,7 +104,6 @@ function useCreateProjectMutation(setAlert: SetAlertType) {
 type CreateProjectFromTemplateDTO = {
   name: string,
   template_identifier: string,
-  dashboard_export?: File | null,
 }
 
 function buildCreateProjectFromTemplateFormData(
@@ -119,9 +112,6 @@ function buildCreateProjectFromTemplateFormData(
   const formData = new FormData()
   formData.append("name", project.name)
   formData.append("template_identifier", project.template_identifier)
-  if (project.dashboard_export) {
-    formData.append("dashboard_export", project.dashboard_export)
-  }
   return formData
 }
 
@@ -147,9 +137,7 @@ function useCreateProjectFromTemplateMutation(setAlert: SetAlertType) {
         created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
         ...data,
         uuid: new_id,
-        superset_import_status: data.dashboard_export
-          ? SupersetImportStatus.PENDING
-          : SupersetImportStatus.NONE,
+        superset_import_status: SupersetImportStatus.NONE,
       }
       queryClient.setQueryData([QueryKeys.projects], (oldData: Project[] | undefined) => {
         if (oldData) {

@@ -4,12 +4,12 @@ import { useEffect, useState } from "react"
 import type { SimpleUpdateEnvsDTO, SimpleUpdateIOSDTO, UpdateWorkflowConfigurationsDTO } from "@/mutations/workflowMutations"
 import { useGetComputeBlocksConfigurationByProjectQuery, useUpdateWorkflowConfigurationsMutation } from "@/mutations/workflowMutations"
 import { ProjectStatusIndicator } from "./ProjectStatusIndicator"
-import { SupersetImportStatus, type Project, ProjectStatus } from "@/utils/types"
+import { type Project, ProjectStatus } from "@/utils/types"
 import ConfigBox, { ConfigBoxVariant } from "./ConfigBox"
 import LoadingAndError from "./LoadingAndError"
 import { encodeFileToBase64, type InputOutput, type RecordValueType } from "./CreateComputeBlockModal"
 import ConfigEnvsInputs from "./inputs/ConfigEnvsInputs"
-import { Save, OpenInNew } from "@mui/icons-material"
+import { Save } from "@mui/icons-material"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import { CircularProgress } from "@mui/material"
 import SupersetDashboardUpload from "./SupersetDashboardUpload"
@@ -290,30 +290,6 @@ export default function ProjectDetail({
 
         <div className="flex items-center space-x-2">
           <ProjectStatusIndicator s={project.status || ProjectStatus.IDLE} />
-          {project.superset_import_status === SupersetImportStatus.IMPORTED
-            && project.superset_dashboard_url && (
-            <button
-              type="button"
-              onClick={() => window.open(project.superset_dashboard_url!, "_blank")}
-              className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
-            >
-              <OpenInNew fontSize="small" />
-              Open Dashboard
-            </button>
-          )}
-          {(project.superset_import_status === SupersetImportStatus.PENDING
-            || project.superset_import_status === SupersetImportStatus.IMPORTING) && (
-            <span className="text-xs text-gray-500">
-              Dashboard will be available after the first successful run
-            </span>
-          )}
-          {project.superset_import_status === SupersetImportStatus.FAILED && (
-            <span className="text-xs text-red-600">
-              Dashboard import failed{project.superset_import_error
-                ? `: ${project.superset_import_error}`
-                : ""}
-            </span>
-          )}
         </div>
 
         <div className="flex justify-between gap-3">
@@ -335,7 +311,9 @@ export default function ProjectDetail({
 
       <div className="border-t border-gray-200" />
 
-      <SupersetDashboardUpload project={project} />
+      <div className="border p-4">
+        <SupersetDashboardUpload project={project} />
+      </div>
 
       <div className="border-t border-gray-200" />
 

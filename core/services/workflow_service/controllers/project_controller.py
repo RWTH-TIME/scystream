@@ -42,7 +42,6 @@ def create_project(
     name: str,
     current_user_uuid: UUID,
     owner_email: str | None = None,
-    dashboard_export_zip: bytes | None = None,
 ) -> UUID:
     logging.debug(
         f"Creating project with name: {name} for user: {current_user_uuid}"
@@ -57,9 +56,6 @@ def create_project(
     project.owner_email = owner_email
     project.superset_import_status = SupersetImportStatus.NONE.value
 
-    if dashboard_export_zip:
-        _store_dashboard_export_on_project(project, dashboard_export_zip)
-
     db.add(project)
 
     logging.info(f"Project {project.uuid} created successfully")
@@ -71,7 +67,6 @@ def create_project_from_template(
     template_identifier: str,
     current_user_uuid: UUID,
     owner_email: str | None = None,
-    dashboard_export_zip: bytes | None = None,
 ) -> UUID:
     """
     This method will handle the creation of project, blocks and edges as
@@ -100,7 +95,6 @@ def create_project_from_template(
                 name,
                 current_user_uuid,
                 owner_email=owner_email,
-                dashboard_export_zip=dashboard_export_zip,
             )
             (
                 block_name_to_model,
