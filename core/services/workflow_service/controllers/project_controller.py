@@ -236,7 +236,8 @@ def read_pending_superset_import_project_ids() -> list[UUID]:
     rows = (
         db.query(Project.uuid)
         .filter(
-            Project.superset_import_status == SupersetImportStatus.PENDING.value
+            Project.superset_import_status
+            == SupersetImportStatus.PENDING.value
         )
         .all()
     )

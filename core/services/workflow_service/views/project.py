@@ -1,23 +1,24 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from uuid import UUID
-from utils.errors.error import handle_error
 import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from services.superset_service.export_adapter import ExportAdapterError
 from services.workflow_service.controllers import (
     project_controller,
     workflow_controller,
 )
-from services.superset_service.export_adapter import ExportAdapterError
 from services.workflow_service.schemas.project import (
     CreateProjectResponse,
-    ReadByUserResponse,
-    ReadAllResponse,
-    RenameProjectRequest,
     CreateProjectFromTemplateResponse,
     Project,
+    ReadAllResponse,
+    ReadByUserResponse,
+    RenameProjectRequest,
 )
 from utils.database.session_injector import get_database
+from utils.errors.error import handle_error
 from utils.security.token import User, get_user
 
 router = APIRouter(prefix="/project", tags=["project"])
@@ -44,7 +45,10 @@ async def _read_dashboard_export(
             detail="Dashboard export exceeds maximum allowed size",
         )
     if not content:
-        raise HTTPException(status_code=422, detail="Dashboard export is empty")
+        raise HTTPException(
+            status_code=422,
+            detail="Dashboard export is empty",
+        )
 
     return content
 
@@ -128,7 +132,10 @@ async def read_project(
 ):
     try:
         if project_id is None:
-            raise HTTPException(status_code=422, detail="Project ID is required")
+            raise HTTPException(
+                status_code=422,
+                detail="Project ID is required",
+            )
 
         project = project_controller.read_project(project_id)
         return project

@@ -237,7 +237,10 @@ async def ws_project_status(
                 if status == WorkflowStatus.FINISHED.value
             }
             if finished_project_ids:
-                pending_ids = project_controller.read_pending_superset_import_project_ids()
+                pending_ids = (
+                    project_controller
+                    .read_pending_superset_import_project_ids()
+                )
                 eligible = [
                     project_id
                     for project_id in pending_ids

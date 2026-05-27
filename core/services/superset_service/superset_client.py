@@ -23,7 +23,9 @@ class SupersetClient:
         self.base_url = (base_url or ENV.SUPERSET_HOST).rstrip("/")
         self.keycloak_token_url = keycloak_token_url or ENV.keycloak_token_url
         self.client_id = client_id or ENV.SUPERSET_KEYCLOAK_CLIENT_ID
-        self.client_secret = client_secret or ENV.SUPERSET_KEYCLOAK_CLIENT_SECRET
+        self.client_secret = (
+            client_secret or ENV.SUPERSET_KEYCLOAK_CLIENT_SECRET
+        )
         self.session = requests.Session()
         self._login()
 
@@ -77,7 +79,13 @@ class SupersetClient:
 
         resp = self.session.post(
             f"{self.base_url}/api/v1/dashboard/import/",
-            files={"formData": ("dashboard_export.zip", zip_bytes, "application/zip")},
+            files={
+                "formData": (
+                    "dashboard_export.zip",
+                    zip_bytes,
+                    "application/zip",
+                )
+            },
             data={
                 "passwords": json.dumps(passwords),
                 "overwrite": str(overwrite).lower(),
@@ -115,7 +123,10 @@ class SupersetClient:
         )
         resp.raise_for_status()
 
-    def list_datasets_for_dashboard(self, dashboard_id: int) -> list[dict[str, Any]]:
+    def list_datasets_for_dashboard(
+        self,
+        dashboard_id: int,
+    ) -> list[dict[str, Any]]:
         dashboard = self.get_dashboard(dashboard_id)
         dataset_ids = {
             chart.get("datasource_id")
@@ -131,7 +142,11 @@ class SupersetClient:
                 datasets.append(resp.json().get("result", {}))
         return datasets
 
-    def set_dataset_owners(self, dataset_id: int, owner_ids: list[int]) -> None:
+    def set_dataset_owners(
+        self,
+        dataset_id: int,
+        owner_ids: list[int],
+    ) -> None:
         resp = self.session.get(f"{self.base_url}/api/v1/dataset/{dataset_id}")
         resp.raise_for_status()
         dataset = resp.json().get("result", {})

@@ -10,7 +10,7 @@ export enum SupersetImportStatus {
   PENDING = "pending",
   IMPORTING = "importing",
   IMPORTED = "imported",
-  FAILED = "failed",
+  FAILED = "failed"
 }
 
 export type Project = {

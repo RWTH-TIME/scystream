@@ -76,7 +76,10 @@ def _dump_yaml_text(data: dict) -> str:
 def _detect_source_schemas(contents: dict[str, bytes]) -> set[str]:
     schemas: set[str] = set()
     for path, data in contents.items():
-        if not path.startswith("datasets/") or not path.endswith((".yaml", ".yml")):
+        if (
+            not path.startswith("datasets/")
+            or not path.endswith((".yaml", ".yml"))
+        ):
             continue
         config = _load_yaml_text(data.decode())
         schema = config.get("schema")
@@ -99,7 +102,11 @@ def _build_pg_sqlalchemy_uri() -> str:
     return f"postgresql+psycopg2://{user}:{password}@{host}:{port}/postgres"
 
 
-def _replace_schema_in_text(text: str, source_schema: str, target_schema: str) -> str:
+def _replace_schema_in_text(
+    text: str,
+    source_schema: str,
+    target_schema: str,
+) -> str:
     patterns = [
         (rf'"{re.escape(source_schema)}"\.', f'"{target_schema}".'),
         (rf"'{re.escape(source_schema)}'\.", f"'{target_schema}'."),
@@ -152,11 +159,17 @@ def _rename_path_if_contains_schema(
     target_schema: str,
 ) -> str:
     parts = list(PurePosixPath(path).parts)
-    renamed = [target_schema if part == source_schema else part for part in parts]
+    renamed = [
+        target_schema if part == source_schema else part
+        for part in parts
+    ]
     return str(PurePosixPath(*renamed))
 
 
-def adapt_export_zip(raw_zip: bytes, project_uuid: UUID) -> tuple[bytes, dict[str, str]]:
+def adapt_export_zip(
+    raw_zip: bytes,
+    project_uuid: UUID,
+) -> tuple[bytes, dict[str, str]]:
     contents = _normalize_zip_paths(_read_zip_contents(raw_zip))
     _validate_export_zip(contents)
 
@@ -172,14 +185,24 @@ def adapt_export_zip(raw_zip: bytes, project_uuid: UUID) -> tuple[bytes, dict[st
 
         prefix = path.split("/")[0] + "/" if "/" in path else ""
         text = data.decode()
-        if prefix in {"datasets/", "databases/", "charts/", "dashboards/"} and path.endswith(
-            (".yaml", ".yml")
+        if (
+            prefix in {"datasets/", "databases/", "charts/", "dashboards/"}
+            and path.endswith((".yaml", ".yml"))
         ):
-            text = _rewrite_yaml_content(text, source_schema, target_schema, prefix)
+            text = _rewrite_yaml_content(
+                text,
+                source_schema,
+                target_schema,
+                prefix,
+            )
         else:
             text = _replace_schema_in_text(text, source_schema, target_schema)
 
-        new_path = _rename_path_if_contains_schema(path, source_schema, target_schema)
+        new_path = _rename_path_if_contains_schema(
+            path,
+            source_schema,
+            target_schema,
+        )
         adapted[new_path] = text.encode()
 
     passwords: dict[str, str] = {}
@@ -189,7 +212,7 @@ def adapt_export_zip(raw_zip: bytes, project_uuid: UUID) -> tuple[bytes, dict[st
 
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as bundle:
-        root = f"dashboard_export_adapted"
+        root = "dashboard_export_adapted"
         for path, data in adapted.items():
             bundle.writestr(f"{root}/{path}", data)
 

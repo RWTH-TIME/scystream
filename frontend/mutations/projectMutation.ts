@@ -75,7 +75,7 @@ function useCreateProjectMutation(setAlert: SetAlertType) {
       const response = await api.post(
         CREATE_PROJECT_ENDPOINT,
         buildCreateProjectFormData(project),
-        { headers: { "Content-Type": "multipart/form-data" } },
+        { headers: { "Content-Type": "multipart/form-data" } }
       )
       return {
         data: project,
@@ -113,7 +113,7 @@ type CreateProjectFromTemplateDTO = {
 }
 
 function buildCreateProjectFromTemplateFormData(
-  project: CreateProjectFromTemplateDTO,
+  project: CreateProjectFromTemplateDTO
 ): FormData {
   const formData = new FormData()
   formData.append("name", project.name)
@@ -129,12 +129,12 @@ function useCreateProjectFromTemplateMutation(setAlert: SetAlertType) {
 
   return useMutation({
     mutationFn: async function createProjectFromTemplate(
-      project_from_template: CreateProjectFromTemplateDTO,
+      project_from_template: CreateProjectFromTemplateDTO
     ) {
       const response = await api.post(
         CREATE_PROJECT_FROM_TEMPLATE_ENDPOINT,
         buildCreateProjectFromTemplateFormData(project_from_template),
-        { headers: { "Content-Type": "multipart/form-data" } },
+        { headers: { "Content-Type": "multipart/form-data" } }
       )
       return {
         data: project_from_template,

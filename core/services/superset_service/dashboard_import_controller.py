@@ -43,7 +43,10 @@ def _extract_dashboard_uuids(zip_bytes: bytes) -> list[str]:
     return uuids
 
 
-def _resolve_dashboard_id(client: SupersetClient, dashboard_uuids: list[str]) -> int | None:
+def _resolve_dashboard_id(
+    client: SupersetClient,
+    dashboard_uuids: list[str],
+) -> int | None:
     for dashboard_uuid in dashboard_uuids:
         query = {
             "filters": [{"col": "uuid", "opr": "eq", "value": dashboard_uuid}],
@@ -96,11 +99,14 @@ def try_import_dashboard_for_project(project_id: UUID) -> None:
         db.query(Project)
         .filter_by(uuid=project_id)
         .filter(
-            Project.superset_import_status == SupersetImportStatus.PENDING.value
+            Project.superset_import_status
+            == SupersetImportStatus.PENDING.value
         )
-        .update(
-            {Project.superset_import_status: SupersetImportStatus.IMPORTING.value}
-        )
+        .update({
+            Project.superset_import_status: (
+                SupersetImportStatus.IMPORTING.value
+            )
+        })
     )
     db.commit()
 
