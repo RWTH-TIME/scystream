@@ -126,6 +126,37 @@ async def read_projects_by_user(
         raise handle_error(e)
 
 
+@router.put("/{project_id}/dashboard_export", response_model=Project)
+async def upload_dashboard_export(
+    project_id: UUID,
+    dashboard_export: UploadFile = File(...),
+    user: User = Depends(get_user),
+):
+    try:
+        export_bytes = await _read_dashboard_export(dashboard_export)
+        if export_bytes is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Dashboard export is required",
+            )
+
+        project = project_controller.upload_dashboard_export(
+            project_id,
+            export_bytes,
+            owner_email=user.email,
+        )
+        return project
+    except ExportAdapterError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logging.exception(
+            "Error uploading dashboard export for project %s: %s",
+            project_id,
+            e,
+        )
+        raise handle_error(e)
+
+
 @router.get("/{project_id}", response_model=Project)
 async def read_project(
     project_id: UUID | None = None,

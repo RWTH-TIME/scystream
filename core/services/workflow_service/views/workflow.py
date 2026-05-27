@@ -218,36 +218,39 @@ async def ws_project_status(
 
     try:
         while True:
-            all_dags = workflow_controller.get_all_dags()
-            dag_runs = workflow_controller.last_dag_run_overview(all_dags)
-
             all_proj_status = {}
 
-            for di, dr in dag_runs.items():
-                project_id = workflow_controller.dag_id_to_project_id(di)
-                status = WorkflowStatus.from_airflow_state(
-                    dr.state,
-                )
+            try:
+                all_dags = workflow_controller.get_all_dags()
+                dag_runs = workflow_controller.last_dag_run_overview(all_dags)
 
-                all_proj_status[project_id] = status.value
+                for di, dr in dag_runs.items():
+                    project_id = workflow_controller.dag_id_to_project_id(di)
+                    status = WorkflowStatus.from_airflow_state(
+                        dr.state,
+                    )
 
-            finished_project_ids = {
-                project_id
-                for project_id, status in all_proj_status.items()
-                if status == WorkflowStatus.FINISHED.value
-            }
-            if finished_project_ids:
-                pending_ids = (
-                    project_controller
-                    .read_pending_superset_import_project_ids()
-                )
-                eligible = [
+                    all_proj_status[project_id] = status.value
+
+                finished_project_ids = {
                     project_id
-                    for project_id in pending_ids
-                    if str(project_id) in finished_project_ids
-                ]
-                if eligible:
-                    process_pending_dashboard_imports(eligible)
+                    for project_id, status in all_proj_status.items()
+                    if status == WorkflowStatus.FINISHED.value
+                }
+                if finished_project_ids:
+                    pending_ids = (
+                        project_controller
+                        .read_pending_superset_import_project_ids()
+                    )
+                    eligible = [
+                        project_id
+                        for project_id in pending_ids
+                        if str(project_id) in finished_project_ids
+                    ]
+                    if eligible:
+                        process_pending_dashboard_imports(eligible)
+            except Exception as e:
+                logging.exception("Error polling project status: %s", e)
 
             await websocket.send_json(all_proj_status)
             await asyncio.sleep(2)

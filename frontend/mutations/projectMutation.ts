@@ -13,6 +13,7 @@ const CREATE_PROJECT_ENDPOINT = "project"
 const DELETE_PROJECT_ENDPOINT = "project/"
 const UPDATE_PROJECT_ENDPOINT = "project/"
 const CREATE_PROJECT_FROM_TEMPLATE_ENDPOINT = "project/from_template"
+const UPLOAD_DASHBOARD_EXPORT_ENDPOINT = "project/"
 
 type ProjectDTO = {
   name: string,
@@ -183,6 +184,39 @@ function useUpdateProjectMutation(setAlert: SetAlertType) {
   })
 }
 
+function useUploadDashboardExportMutation(
+  projectId: string,
+  setAlert: SetAlertType
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function uploadDashboardExport(file: File) {
+      const formData = new FormData()
+      formData.append("dashboard_export", file)
+      const response = await api.put(
+        `${UPLOAD_DASHBOARD_EXPORT_ENDPOINT}${projectId}/dashboard_export`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      )
+      return response.data as Project
+    },
+    onSuccess: (project) => {
+      queryClient.setQueryData([projectId], project)
+      queryClient.setQueryData([QueryKeys.projects], (oldData: Project[] | undefined) => {
+        if (!oldData) return oldData
+        return oldData.map((item) => (
+          item.uuid === projectId ? { ...item, ...project } : item
+        ))
+      })
+      setAlert("Dashboard export uploaded successfully.", AlertType.SUCCESS)
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+    },
+  })
+}
+
 function useDeleteProjectMutation(setAlert: SetAlertType) {
   const queryClient = useQueryClient()
 
@@ -207,5 +241,6 @@ export {
   useCreateProjectMutation,
   useUpdateProjectMutation,
   useDeleteProjectMutation,
-  useCreateProjectFromTemplateMutation
+  useCreateProjectFromTemplateMutation,
+  useUploadDashboardExportMutation,
 }

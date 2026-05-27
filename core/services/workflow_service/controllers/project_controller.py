@@ -18,6 +18,23 @@ from services.workflow_service.controllers import (
 )
 from services.workflow_service.schemas.workflow import WorkflowTemplate
 from utils.data import file_handling as fh
+from services.superset_service.dashboard_import_controller import (
+    try_import_dashboard_for_project,
+)
+
+
+def _store_dashboard_export_on_project(
+    project: Project,
+    dashboard_export_zip: bytes,
+) -> None:
+    validate_dashboard_export_zip(dashboard_export_zip)
+    s3_key = fh.project_superset_export_key(project.uuid)
+    fh.put_project_bytes(s3_key, dashboard_export_zip)
+    project.superset_export_s3_key = s3_key
+    project.superset_import_status = SupersetImportStatus.PENDING.value
+    project.superset_dashboard_id = None
+    project.superset_dashboard_url = None
+    project.superset_import_error = None
 
 
 def create_project(
@@ -41,11 +58,7 @@ def create_project(
     project.superset_import_status = SupersetImportStatus.NONE.value
 
     if dashboard_export_zip:
-        validate_dashboard_export_zip(dashboard_export_zip)
-        s3_key = fh.project_superset_export_key(project.uuid)
-        fh.put_project_bytes(s3_key, dashboard_export_zip)
-        project.superset_export_s3_key = s3_key
-        project.superset_import_status = SupersetImportStatus.PENDING.value
+        _store_dashboard_export_on_project(project, dashboard_export_zip)
 
     db.add(project)
 
@@ -229,6 +242,31 @@ def read_projects_by_user_uuid(user_uuid: UUID) -> list[Project]:
     logging.info(f"Retrieved {len(projects)} projects for user {user_uuid}")
 
     return projects
+
+
+def upload_dashboard_export(
+    project_uuid: UUID,
+    dashboard_export_zip: bytes,
+    owner_email: str | None = None,
+) -> Project:
+    db: Session = next(get_database())
+
+    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    _store_dashboard_export_on_project(project, dashboard_export_zip)
+
+    if owner_email:
+        project.owner_email = owner_email
+
+    db.commit()
+    db.refresh(project)
+
+    try_import_dashboard_for_project(project_uuid)
+
+    db.refresh(project)
+    return project
 
 
 def read_pending_superset_import_project_ids() -> list[UUID]:
