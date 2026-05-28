@@ -64,7 +64,7 @@ def create_project(
 
 def create_project_from_template(
     db: Session,
-    template_identifier: str,
+    template: WorkflowTemplate,
     current_user_uuid: UUID,
     name: str,
     owner_email: str | None = None,
@@ -73,11 +73,7 @@ def create_project_from_template(
     This method will handle the creation of project, blocks and edges as
     defined in the template.yaml
     """
-    template: WorkflowTemplate = (
-        template_controller.get_workflow_template_by_identifier(
-            template_identifier
-        )
-    )
+
     required_blocks = template_controller.extract_block_urls_from_template(
         template
     )

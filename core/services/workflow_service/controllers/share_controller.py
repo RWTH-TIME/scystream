@@ -105,7 +105,7 @@ def accept_from_template_share(
         db, project_uuid
     )
 
-    created_project_id = project_controller.build_project_from_template(
+    created_project_id = project_controller.create_project_from_template(
         db,
         generated_template,
         user_uuid,

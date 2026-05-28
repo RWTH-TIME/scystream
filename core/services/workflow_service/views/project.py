@@ -105,9 +105,15 @@ async def create_project_from_template(
 ):
     try:
         with db.begin():
+            workflow_template = (
+                template_controller.get_workflow_template_by_identifier(
+                    template_identifier
+                )
+            )
+
             project_id = project_controller.create_project_from_template(
                 db=db,
-                template_identifier=template_identifier,
+                template=workflow_template,
                 current_user_uuid=user.uuid,
                 name=name,
                 owner_email=user.email,
