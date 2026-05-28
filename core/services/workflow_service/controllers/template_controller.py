@@ -292,10 +292,10 @@ def _configure_block(
 
     if do_config_keys_match(
         config_type="envs",
-        original_config=envs,
+        original_config=envs or {},
         update_config=envs_from_template or {},
     ):
-        configured_envs = {**envs, **(envs_from_template or {})}
+        configured_envs = {**(envs or {}), **(envs_from_template or {})}
     else:
         raise HTTPException(
             status_code=421,

@@ -166,6 +166,7 @@ def translate_project_to_dag(
                 )
             workflow_controller.trigger_workflow_run(dag_id)
     except Exception as e:
+        logging.exception(e)
         raise handle_error(e)
 
 

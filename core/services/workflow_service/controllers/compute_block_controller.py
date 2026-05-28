@@ -486,7 +486,9 @@ def update_block(
         block.custom_name = custom_name
 
     if envs:
-        if do_config_keys_match("envs", block.selected_entrypoint.envs, envs):
+        if do_config_keys_match(
+            "envs", block.selected_entrypoint.envs or {}, envs
+        ):
             block.selected_entrypoint.envs = {
                 **block.selected_entrypoint.envs,
                 **envs,
