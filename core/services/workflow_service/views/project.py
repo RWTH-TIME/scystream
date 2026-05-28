@@ -124,10 +124,6 @@ async def create_project_from_template(
     except ExportAdapterError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-    except Exception as e:
-        logging.error(f"Error creating project from template: {e}")
-        raise handle_error(e)
-
 
 @router.get("/read_all", response_model=ReadAllResponse)
 async def read_all_projects():
@@ -189,7 +185,8 @@ async def read_project(
     try:
         if project_id is None:
             raise HTTPException(
-                status_code=422, detail="Project ID is required"
+                status_code=422,
+                detail="Project ID is required",
             )
 
         project = project_controller.read_project(project_id)

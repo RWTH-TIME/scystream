@@ -1,3 +1,4 @@
+from services.workflow_service.schemas.workflow import WorkflowTemplate
 from utils.database.session_injector import get_database
 from sqlalchemy.orm import Session
 import logging
@@ -16,7 +17,6 @@ from services.workflow_service.controllers import (
     compute_block_controller,
     template_controller,
 )
-from services.workflow_service.schemas.workflow import WorkflowTemplate
 from utils.data import file_handling as fh
 from services.superset_service.dashboard_import_controller import (
     try_import_dashboard_for_project,
