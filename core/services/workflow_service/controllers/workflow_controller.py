@@ -519,18 +519,42 @@ def trigger_workflow_run(dag_id: str) -> None:
             raise
 
 
-def get_all_dags():
-    with ApiClient(get_airflow_config()) as api_client:
-        api = DAGApi(api_client)
+def get_all_dags() -> list[str]:
+    config = get_airflow_config()
+    headers = {"Authorization": f"Bearer {config.access_token}"}
+    url = f"{ENV.AIRFLOW_HOST.rstrip('/')}/api/v2/dags"
 
-        try:
-            dags = api.get_dags()
-            return [d.dag_id for d in dags.dags]
-        except ApiException as e:
-            logging.exception(
-                f"Exception while trying to query the DAGs from airflow: {e}",
-            )
-            raise
+    try:
+        response = requests.get(
+            url,
+            headers=headers,
+            params={"limit": 10000},
+            timeout=30,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        return [
+            dag["dag_id"]
+            for dag in payload.get("dags", [])
+            if dag.get("dag_id")
+        ]
+    except requests.RequestException as e:
+        logging.exception(
+            "Exception while trying to query DAGs from Airflow: %s",
+            e,
+        )
+        return _get_all_dags_from_filesystem()
+
+
+def _get_all_dags_from_filesystem() -> list[str]:
+    if not os.path.isdir(DAG_DIRECTORY):
+        return []
+
+    return [
+        filename[:-3]
+        for filename in os.listdir(DAG_DIRECTORY)
+        if filename.startswith("dag_") and filename.endswith(".py")
+    ]
 
 
 def last_dag_run_overview(dag_ids: list[str]) -> dict:

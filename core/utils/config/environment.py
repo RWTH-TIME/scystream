@@ -64,6 +64,23 @@ class Settings(BaseSettings):
     INVITE_SALT: str = "salt"
     INVITE_MAX_AGE_SECONDS: int = 60 * 60 * 24 * 7  # 7 days
 
+    SUPERSET_HOST: str = "http://superset"
+    SUPERSET_PUBLIC_URL: str = ""
+    SUPERSET_KEYCLOAK_CLIENT_ID: str = "superset-service"
+    SUPERSET_KEYCLOAK_CLIENT_SECRET: str = ""
+    SUPERSET_EXPORT_S3_PREFIX: str = "projects"
+
+    @property
+    def superset_public_url(self) -> str:
+        return self.SUPERSET_PUBLIC_URL or self.SUPERSET_HOST
+
+    @property
+    def keycloak_token_url(self) -> str:
+        return (
+            f"{self.KEYCLOAK_SERVER_URL}/realms/{self.KEYCLOAK_REALM}"
+            f"/protocol/openid-connect/token"
+        )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

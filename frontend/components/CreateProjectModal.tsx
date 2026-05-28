@@ -29,6 +29,7 @@ export default function CreateProjectModal({
 
     if (projectName.length >= MIN_LEN_PROJECT_NAME) {
       onSubmit(projectName)
+      setProjectName("")
       onClose()
     } else {
       setAlert("Project Name must be set.", AlertType.ERROR)

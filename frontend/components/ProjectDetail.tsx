@@ -14,6 +14,7 @@ import { CircularProgress } from "@mui/material"
 import ProjectModals from "./ProjectModals"
 import { useProjectModals } from "@/hooks/useProjectModals"
 import { useExportProjectMutation } from "@/mutations/projectMutation"
+import SupersetDashboardUpload from "./SupersetDashboardUpload"
 
 type ProjectDetailProps = {
   deleteProject: (project_id: string) => void,
@@ -305,7 +306,12 @@ export default function ProjectDetail({
 
       <div className="border-t border-gray-200" />
 
-      {/* Configs */}
+      <div className="border p-4">
+        <SupersetDashboardUpload project={project} />
+      </div>
+
+      <div className="border-t border-gray-200" />
+
       <div className="border rounded p-4 bg-white">
         <p className="text-lg font-semibold mb-4">Workflow Configurations</p>
         <LoadingAndError loading={isLoading} error={isError}>

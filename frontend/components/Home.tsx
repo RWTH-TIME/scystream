@@ -24,7 +24,10 @@ export default function Home() {
         loading={createLoading}
         onSubmit={(name) => {
           if (selectedTemplate) {
-            createProjectMutate({ name, template_identifier: selectedTemplate })
+            createProjectMutate({
+              name,
+              template_identifier: selectedTemplate,
+            })
           }
         }}
       />

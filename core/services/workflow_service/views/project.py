@@ -1,71 +1,123 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+import logging
 from uuid import UUID
 
 import yaml
-from services.workflow_service.schemas.compute_block import (
-    BlockStatus,
-    EdgeDTO,
-    GetNodesByProjectResponse,
-    SimpleNodeDTO,
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Response,
+    UploadFile,
 )
-from utils.errors.error import handle_error
-import logging
 from sqlalchemy.orm import Session
 
+from services.superset_service.export_adapter import ExportAdapterError
 from services.workflow_service.controllers import (
     project_controller,
     share_controller,
     template_controller,
     workflow_controller,
 )
+from services.workflow_service.schemas.compute_block import (
+    BlockStatus,
+    EdgeDTO,
+    GetNodesByProjectResponse,
+    SimpleNodeDTO,
+)
 from services.workflow_service.schemas.project import (
     AcceptTemplateRequest,
-    CreateProjectRequest,
     CreateProjectResponse,
-    ReadByUserResponse,
-    ReadAllResponse,
-    RenameProjectRequest,
     CreateProjectFromTemplateResponse,
-    CreateProjectFromTemplateRequest,
     Project,
+    ReadAllResponse,
+    ReadByUserResponse,
+    RenameProjectRequest,
 )
 from utils.database.session_injector import get_database
+from utils.errors.error import handle_error
 from utils.security.token import User, get_user
 
 router = APIRouter(prefix="/project", tags=["project"])
 
+MAX_DASHBOARD_EXPORT_SIZE = 50 * 1024 * 1024
+
+
+async def _read_dashboard_export(
+    dashboard_export: UploadFile | None,
+) -> bytes | None:
+    if dashboard_export is None or not dashboard_export.filename:
+        return None
+
+    if not dashboard_export.filename.lower().endswith(".zip"):
+        raise HTTPException(
+            status_code=422,
+            detail="Dashboard export must be a .zip file",
+        )
+
+    content = await dashboard_export.read()
+    if len(content) > MAX_DASHBOARD_EXPORT_SIZE:
+        raise HTTPException(
+            status_code=422,
+            detail="Dashboard export exceeds maximum allowed size",
+        )
+    if not content:
+        raise HTTPException(
+            status_code=422,
+            detail="Dashboard export is empty",
+        )
+
+    return content
+
 
 @router.post("/", response_model=CreateProjectResponse)
 async def create_project(
-    data: CreateProjectRequest,
+    name: str = Form(...),
     user: User = Depends(get_user),
     db: Session = Depends(get_database),
 ):
     try:
         with db.begin():
             project_uuid = project_controller.create_project(
-                db, data.name, user.uuid
+                db,
+                name,
+                user.uuid,
+                owner_email=user.email,
             )
         return CreateProjectResponse(project_uuid=project_uuid)
+    except ExportAdapterError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logging.exception(f"Error creating project: {e}")
         raise handle_error(e)
 
 
 @router.post(
-    "/from_template", response_model=CreateProjectFromTemplateResponse
+    "/from_template",
+    response_model=CreateProjectFromTemplateResponse,
 )
 async def create_project_from_template(
-    data: CreateProjectFromTemplateRequest,
+    name: str = Form(...),
+    template_identifier: str = Form(...),
     user: User = Depends(get_user),
     db: Session = Depends(get_database),
 ):
     try:
         with db.begin():
-            id = project_controller.create_project_from_template_file(
-                db, data.name, data.template_identifier, user.uuid
+            project_id = project_controller.create_project_from_template(
+                db=db,
+                template_identifier=template_identifier,
+                current_user_uuid=user.uuid,
+                name=name,
+                owner_email=user.email,
             )
-        return CreateProjectResponse(project_uuid=id)
+
+        return CreateProjectResponse(project_uuid=project_id)
+
+    except ExportAdapterError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
     except Exception as e:
         logging.error(f"Error creating project from template: {e}")
         raise handle_error(e)
@@ -90,6 +142,37 @@ async def read_projects_by_user(
         return ReadByUserResponse(projects=projects)
     except Exception as e:
         logging.exception(f"Error reading project by user: {e}")
+        raise handle_error(e)
+
+
+@router.put("/{project_id}/dashboard_export", response_model=Project)
+async def upload_dashboard_export(
+    project_id: UUID,
+    dashboard_export: UploadFile = File(...),
+    user: User = Depends(get_user),
+):
+    try:
+        export_bytes = await _read_dashboard_export(dashboard_export)
+        if export_bytes is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Dashboard export is required",
+            )
+
+        project = project_controller.upload_dashboard_export(
+            project_id,
+            export_bytes,
+            owner_email=user.email,
+        )
+        return project
+    except ExportAdapterError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logging.exception(
+            "Error uploading dashboard export for project %s: %s",
+            project_id,
+            e,
+        )
         raise handle_error(e)
 
 

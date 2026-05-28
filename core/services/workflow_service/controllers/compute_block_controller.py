@@ -7,6 +7,7 @@ import os
 import logging
 import base64
 
+import yaml
 from typing import Literal
 from sqlalchemy import select, case, asc, delete
 from utils.config.defaults import (
@@ -29,12 +30,42 @@ from services.workflow_service.schemas.compute_block import (
     InputOutputDTO,
 )
 from services.workflow_service.schemas.compute_block import BaseInputOutputDTO
-from scystream.sdk.config import load_config
 from scystream.sdk.config.models import (
     ComputeBlock as SDKComputeBlock,
 )
 
 CBC_FILE_IDENTIFIER = "cbc.yaml"
+
+LEGACY_IO_TYPE_ALIASES = {
+    "pg_table": "database_table",
+    "PGTABLE": "database_table",
+}
+
+
+def _normalize_legacy_io_types(config: object) -> None:
+    if isinstance(config, dict):
+        io_type = config.get("type")
+        if isinstance(io_type, str) and io_type in LEGACY_IO_TYPE_ALIASES:
+            config["type"] = LEGACY_IO_TYPE_ALIASES[io_type]
+        for value in config.values():
+            _normalize_legacy_io_types(value)
+    elif isinstance(config, list):
+        for item in config:
+            _normalize_legacy_io_types(item)
+
+
+def _load_compute_block_config(cbc_path: str) -> SDKComputeBlock:
+    with open(cbc_path, encoding="utf-8") as file:
+        raw_config = yaml.safe_load(file)
+
+    if not isinstance(raw_config, dict):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid cbc.yaml at {cbc_path}",
+        )
+
+    _normalize_legacy_io_types(raw_config)
+    return SDKComputeBlock.model_validate(raw_config)
 
 
 def _get_cb_info_from_repo(repo_url: str) -> SDKComputeBlock:
@@ -46,7 +77,7 @@ def _get_cb_info_from_repo(repo_url: str) -> SDKComputeBlock:
         raise HTTPException(
             status_code=422, detail=f"Cached repo {repo_url} missing cbc.yaml"
         )
-    return load_config(cbc_path)
+    return _load_compute_block_config(cbc_path)
 
 
 def request_cb_info(

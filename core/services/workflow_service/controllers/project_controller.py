@@ -6,14 +6,43 @@ from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from services.workflow_service.models.project import Project
+from services.workflow_service.models.superset_import_status import (
+    SupersetImportStatus,
+)
+from services.superset_service.export_adapter import (
+    validate_dashboard_export_zip,
+)
 from services.workflow_service.controllers import (
     compute_block_controller,
     template_controller,
 )
 from services.workflow_service.schemas.workflow import WorkflowTemplate
+from utils.data import file_handling as fh
+from services.superset_service.dashboard_import_controller import (
+    try_import_dashboard_for_project,
+)
 
 
-def create_project(db: Session, name: str, current_user_uuid: UUID) -> UUID:
+def _store_dashboard_export_on_project(
+    project: Project,
+    dashboard_export_zip: bytes,
+) -> None:
+    validate_dashboard_export_zip(dashboard_export_zip)
+    s3_key = fh.project_superset_export_key(project.uuid)
+    fh.put_project_bytes(s3_key, dashboard_export_zip)
+    project.superset_export_s3_key = s3_key
+    project.superset_import_status = SupersetImportStatus.PENDING.value
+    project.superset_dashboard_id = None
+    project.superset_dashboard_url = None
+    project.superset_import_error = None
+
+
+def create_project(
+    db: Session,
+    name: str,
+    current_user_uuid: UUID,
+    owner_email: str | None = None,
+) -> UUID:
     logging.debug(
         f"Creating project with name: {name} for user: {current_user_uuid}"
     )
@@ -24,6 +53,8 @@ def create_project(db: Session, name: str, current_user_uuid: UUID) -> UUID:
     project.name = name
     project.created_at = datetime.now(timezone.utc)
     project.users = [current_user_uuid]
+    project.owner_email = owner_email
+    project.superset_import_status = SupersetImportStatus.NONE.value
 
     db.add(project)
 
@@ -31,14 +62,22 @@ def create_project(db: Session, name: str, current_user_uuid: UUID) -> UUID:
     return project.uuid
 
 
-def build_project_from_template(
-    db: Session, template: WorkflowTemplate, user_uuid: UUID, project_name: str
-):
+def create_project_from_template(
+    db: Session,
+    template_identifier: str,
+    current_user_uuid: UUID,
+    name: str,
+    owner_email: str | None = None,
+) -> UUID:
     """
     This method will handle the creation of project, blocks and edges as
     defined in the template.yaml
     """
-
+    template: WorkflowTemplate = (
+        template_controller.get_workflow_template_by_identifier(
+            template_identifier
+        )
+    )
     required_blocks = template_controller.extract_block_urls_from_template(
         template
     )
@@ -49,14 +88,24 @@ def build_project_from_template(
     G = template_controller.build_workflow_graph(template)
 
     try:
-        project_id = create_project(db, project_name, user_uuid)
+        project_id = create_project(
+            db,
+            name,
+            current_user_uuid,
+            owner_email=owner_email,
+        )
+
         (
             block_name_to_model,
             block_outputs_by_name,
             block_inputs_by_name,
         ) = template_controller.configure_and_create_blocks(
-            G, db, unconfigured_blocks, project_id
+            G,
+            db,
+            unconfigured_blocks,
+            project_id,
         )
+
         template_controller.create_edges_from_template(
             G,
             db,
@@ -64,28 +113,11 @@ def build_project_from_template(
             block_outputs_by_name,
             block_inputs_by_name,
         )
+
         return project_id
     except Exception as e:
         logging.exception(f"Error creating project from template: {e}")
-        raise e
-
-
-def create_project_from_template_file(
-    db: Session,
-    name: str,
-    template_identifier: str,
-    current_user_uuid: UUID,
-) -> UUID:
-    """
-    This method will load the workflow template from a file and then
-    pass it into the creation method
-    """
-    template: WorkflowTemplate = (
-        template_controller.get_workflow_template_by_identifier(
-            template_identifier
-        )
-    )
-    return build_project_from_template(db, template, current_user_uuid, name)
+        raise
 
 
 def read_project(project_uuid: UUID) -> Project:
@@ -176,3 +208,41 @@ def read_projects_by_user_uuid(user_uuid: UUID) -> list[Project]:
     logging.info(f"Retrieved {len(projects)} projects for user {user_uuid}")
 
     return projects
+
+
+def upload_dashboard_export(
+    project_uuid: UUID,
+    dashboard_export_zip: bytes,
+    owner_email: str | None = None,
+) -> Project:
+    db: Session = next(get_database())
+
+    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    _store_dashboard_export_on_project(project, dashboard_export_zip)
+
+    if owner_email:
+        project.owner_email = owner_email
+
+    db.commit()
+    db.refresh(project)
+
+    try_import_dashboard_for_project(project_uuid)
+
+    db.refresh(project)
+    return project
+
+
+def read_pending_superset_import_project_ids() -> list[UUID]:
+    db: Session = next(get_database())
+    rows = (
+        db.query(Project.uuid)
+        .filter(
+            Project.superset_import_status
+            == SupersetImportStatus.PENDING.value
+        )
+        .all()
+    )
+    return [row[0] for row in rows]
