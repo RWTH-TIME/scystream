@@ -1,40 +1,92 @@
-The scystream project is an open-source data-science pipeline toolkit containing all necessary tools to create and carry our data-science workflows.
-With an easy to use frontend, you can schedule and deploy custom workflows containing different data processing tasks.
+# Scystream
+
+The Scystream project is an open-source data-science pipeline toolkit containing all necessary tools to create and execute data-science workflows.
+
+Using an easy-to-use frontend, users can schedule and deploy custom workflows consisting of different data-processing tasks.
 
 ## Architecture
 
-![.assets/arch.png](.assets/arch.png)
+![Architecture Diagram](.assets/arch.png)
 
-## quickstart
+### Short Description
 
-Its recommended to use [docker](https://docs.docker.com/get-docker/) and [docker-compose](https://docs.docker.com/compose/install/)
+The frontend is a Next.js application that communicates with the backend (“core”) via HTTP. Authentication and authorization are handled through Keycloak.
+
+The backend is built with FastAPI and consists of two primary services:
+
+#### Workflow Service
+
+Responsible for all workflow-related logic, including:
+
+- project creation and management
+- adding and configuring compute blocks
+- starting and stopping workflows
+- workflow orchestration
+
+The workflow service integrates with Apache Airflow, which is responsible for scheduling and executing compute blocks.
+
+#### Superset Service
+
+Handles integration with Apache Superset, including:
+
+- dashboard configuration
+- linking dashboards to workflows and projects
+
+Compute blocks are implemented using the [scystream-sdk](https://github.com/RWTH-TIME/scystream-sdk).
+
+Each compute block is packaged as a Docker container and includes a `cbc.yaml` file that defines:
+
+- configuration options
+- expected inputs
+- produced outputs
+
+Workflows can be described declaratively using the project's Template Schema (see the corresponding template repository on GitLab for more details).
+
+The system uses three primary data sources:
+
+#### core-postgres
+
+Stores all application-related metadata and state required by the core platform.
+
+#### data-postgres
+
+Stores structured workflow and compute data processed by compute blocks.
+
+#### data-minio
+
+Object storage used for files and larger datasets accessed by compute blocks.
+
+Compute blocks can read from and write to both `data-postgres` and `data-minio` during execution.
+
+## Quickstart
+
+It is recommended to use [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
 
 ### Docker
 
-To setup all services just run the following command in the root directory
+To start all services, run the following command in the project root directory:
 
 ```sh
-docker compose up -d
+docker compose -f docker-compose.dev.yaml up -d
 ```
 
-#### Using Protected Git Repositories and Docker Registries
+You might be required to setup the keycloak environment correctly.
 
-If your compute blocks depend on private Git repositories or Docker images, ensure proper authentication is in place.
+For development, run the frontend and backend locally:
 
-#### Git Repositories
+```sh
+npm run dev
+```
 
-Make sure that the user executing `docker compose up` has ssh access to the required git-repos.
-We are mounting the hosts ssh-agent to the core container.
+```sh
+uvicorn main:app --reload
+```
 
-#### Docker Registries
+Please make sure to configure the front- & backend correctly using corresponding `.env` files for them.
 
-For private Docker registries (e.g., GitLab):
+#### Working with Compute Blocks
 
-1. Run `docker login registry.gitlab.com` to create the `~/.docker/config.json`.
+Compute Blocks, when pulled initially, are stored within `core/repos/`. For development purposes, when changes are made to
+compute blocks, you should also pull these changes into your `core/repos/` directory (Dont forget to update the image, using the correct tag (e.g. `pr-14`).
 
-We are mounting the `.docker` directory to the airflow containers.
-
-## Development
-
-You can find the development READMEs in the according directories
-
+The Airflow Container uses the docker-images downloaded to your own device. Make sure to keep them up to date accordingly.
