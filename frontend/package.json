@@ -35,7 +35,7 @@
     "@types/uuid": "10.0.0",
     "eslint": "9.39.4",
     "eslint-config-next": "15.5.18",
-    "postcss": "8.5.14",
+    "postcss": "8.5.23",
     "tailwindcss": "4.3.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.59.3"
