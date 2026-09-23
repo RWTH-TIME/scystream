@@ -58,6 +58,12 @@ alembic upgrade head
 | SUPERSET_KEYCLOAK_CLIENT_ID       | superset-service            | Keycloak client id for Superset API service account |
 | SUPERSET_KEYCLOAK_CLIENT_SECRET   |                             | Keycloak client secret for Superset API service account |
 | SUPERSET_EXPORT_S3_PREFIX         | projects                    | S3 key prefix for per-project Superset export zips inside the data bucket |
+| SUPERSET_USER_ROLE                | Gamma                       | Role of the Superset users core creates for project owners |
+| AIRFLOW_HOST                      | http://localhost:8080       | Airflow API server base URL (without `/api/v2`) |
+| AIRFLOW_USER                      | airflow                     | Airflow user core authenticates with |
+| AIRFLOW_PASS                      | airflow                     | Password of that user |
+| AIRFLOW_DAG_DIR                   | ../airflow-dags             | Directory shared with the Airflow dag-processor, generated DAGs are written here |
+| AIRFLOW_TOKEN_TTL_SECONDS         | 300                         | How long an Airflow access token is reused before a new one is requested |
 
 #### File Output Defaults
 

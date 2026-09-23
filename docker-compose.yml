@@ -2,6 +2,7 @@ networks:
   core:
   airflow:
   data_processing:
+  superset:
 
 volumes:
   postgres-airflow-volume:
@@ -13,6 +14,7 @@ volumes:
   core-postgres:
   minio-data:
   keycloak-postgres-data:
+  superset-postgres:
 
 x-airflow-common:
   &airflow-common
@@ -253,7 +255,14 @@ services:
     environment:
       SSH_AUTH_SOCK: /ssh-agent
       EXTERNAL_URL: "http://localhost:8000"
-      AIRFLOW_HOST: "http://airflow-apiserver:8080/api/v1"
+      # base url, the airflow client appends /api/v2 and /auth/token itself
+      AIRFLOW_HOST: "http://airflow-apiserver:8080"
+      KEYCLOAK_SERVER_URL: "http://keycloak:8080"
+      KEYCLOAK_REALM: "main"
+      SUPERSET_HOST: "http://superset:8088"
+      SUPERSET_PUBLIC_URL: "http://localhost:8088"
+      SUPERSET_KEYCLOAK_CLIENT_ID: "superset-service"
+      SUPERSET_KEYCLOAK_CLIENT_SECRET: ${SUPERSET_KEYCLOAK_CLIENT_SECRET:-}
     depends_on:
       core-postgres:
         condition: service_healthy
@@ -334,6 +343,8 @@ services:
       POSTGRES_DB: "keycloak"
       POSTGRES_USER: "keycloak"
       POSTGRES_PASSWORD: "password"
+    networks:
+      - core
 
   keycloak:
     image: quay.io/keycloak/keycloak
@@ -358,3 +369,51 @@ services:
       - keycloak-postgres
     volumes:
       - ./.keycloak-config:/opt/keycloak/data/import
+    networks:
+      - core
+
+  superset-postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: superset
+      POSTGRES_PASSWORD: superset
+      POSTGRES_DB: superset
+    volumes:
+      - superset-postgres:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U superset -d superset -q"]
+      interval: 10s
+      timeout: 2s
+      retries: 5
+    networks:
+      - superset
+
+  superset:
+    build: superset
+    command: ["sh", "-c", "/app/docker-init.sh && /app/docker/entrypoints/run-server.sh"]
+    restart: always
+    ports:
+      - "8088:8088"
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-me-to-a-long-random-string}
+      SUPERSET_DATABASE_URI: postgresql+psycopg2://superset:superset@superset-postgres:5432/superset
+      KEYCLOAK_REALM: main
+      KEYCLOAK_PUBLIC_URL: http://localhost:8090
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      SUPERSET_OAUTH_CLIENT_ID: superset
+      SUPERSET_OAUTH_CLIENT_SECRET: ${SUPERSET_OAUTH_CLIENT_SECRET:-}
+      SUPERSET_SERVICE_CLIENT_ID: superset-service
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8088/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      superset-postgres:
+        condition: service_healthy
+    networks:
+      - superset
+      - core
+      - data_processing
