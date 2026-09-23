@@ -1,0 +1,131 @@
+name: Airflow
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    paths:
+      - 'core/**'
+      - 'docker-compose*.yml'
+      - '.github/scripts/check_versions.py'
+      - '.github/workflows/airflow.yaml'
+
+concurrency:
+  group: airflow-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  versions:
+    name: Check Airflow versions
+    runs-on: ubuntu-latest
+    outputs:
+      airflow_image: ${{ steps.versions.outputs.airflow_image }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Compose files and airflow client use matching versions
+        id: versions
+        run: python .github/scripts/check_versions.py
+
+  dag-validation:
+    name: Load generated DAGs in Airflow
+    needs: versions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: core/requirements*.txt
+
+      - name: Install requirements
+        working-directory: ./core
+        run: pip install -r requirements-dev.txt
+
+      - name: Render DAGs with the core DAG generator
+        working-directory: ./core
+        run: python -m tests.airflow.render_sample_dags "$RUNNER_TEMP/dags"
+
+      - name: Load DAGs with Airflow (${{ needs.versions.outputs.airflow_image }})
+        run: |
+          docker run --rm \
+            -e AIRFLOW__CORE__LOAD_EXAMPLES=false \
+            -v "$RUNNER_TEMP/dags:/dags:ro" \
+            -v "$PWD/core/tests/airflow/check_dagbag.py:/check_dagbag.py:ro" \
+            "${{ needs.versions.outputs.airflow_image }}" \
+            python /check_dagbag.py /dags
+
+  api-integration:
+    name: Airflow API integration
+    needs: versions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: core/requirements*.txt
+
+      - name: Install requirements
+        working-directory: ./core
+        run: pip install -r requirements-dev.txt
+
+      - name: Start Airflow (${{ needs.versions.outputs.airflow_image }})
+        run: |
+          mkdir -p "$RUNNER_TEMP/dags"
+          chmod 777 "$RUNNER_TEMP/dags"
+          echo '{"airflow": "airflow"}' > "$RUNNER_TEMP/passwords.json"
+          chmod 666 "$RUNNER_TEMP/passwords.json"
+          # standalone runs all components and uses the simple auth manager,
+          # which offers the same /auth/token endpoint as the FAB auth manager
+          docker run -d --name airflow -p 8080:8080 \
+            -v "$RUNNER_TEMP/dags:/opt/airflow/dags" \
+            -v "$RUNNER_TEMP/passwords.json:/opt/airflow/passwords.json" \
+            -e AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS=airflow:admin \
+            -e AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE=/opt/airflow/passwords.json \
+            -e AIRFLOW__CORE__LOAD_EXAMPLES=false \
+            -e AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true \
+            -e AIRFLOW__DAG_PROCESSOR__REFRESH_INTERVAL=5 \
+            -e AIRFLOW__API_AUTH__JWT_SECRET=ci-secret \
+            "${{ needs.versions.outputs.airflow_image }}" standalone
+
+      - name: Wait for Airflow
+        run: |
+          for _ in $(seq 150); do
+            status=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+              -H 'Content-Type: application/json' \
+              -d '{"username": "airflow", "password": "airflow"}' \
+              http://localhost:8080/auth/token || true)
+            if [ "$status" = "201" ]; then exit 0; fi
+            sleep 2
+          done
+          echo "Airflow did not become ready"
+          exit 1
+
+      - name: Run Airflow integration tests
+        working-directory: ./core
+        env:
+          AIRFLOW_INTEGRATION_URL: http://localhost:8080
+          AIRFLOW_INTEGRATION_DAG_DIR: ${{ runner.temp }}/dags
+        run: pytest tests/integration/test_airflow_api.py -v
+
+      - name: Airflow logs
+        if: failure()
+        run: docker logs airflow 2>&1 | tail -300

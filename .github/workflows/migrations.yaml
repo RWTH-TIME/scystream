@@ -20,7 +20,7 @@ jobs:
         env:
           CHANGED_MODEL_FILES: ${{ steps.model-changes.outputs.all_changed_files }}
         run: |
-          for file in "${CHANGED_MODEL_FILES}"; do
+          for file in ${CHANGED_MODEL_FILES}; do
             echo "$file was changed"
           done
 
