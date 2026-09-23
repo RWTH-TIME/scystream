@@ -1,5 +1,6 @@
 import json
 import logging
+import secrets
 from typing import Any
 
 import requests
@@ -7,9 +8,24 @@ from utils.config.environment import ENV
 
 logger = logging.getLogger(__name__)
 
+REQUEST_TIMEOUT_SECONDS = 60
+
 
 class SupersetClientError(Exception):
     pass
+
+
+class _TimeoutSession(requests.Session):
+    """requests.Session that applies a default timeout to every request, so a
+    hanging Superset can never block the core indefinitely."""
+
+    def __init__(self, timeout: float):
+        super().__init__()
+        self.timeout = timeout
+
+    def request(self, method, url, **kwargs):
+        kwargs.setdefault("timeout", self.timeout)
+        return super().request(method, url, **kwargs)
 
 
 class SupersetClient:
@@ -19,17 +35,25 @@ class SupersetClient:
         keycloak_token_url: str | None = None,
         client_id: str | None = None,
         client_secret: str | None = None,
+        access_token: str | None = None,
+        timeout: float = REQUEST_TIMEOUT_SECONDS,
     ):
+        """
+        By default the client authenticates against Keycloak using the
+        client credentials grant. An already issued ``access_token`` (e.g. one
+        obtained via Superset's own ``/api/v1/security/login``) can be passed
+        instead.
+        """
         self.base_url = (base_url or ENV.SUPERSET_HOST).rstrip("/")
         self.keycloak_token_url = keycloak_token_url or ENV.keycloak_token_url
         self.client_id = client_id or ENV.SUPERSET_KEYCLOAK_CLIENT_ID
         self.client_secret = (
             client_secret or ENV.SUPERSET_KEYCLOAK_CLIENT_SECRET
         )
-        self.session = requests.Session()
-        self._login()
+        self.session = _TimeoutSession(timeout)
+        self._login(access_token)
 
-    def _login(self) -> None:
+    def _fetch_keycloak_token(self) -> str:
         token_resp = self.session.post(
             self.keycloak_token_url,
             data={
@@ -40,7 +64,10 @@ class SupersetClient:
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
         token_resp.raise_for_status()
-        access_token = token_resp.json()["access_token"]
+        return token_resp.json()["access_token"]
+
+    def _login(self, access_token: str | None = None) -> None:
+        access_token = access_token or self._fetch_keycloak_token()
 
         self.session.headers.update(
             {
@@ -61,12 +88,83 @@ class SupersetClient:
     def find_user_id_by_email(self, email: str) -> int | None:
         query = {"filters": [{"col": "email", "opr": "eq", "value": email}]}
         resp = self.session.get(
-            f"{self.base_url}/api/v1/security/users",
+            f"{self.base_url}/api/v1/security/users/",
             params={"q": json.dumps(query)},
         )
         resp.raise_for_status()
         results = resp.json().get("result", [])
         return results[0]["id"] if results else None
+
+    def find_role_id(self, name: str) -> int | None:
+        query = {"filters": [{"col": "name", "opr": "eq", "value": name}]}
+        resp = self.session.get(
+            f"{self.base_url}/api/v1/security/roles/",
+            params={"q": json.dumps(query)},
+        )
+        resp.raise_for_status()
+        results = resp.json().get("result", [])
+        return results[0]["id"] if results else None
+
+    def ensure_user(self, email: str, role: str | None = None) -> int:
+        """Returns the id of the Superset user with the given email and
+        creates the user if it does not exist yet.
+
+        The username is the email, which is also what the Keycloak login of
+        Superset uses (see superset/pythonpath/scystream_security.py), so the
+        user is matched on their first login.
+        """
+        user_id = self.find_user_id_by_email(email)
+        if user_id:
+            return user_id
+
+        role = role or ENV.SUPERSET_USER_ROLE
+        role_id = self.find_role_id(role)
+        if not role_id:
+            raise SupersetClientError(f"Superset role {role} does not exist")
+
+        local_part = email.split("@", 1)[0]
+        resp = self.session.post(
+            f"{self.base_url}/api/v1/security/users/",
+            json={
+                "username": email,
+                "email": email,
+                "first_name": local_part,
+                "last_name": "-",
+                "active": True,
+                "roles": [role_id],
+                # never used, users log in via Keycloak
+                "password": secrets.token_urlsafe(32),
+            },
+        )
+        if not resp.ok:
+            raise SupersetClientError(
+                f"Creating Superset user {email} failed "
+                f"({resp.status_code}): {resp.text}"
+            )
+        logger.info("Created Superset user %s", email)
+        return resp.json()["id"]
+
+    def find_dashboard_id_by_uuid(
+        self,
+        dashboard_uuids: list[str],
+    ) -> int | None:
+        """Returns the id of the first dashboard that exists in Superset."""
+        for dashboard_uuid in dashboard_uuids:
+            query = {
+                "filters": [
+                    {"col": "uuid", "opr": "eq", "value": dashboard_uuid},
+                ],
+                "page_size": 1,
+            }
+            resp = self.session.get(
+                f"{self.base_url}/api/v1/dashboard/",
+                params={"q": json.dumps(query)},
+            )
+            if resp.ok:
+                results = resp.json().get("result", [])
+                if results:
+                    return results[0]["id"]
+        return None
 
     def import_dashboard_zip(
         self,
@@ -127,20 +225,12 @@ class SupersetClient:
         self,
         dashboard_id: int,
     ) -> list[dict[str, Any]]:
-        dashboard = self.get_dashboard(dashboard_id)
-        dataset_ids = {
-            chart.get("datasource_id")
-            for chart in dashboard.get("charts", [])
-            if chart.get("datasource_id")
-        }
-        datasets: list[dict[str, Any]] = []
-        for dataset_id in dataset_ids:
-            resp = self.session.get(
-                f"{self.base_url}/api/v1/dataset/{dataset_id}"
-            )
-            if resp.ok:
-                datasets.append(resp.json().get("result", {}))
-        return datasets
+        # Note: the "charts" of GET /dashboard/<id> only contain chart names
+        resp = self.session.get(
+            f"{self.base_url}/api/v1/dashboard/{dashboard_id}/datasets"
+        )
+        resp.raise_for_status()
+        return resp.json().get("result", [])
 
     def set_dataset_owners(
         self,

@@ -118,7 +118,9 @@ def _replace_schema_in_text(
     return result
 
 
-def _rewrite_database_yaml(config: dict, target_schema: str) -> dict:
+def _rewrite_database_yaml(config: dict) -> dict:
+    # The schema is set on the datasets, Superset rejects unknown keys (like
+    # "schema") in the database "extra" field.
     config["sqlalchemy_uri"] = _build_pg_sqlalchemy_uri()
     extra = config.get("extra")
     if isinstance(extra, str):
@@ -128,7 +130,7 @@ def _rewrite_database_yaml(config: dict, target_schema: str) -> dict:
             extra = {}
     if not isinstance(extra, dict):
         extra = {}
-    extra["schema"] = target_schema
+    extra.pop("schema", None)
     config["extra"] = extra
     return config
 
@@ -143,7 +145,7 @@ def _rewrite_yaml_content(
     if prefix == "datasets/" and "schema" in config:
         config["schema"] = target_schema
     if prefix == "databases/":
-        config = _rewrite_database_yaml(config, target_schema)
+        config = _rewrite_database_yaml(config)
     for key in ("sql", "select_sql", "where"):
         if key in config and isinstance(config[key], str):
             config[key] = _replace_schema_in_text(

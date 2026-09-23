@@ -1,5 +1,4 @@
 import io
-import json
 import logging
 import zipfile
 from uuid import UUID
@@ -43,26 +42,6 @@ def _extract_dashboard_uuids(zip_bytes: bytes) -> list[str]:
     return uuids
 
 
-def _resolve_dashboard_id(
-    client: SupersetClient,
-    dashboard_uuids: list[str],
-) -> int | None:
-    for dashboard_uuid in dashboard_uuids:
-        query = {
-            "filters": [{"col": "uuid", "opr": "eq", "value": dashboard_uuid}],
-            "page_size": 1,
-        }
-        resp = client.session.get(
-            f"{client.base_url}/api/v1/dashboard/",
-            params={"q": json.dumps(query)},
-        )
-        if resp.ok:
-            results = resp.json().get("result", [])
-            if results:
-                return results[0]["id"]
-    return None
-
-
 def _mark_import_failed(db: Session, project: Project, message: str) -> None:
     project.superset_import_status = SupersetImportStatus.FAILED.value
     project.superset_import_error = message[:2048]
@@ -70,7 +49,7 @@ def _mark_import_failed(db: Session, project: Project, message: str) -> None:
 
 
 def _is_pipeline_finished(project_id: UUID) -> bool:
-    dag_id = f"dag_{str(project_id).replace('-', '_')}"
+    dag_id = workflow_controller.project_id_to_dag_id(project_id)
     dag_runs = workflow_controller.last_dag_run_overview([dag_id])
     dag_run = dag_runs.get(dag_id)
     if not dag_run or not dag_run.state:
@@ -126,13 +105,9 @@ def try_import_dashboard_for_project(project_id: UUID) -> None:
         if not project.owner_email:
             raise ExportAdapterError("Project owner email is missing")
 
-        owner_id = client.find_user_id_by_email(project.owner_email)
-        if not owner_id:
-            raise SupersetClientError(
-                f"Superset user not found for {project.owner_email}"
-            )
+        owner_id = client.ensure_user(project.owner_email)
 
-        dashboard_id = _resolve_dashboard_id(client, dashboard_uuids)
+        dashboard_id = client.find_dashboard_id_by_uuid(dashboard_uuids)
         if not dashboard_id:
             raise SupersetClientError(
                 "Imported dashboard could not be resolved in Superset"

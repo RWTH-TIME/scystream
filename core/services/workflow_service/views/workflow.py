@@ -208,6 +208,42 @@ async def workflow_templates():
         raise handle_error(e)
 
 
+def _collect_project_statuses() -> dict[str, str]:
+    """Polls Airflow for the latest run of every project DAG and triggers the
+    Superset dashboard import for projects that finished.
+
+    This is blocking I/O and must not run on the event loop.
+    """
+    all_proj_status = {}
+
+    all_dags = workflow_controller.get_all_dags()
+    dag_runs = workflow_controller.last_dag_run_overview(all_dags)
+
+    for di, dr in dag_runs.items():
+        project_id = workflow_controller.dag_id_to_project_id(di)
+        status = WorkflowStatus.from_airflow_state(dr.state)
+        all_proj_status[project_id] = status.value
+
+    finished_project_ids = {
+        project_id
+        for project_id, status in all_proj_status.items()
+        if status == WorkflowStatus.FINISHED.value
+    }
+    if finished_project_ids:
+        pending_ids = (
+            project_controller.read_pending_superset_import_project_ids()
+        )
+        eligible = [
+            project_id
+            for project_id in pending_ids
+            if str(project_id) in finished_project_ids
+        ]
+        if eligible:
+            process_pending_dashboard_imports(eligible)
+
+    return all_proj_status
+
+
 @router.websocket("/ws/project_status")
 async def ws_project_status(
     websocket: WebSocket,
@@ -221,34 +257,9 @@ async def ws_project_status(
             all_proj_status = {}
 
             try:
-                all_dags = workflow_controller.get_all_dags()
-                dag_runs = workflow_controller.last_dag_run_overview(all_dags)
-
-                for di, dr in dag_runs.items():
-                    project_id = workflow_controller.dag_id_to_project_id(di)
-                    status = WorkflowStatus.from_airflow_state(
-                        dr.state,
-                    )
-
-                    all_proj_status[project_id] = status.value
-
-                finished_project_ids = {
-                    project_id
-                    for project_id, status in all_proj_status.items()
-                    if status == WorkflowStatus.FINISHED.value
-                }
-                if finished_project_ids:
-                    pending_ids = (
-                        project_controller
-                        .read_pending_superset_import_project_ids()
-                    )
-                    eligible = [
-                        project_id
-                        for project_id in pending_ids
-                        if str(project_id) in finished_project_ids
-                    ]
-                    if eligible:
-                        process_pending_dashboard_imports(eligible)
+                all_proj_status = await asyncio.to_thread(
+                    _collect_project_statuses,
+                )
             except Exception as e:
                 logging.exception("Error polling project status: %s", e)
 
@@ -272,7 +283,10 @@ async def ws_workflow_status(
 
     try:
         while True:
-            status = workflow_controller.dag_status(project_id)
+            status = await asyncio.to_thread(
+                workflow_controller.dag_status,
+                project_id,
+            )
             await websocket.send_json(status)
             await asyncio.sleep(2)
     except WebSocketDisconnect:

@@ -18,9 +18,8 @@ from services.workflow_service.controllers import (
 )
 from services.workflow_service.schemas.workflow import WorkflowTemplate
 from utils.data import file_handling as fh
-from services.superset_service.dashboard_import_controller import (
-    try_import_dashboard_for_project,
-)
+# module import, dashboard_import_controller depends on this module as well
+from services.superset_service import dashboard_import_controller
 
 
 def _store_dashboard_export_on_project(
@@ -257,7 +256,7 @@ def upload_dashboard_export(
     db.commit()
     db.refresh(project)
 
-    try_import_dashboard_for_project(project_uuid)
+    dashboard_import_controller.try_import_dashboard_for_project(project_uuid)
 
     db.refresh(project)
     return project

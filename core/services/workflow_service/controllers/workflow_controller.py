@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import ast
+import functools
 import json
 import logging
 import os
+import tempfile
 import time
 from collections import defaultdict
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import networkx as nx
@@ -12,8 +16,6 @@ import requests
 from airflow_client.client.api.dag_api import DAGApi
 from airflow_client.client.api.dag_run_api import DagRunApi
 from airflow_client.client.api.task_instance_api import TaskInstanceApi
-from airflow_client.client.api_client import ApiClient
-from airflow_client.client.configuration import Configuration
 from airflow_client.client.exceptions import ApiException, NotFoundException
 from airflow_client.client.models.dag_patch_body import DAGPatchBody
 from airflow_client.client.models.dag_runs_batch_body import (
@@ -24,13 +26,16 @@ from airflow_client.client.models.trigger_dag_run_post_body import (
 )
 from fastapi import HTTPException
 from jinja2 import Environment, FileSystemLoader
-from pydantic import BaseModel
+from services.workflow_service.airflow_client import (
+    REQUEST_TIMEOUT_SECONDS,
+    airflow_api_client,
+    get_airflow_config,
+    invalidate_airflow_token,
+)
 from services.workflow_service.controllers import (
     compute_block_controller,
+    project_controller,
     template_controller,
-)
-from services.workflow_service.controllers.project_controller import (
-    read_project,
 )
 from services.workflow_service.models.block import (
     Block,
@@ -62,46 +67,31 @@ if TYPE_CHECKING:
 DAG_DIRECTORY = ENV.AIRFLOW_DAG_DIR
 
 
-class AirflowAccessTokenResponse(BaseModel):
-    access_token: str
+class InvalidDagCodeError(Exception):
+    pass
 
 
-def get_airflow_client_access_token(
-    host: str,
-    username: str,
-    password: str,
-) -> str:
-    url = f"{host}/auth/token"
-    payload = {
-        "username": username,
-        "password": password,
-    }
-    headers = {"Content-Type": "application/json"}
-    response = requests.post(url, json=payload, headers=headers)
-    if response.status_code != 201:
-        raise RuntimeError(
-            f"Failed to get access token: \
-            {response.status_code} {response.text}",
-        )
-    response_success = AirflowAccessTokenResponse(**response.json())
-    return response_success.access_token
+def _invalidate_token_on_unauthorized(func):
+    """Drop the cached Airflow token when Airflow rejects it (e.g. after the
+    Airflow JWT secret was rotated), so the next call logs in again."""
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except ApiException as e:
+            if e.status == 401:
+                invalidate_airflow_token()
+            raise
+        except requests.HTTPError as e:
+            if e.response is not None and e.response.status_code == 401:
+                invalidate_airflow_token()
+            raise
+
+    return wrapper
 
 
-def get_airflow_config() -> Configuration:
-    airflow_config = Configuration(
-        host=ENV.AIRFLOW_HOST,
-    )
-
-    airflow_config.access_token = get_airflow_client_access_token(
-        host=airflow_config.host,
-        username=ENV.AIRFLOW_USER,
-        password=ENV.AIRFLOW_PASS,
-    )
-
-    return airflow_config
-
-
-def _project_id_to_dag_id(pi: UUID | str) -> str:
+def project_id_to_dag_id(pi: UUID | str) -> str:
     return f"dag_{str(pi).replace("-", "_")}"
 
 
@@ -109,11 +99,11 @@ def dag_id_to_project_id(di: str) -> str:
     return di[4:].replace("_", "-")
 
 
-def _task_id_to_cb_id(ti: str) -> str:
+def task_id_to_cb_id(ti: str) -> str:
     return ti[5:].replace("_", "-")
 
 
-def _cb_id_to_task_id(ci: UUID | str) -> str:
+def cb_id_to_task_id(ci: UUID | str) -> str:
     return f"task_{str(ci).replace('-', '_')}"
 
 
@@ -365,12 +355,24 @@ def init_templates():
     }
 
 
+def validate_dag_code(dag_code: str) -> None:
+    """Make sure the rendered DAG is valid python before handing it to
+    Airflow, a broken file would otherwise only show up as an import error in
+    the Airflow UI."""
+    try:
+        ast.parse(dag_code)
+    except SyntaxError as e:
+        raise InvalidDagCodeError(
+            f"Generated DAG code is invalid: {e.msg} (line {e.lineno})",
+        ) from e
+
+
 def generate_dag_code(graph, templates, dag_id, project_uuid):
     parts = [templates["dag"].render(dag_id=dag_id)]
 
     # Convert to Airflow-compatible representation
     for node, data in graph.nodes(data=True):
-        task_id = _cb_id_to_task_id(node)
+        task_id = cb_id_to_task_id(node)
         parts.append(
             templates["algorithm"].render(
                 task_id=task_id,
@@ -389,22 +391,38 @@ def generate_dag_code(graph, templates, dag_id, project_uuid):
     parts.extend(
         [
             templates["dependency"].render(
-                from_task=_cb_id_to_task_id(from_task),
-                to_task=_cb_id_to_task_id(to_task),
+                from_task=cb_id_to_task_id(from_task),
+                to_task=cb_id_to_task_id(to_task),
             )
             for from_task, to_task in graph.edges
         ],
     )
 
-    return "\n".join(parts)
+    dag_code = "\n".join(parts)
+    validate_dag_code(dag_code)
+    return dag_code
 
 
 def save_dag_to_file(dag_code, dag_id):
     os.makedirs(DAG_DIRECTORY, exist_ok=True)
     filename = os.path.join(DAG_DIRECTORY, f"{dag_id}.py")
 
-    with open(filename, "w") as f:
-        f.write(dag_code)
+    # Write to a temporary file and move it into place, so the Airflow
+    # dag-processor never parses a half written DAG file.
+    fd, tmp_path = tempfile.mkstemp(
+        dir=DAG_DIRECTORY,
+        prefix=f".{dag_id}.",
+        suffix=".tmp",
+    )
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(dag_code)
+        os.chmod(tmp_path, 0o644)
+        os.replace(tmp_path, filename)
+    except BaseException:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
 
     return filename
 
@@ -456,12 +474,13 @@ def validate_workflow(project_uuid: UUID) -> None:
         )
 
 
+@_invalidate_token_on_unauthorized
 def wait_for_dag_registration(
     dag_id: str,
     timeout: int = 10,
     wait: float = 0.5,
 ) -> bool:
-    with ApiClient(get_airflow_config()) as api_client:
+    with airflow_api_client() as api_client:
         api = DAGApi(api_client)
         start_time = time.time()
 
@@ -481,17 +500,18 @@ def wait_for_dag_registration(
 def translate_project_to_dag(project_uuid: UUID) -> str:
     """Parses a project and its blocks into a DAG, validates it, and saves
     it."""
-    project = read_project(project_uuid)
+    project = project_controller.read_project(project_uuid)
     graph = create_graph(project)
     templates = init_templates()
-    dag_id = _project_id_to_dag_id(project_uuid)
+    dag_id = project_id_to_dag_id(project_uuid)
     dag_code = generate_dag_code(graph, templates, dag_id, project_uuid)
     save_dag_to_file(dag_code, dag_id)
     return dag_id
 
 
+@_invalidate_token_on_unauthorized
 def unpause_dag(dag_id: str, is_paused: bool = False) -> None:
-    with ApiClient(get_airflow_config()) as api_client:
+    with airflow_api_client() as api_client:
         api = DAGApi(api_client)
         try:
             api.patch_dag(dag_id, DAGPatchBody(is_paused=is_paused))
@@ -500,8 +520,9 @@ def unpause_dag(dag_id: str, is_paused: bool = False) -> None:
             raise
 
 
+@_invalidate_token_on_unauthorized
 def trigger_workflow_run(dag_id: str) -> None:
-    with ApiClient(get_airflow_config()) as api_client:
+    with airflow_api_client() as api_client:
         unpause_dag(dag_id)
         api = DagRunApi(api_client)
 
@@ -514,6 +535,7 @@ def trigger_workflow_run(dag_id: str) -> None:
             raise
 
 
+@_invalidate_token_on_unauthorized
 def get_all_dags() -> list[str]:
     config = get_airflow_config()
     headers = {"Authorization": f"Bearer {config.access_token}"}
@@ -524,8 +546,10 @@ def get_all_dags() -> list[str]:
             url,
             headers=headers,
             params={"limit": 10000},
-            timeout=30,
+            timeout=REQUEST_TIMEOUT_SECONDS,
         )
+        if response.status_code == 401:
+            invalidate_airflow_token()
         response.raise_for_status()
         payload = response.json()
         return [
@@ -552,42 +576,50 @@ def _get_all_dags_from_filesystem() -> list[str]:
     ]
 
 
+@_invalidate_token_on_unauthorized
+def _run_sort_key(run) -> tuple[bool, datetime]:
+    # Runs that have not started yet (queued) have no start_date, they are
+    # still more recent than every run that already started.
+    started = run.start_date is not None
+    return (not started, run.start_date or datetime.min.replace(tzinfo=UTC))
+
+
 def last_dag_run_overview(dag_ids: list[str]) -> dict:
-    with ApiClient(get_airflow_config()) as api_client:
+    """Returns the most recent DAG run for every passed dag id."""
+    if not dag_ids:
+        return {}
+
+    with airflow_api_client() as api_client:
         api = DagRunApi(api_client)
         most_recent_runs = {}
 
-        # TODO: refactor this method. Its way to strong querying all the dag
-        # and their batch runs without sql limitations
-        for dag_id in dag_ids:
-            try:
-                all_runs = api.get_list_dag_runs_batch(
-                    "~",
-                    DAGRunsBatchBody(
-                        dag_ids=dag_ids,
-                        page_limit=1000,
-                    ),
-                )
+        try:
+            all_runs = api.get_list_dag_runs_batch(
+                "~",
+                DAGRunsBatchBody(
+                    dag_ids=dag_ids,
+                    page_limit=1000,
+                    order_by="-start_date",
+                ),
+            )
+        except ApiException as e:
+            logging.exception(
+                f"Exception while trying to get DAGRuns from airflow: {e}",
+            )
+            raise
 
-                for run in all_runs.dag_runs:
-                    dag_id = run.dag_id
-                    if (
-                        dag_id not in most_recent_runs
-                        or run.start_date > most_recent_runs[dag_id].start_date
-                    ):
-                        most_recent_runs[dag_id] = run
-            except ApiException as e:
-                logging.exception(
-                    f"Exception while trying to get DAGRuns from airflow: {e}",
-                )
-                raise
+        for run in all_runs.dag_runs:
+            current = most_recent_runs.get(run.dag_id)
+            if current is None or _run_sort_key(run) > _run_sort_key(current):
+                most_recent_runs[run.dag_id] = run
 
         return most_recent_runs
 
 
+@_invalidate_token_on_unauthorized
 def get_latest_dag_run(project_id: UUID) -> str | None:
-    dag_id = _project_id_to_dag_id(project_id)
-    with ApiClient(get_airflow_config()) as api_client:
+    dag_id = project_id_to_dag_id(project_id)
+    with airflow_api_client() as api_client:
         api = DagRunApi(api_client)
 
         try:
@@ -608,9 +640,10 @@ def get_latest_dag_run(project_id: UUID) -> str | None:
             raise
 
 
+@_invalidate_token_on_unauthorized
 def delete_dag_from_airflow(project_id: UUID) -> str | None:
-    dag_id = _project_id_to_dag_id(project_id)
-    with ApiClient(get_airflow_config()) as api_client:
+    dag_id = project_id_to_dag_id(project_id)
+    with airflow_api_client() as api_client:
         api = DAGApi(api_client)
 
         try:
@@ -627,14 +660,15 @@ def delete_dag_from_airflow(project_id: UUID) -> str | None:
             raise
 
 
+@_invalidate_token_on_unauthorized
 def dag_status(project_id: UUID) -> dict:
-    dag_id = _project_id_to_dag_id(project_id)
+    dag_id = project_id_to_dag_id(project_id)
     latest_run_id = get_latest_dag_run(project_id)
 
     if not latest_run_id:
         return {}
 
-    with ApiClient(get_airflow_config()) as api_client:
+    with airflow_api_client() as api_client:
         api = TaskInstanceApi(api_client)
 
         task_statuses = {}
@@ -646,7 +680,7 @@ def dag_status(project_id: UUID) -> dict:
             ).task_instances
 
             for task in tasks:
-                cb_id = _task_id_to_cb_id(task.task_id)
+                cb_id = task_id_to_cb_id(task.task_id)
                 task_statuses[cb_id] = BlockStatus.from_airflow_state(
                     task.state.value if task.state else None,
                 ).value

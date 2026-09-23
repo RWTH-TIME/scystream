@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     AIRFLOW_USER: str = "airflow"
     AIRFLOW_PASS: str = "airflow"
     AIRFLOW_DAG_DIR: str = "../airflow-dags"
+    # Airflow JWTs are valid for 24h by default, refresh well before that
+    AIRFLOW_TOKEN_TTL_SECONDS: int = 300
 
     REPO_CACHE_DIR: str = "repos"
     WORKFLOW_TEMPLATE_REPO: str = (
@@ -65,6 +67,8 @@ class Settings(BaseSettings):
     SUPERSET_KEYCLOAK_CLIENT_ID: str = "superset-service"
     SUPERSET_KEYCLOAK_CLIENT_SECRET: str = ""
     SUPERSET_EXPORT_S3_PREFIX: str = "projects"
+    # Role of Superset users that are provisioned by core
+    SUPERSET_USER_ROLE: str = "Gamma"
 
     @property
     def superset_public_url(self) -> str:
