@@ -69,6 +69,11 @@ class Settings(BaseSettings):
     SUPERSET_EXPORT_S3_PREFIX: str = "projects"
     # Role of Superset users that are provisioned by core
     SUPERSET_USER_ROLE: str = "Gamma"
+    # Name of the Superset database connection to the data postgres
+    SUPERSET_DATA_DATABASE_NAME: str = "scystream-data"
+    # SQLAlchemy URI Superset uses to reach the data postgres. Superset may
+    # run elsewhere, defaults to the DEFAULT_CB_CONFIG_PG_* connection.
+    SUPERSET_DATA_SQLALCHEMY_URI: str = ""
 
     @property
     def superset_public_url(self) -> str:

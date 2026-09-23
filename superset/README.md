@@ -7,16 +7,51 @@ stack for CI (`docker-compose.test.yml`).
 
 ## How it fits together
 
-1. A user uploads a Superset dashboard export (`.zip`) for a project in the
-   scystream frontend. Core stores it in the data MinIO.
-2. After the project's workflow finished successfully, core
-   - rewrites the export to the project's schema in `data-postgres`
-     (`core/services/superset_service/export_adapter.py`),
-   - imports it into Superset,
-   - creates the project owner in Superset if needed (username = email) and
-     makes them owner of the dashboard and its datasets.
-3. The frontend links to the imported dashboard. The user logs in to Superset
-   via Keycloak and only sees the dashboards and datasets they own.
+1. **Data.** After every successful workflow run, core looks up every table
+   and view in the project's schemas of `data-postgres`. That is the project
+   schema plus any schema configured on a database output of the project, so
+   tables a step creates on its own are included too. Each one becomes a
+   Superset dataset on the `scystream-data` database connection. Later runs
+   refresh the datasets' columns.
+2. **Dashboard.**
+   - *With a visualization template* (a Superset dashboard export, `.zip` or
+     `.tar.gz`, uploaded on the project page or inherited from a cloned
+     project), the export is imported with only its references changed. Its
+     datasets point to the project's datasets (matched by table name) and its
+     database becomes `scystream-data`. Its charts and dashboard get
+     project-specific UUIDs, so the same template can be used by many
+     projects (`core/services/superset_service/template.py`).
+   - *Without a template*, a standard dashboard is created with one table
+     chart per dataset. Charts are only added for new tables, so changes made
+     in Superset are kept.
+3. **Access.** *Open dashboard* on the project page adds the logged-in
+   scystream user as owner of the dashboard and its datasets. Core creates
+   the Superset user if needed, with username = email, and the user then logs
+   in to Superset with the same Keycloak account. Owners only see their
+   dashboards and can query only their datasets.
+4. **Templates.** *Download template* exports the project's dashboard in its
+   current state from Superset, so it can be uploaded to other projects.
+   Cloning a project uses the source project's visualization as the clone's
+   template.
+
+Syncing is triggered when the project status poll sees a new successful
+run. It can also be triggered with *Sync now* (`POST
+/project/{id}/superset/sync`).
+
+### Superset hosted elsewhere
+
+Core only talks to Superset over its API. Set:
+
+| Variable (core)                   | Description                                                         |
+| --------------------------------- | ------------------------------------------------------------------- |
+| `SUPERSET_HOST`                   | Superset URL as reachable by core                                   |
+| `SUPERSET_PUBLIC_URL`             | Superset URL as reachable by the browser (dashboard links)          |
+| `SUPERSET_DATA_SQLALCHEMY_URI`    | How *Superset* reaches data-postgres, e.g. `postgresql+psycopg2://user:pass@db.example.org:5432/postgres`. Defaults to the `DEFAULT_CB_CONFIG_PG_*` connection |
+| `SUPERSET_DATA_DATABASE_NAME`     | Name of the database connection in Superset (`scystream-data`)      |
+
+The Superset instance needs `superset/pythonpath` (Keycloak login and
+service account tokens), and `KEYCLOAK_INTERNAL_URL` must point to a Keycloak
+URL that Superset can reach.
 
 Authentication (`pythonpath/scystream_security.py`):
 
@@ -63,15 +98,23 @@ setup** and pass the new values via the environment variables above.
 
 ## Tests
 
-* `superset/tests` — unit tests of the Keycloak token validation
+* `superset/tests`: unit tests of the Keycloak token validation
   (`pytest superset/tests`).
-* `core/tests/integration/test_superset_import.py` — creates a dashboard in a
-  real Superset, exports it, adapts and re-imports it the way core does and
-  checks ownership and that the imported dataset can query the project schema:
+* `core/tests/superset`: unit tests of templates, the Superset client and the
+  sync.
+* `core/tests/integration/test_superset_e2e.py`: end to end tests with core's
+  database, MinIO, data-postgres and Superset. They cover the whole flow: a
+  project run → datasets and standard dashboard → sharing with a user, who
+  can see and query only their data → template export → clone → the clone's
+  run imports the template bound to the clone's data. They also cover
+  uploaded `.tar.gz` templates and the HTTP endpoints:
 
   ```sh
   docker compose -f superset/docker-compose.test.yml up -d --build --wait
-  cd core && SUPERSET_INTEGRATION_URL=http://localhost:8088 pytest tests/integration
+  cd core
+  # environment: see the "Superset end to end" job in .github/workflows/superset.yaml
+  alembic upgrade head
+  SCYSTREAM_E2E=1 pytest tests/integration/test_superset_e2e.py
   ```
 
-Both run in the `Superset` GitHub workflow.
+All of them run in the `Superset` GitHub workflow.

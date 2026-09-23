@@ -32,8 +32,13 @@ Handles integration with Apache Superset, including:
 - dashboard configuration
 - linking dashboards to workflows and projects
 
-Superset itself is built from [`superset/`](superset/README.md), which also
-documents the Keycloak clients Superset needs.
+After every successful run, all tables the workflow wrote are available as
+Superset datasets and shown on the project dashboard. The dashboard is built
+from an uploaded visualization template (a Superset dashboard export) or, if
+there is none, a standard dashboard. The project page links to it and shares
+it with the logged-in user. Cloning a project also clones its visualization.
+Superset itself is built from [`superset/`](superset/README.md), which
+documents the setup, including Superset hosted elsewhere.
 
 Compute blocks are implemented using the [scystream-sdk](https://github.com/RWTH-TIME/scystream-sdk).
 
@@ -101,7 +106,7 @@ The Airflow Container uses the docker-images downloaded to your own device. Make
 | `CI`         | Lints frontend, core and the workflow files, runs the core unit tests, validates the compose files and builds the frontend, core and superset images      |
 | `Migrations` | Runs the alembic migrations up and down and checks that the models match them                                                                              |
 | `Airflow`    | Checks that the Airflow image and `apache-airflow-client` versions match, loads DAGs rendered by core in the Airflow image and runs the workflow lifecycle (register, trigger, status, delete) against a real Airflow |
-| `Superset`   | Unit tests the Keycloak token validation and imports a dashboard export through core's export adapter and Superset client into a real Superset              |
+| `Superset`   | Unit tests the Keycloak token validation and runs the project visualization end to end against a real Superset: data sync, standard dashboard, sharing, template export, clone and uploaded templates |
 
 Run the core unit tests locally with:
 

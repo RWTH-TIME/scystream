@@ -8,6 +8,8 @@ from psycopg2.errors import (
     NotNullViolation,
     UniqueViolation,
 )
+from services.superset_service.superset_client import SupersetClientError
+from services.superset_service.template import TemplateError
 from sqlalchemy import exc
 
 """
@@ -44,6 +46,14 @@ def handle_error(error: Exception) -> None:
     if isinstance(error, HTTPException):
         # HTTPExceptions are already in the right format
         raise error
+    if isinstance(error, TemplateError):
+        raise HTTPException(422, detail=str(error))
+    if isinstance(error, SupersetClientError):
+        logging.error(f"Superset error: {error}")
+        raise HTTPException(
+            502,
+            detail="While talking to Superset an error occured.",
+        )
     # TODO: Can we propagate more error details to the user
     logging.error(f"Could not handle exception {error}")
     raise HTTPException(500, detail="internal server error")

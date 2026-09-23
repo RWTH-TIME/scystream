@@ -183,3 +183,74 @@ def test_ensure_user_with_unknown_role(superset):
 
     with pytest.raises(SupersetClientError, match="role"):
         _client().ensure_user("jane@b.de", role="Nope")
+
+
+def test_owners_are_added_not_replaced(superset):
+    superset.get(
+        f"{BASE}/api/v1/dashboard/3",
+        json={"result": {"owners": [{"id": 1}, {"id": 2}]}},
+    )
+    superset.put(f"{BASE}/api/v1/dashboard/3", json={})
+
+    client = _client()
+    client.add_dashboard_owner(3, 7)
+    assert superset.last_request.json() == {"owners": [1, 2, 7]}
+
+    # already an owner: nothing to do
+    count = superset.call_count
+    client.add_dashboard_owner(3, 2)
+    assert superset.call_count == count + 1  # only the GET
+
+
+def test_ensure_database_creates_connection(superset):
+    superset.get(
+        f"{BASE}/api/v1/database/",
+        [{"json": {"result": []}},
+         {"json": {"result": [{"id": 4, "uuid": "db-uuid"}]}}],
+    )
+    superset.post(f"{BASE}/api/v1/database/", json={"id": 4})
+
+    assert _client().ensure_database("scystream-data", "postgresql://x") == {
+        "id": 4, "uuid": "db-uuid",
+    }
+    post = [r for r in superset.request_history if r.method == "POST"][-1]
+    assert post.json()["database_name"] == "scystream-data"
+    assert post.json()["sqlalchemy_uri"] == "postgresql://x"
+
+
+def test_ensure_database_updates_existing_connection(superset):
+    superset.get(
+        f"{BASE}/api/v1/database/",
+        json={"result": [{"id": 4, "uuid": "db-uuid"}]},
+    )
+    superset.put(f"{BASE}/api/v1/database/4", json={})
+
+    assert _client().ensure_database("scystream-data", "postgresql://y") == {
+        "id": 4, "uuid": "db-uuid",
+    }
+    assert superset.last_request.json()["sqlalchemy_uri"] == "postgresql://y"
+
+
+def test_ensure_dataset_creates_or_refreshes(superset):
+    dataset = {"id": 9, "uuid": "ds", "schema": "s1", "table_name": "t"}
+    superset.get(
+        f"{BASE}/api/v1/dataset/",
+        [{"json": {"result": []}}, {"json": {"result": [dataset]}},
+         {"json": {"result": [dataset]}}],
+    )
+    superset.post(f"{BASE}/api/v1/dataset/", json={"id": 9})
+    superset.put(f"{BASE}/api/v1/dataset/9/refresh", json={})
+    client = _client()
+
+    assert client.ensure_dataset(4, "s1", "t") == dataset
+    create = [r for r in superset.request_history if r.method == "POST"][-1]
+    assert create.json() == {"database": 4, "schema": "s1", "table_name": "t"}
+
+    assert client.ensure_dataset(4, "s1", "t") == dataset
+    assert superset.last_request.path == "/api/v1/dataset/9/refresh"
+
+
+def test_export_dashboard(superset):
+    superset.get(f"{BASE}/api/v1/dashboard/export/", content=b"PK-zip")
+    assert _client().export_dashboard(5) == b"PK-zip"
+    assert superset.last_request.qs["q"] == ["!(5)"]

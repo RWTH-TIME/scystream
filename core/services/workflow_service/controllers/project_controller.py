@@ -9,31 +9,25 @@ from services.workflow_service.models.project import Project
 from services.workflow_service.models.superset_import_status import (
     SupersetImportStatus,
 )
-from services.superset_service.export_adapter import (
-    validate_dashboard_export_zip,
-)
 from services.workflow_service.controllers import (
     compute_block_controller,
     template_controller,
 )
+from services.workflow_service.models.block import Block, block_dependencies
+from services.workflow_service.models.entrypoint import Entrypoint
+from services.workflow_service.models.input_output import (
+    DataType,
+    InputOutput,
+    InputOutputType,
+)
 from services.workflow_service.schemas.workflow import WorkflowTemplate
-from utils.data import file_handling as fh
-# module import, dashboard_import_controller depends on this module as well
-from services.superset_service import dashboard_import_controller
-
-
-def _store_dashboard_export_on_project(
-    project: Project,
-    dashboard_export_zip: bytes,
-) -> None:
-    validate_dashboard_export_zip(dashboard_export_zip)
-    s3_key = fh.project_superset_export_key(project.uuid)
-    fh.put_project_bytes(s3_key, dashboard_export_zip)
-    project.superset_export_s3_key = s3_key
-    project.superset_import_status = SupersetImportStatus.PENDING.value
-    project.superset_dashboard_id = None
-    project.superset_dashboard_url = None
-    project.superset_import_error = None
+from utils.config.defaults import (
+    data_pg_dsn_for_core,
+    ensure_schema_exists,
+    project_schema,
+)
+# module import, project_sync depends on the models of this service
+from services.superset_service import project_sync
 
 
 def create_project(
@@ -237,39 +231,121 @@ def read_projects_by_user_uuid(user_uuid: UUID) -> list[Project]:
     return projects
 
 
-def upload_dashboard_export(
-    project_uuid: UUID,
-    dashboard_export_zip: bytes,
+def _new_file_name(io_name: str) -> str:
+    return f"file_{io_name}_{uuid4()}"
+
+
+def _remap_config(config: dict | None, value_map: dict) -> dict:
+    return {
+        key: value_map.get(value, value) if isinstance(value, str) else value
+        for key, value in (config or {}).items()
+    }
+
+
+def clone_project(
+    source_uuid: UUID,
+    name: str,
+    current_user_uuid: UUID,
     owner_email: str | None = None,
-) -> Project:
+) -> UUID:
+    """Copies a project with its compute blocks, configurations and edges.
+
+    The clone writes its outputs to its own locations: database outputs use
+    the clone's project schema, file outputs get new file names (inputs
+    connected to them are updated accordingly). The Superset visualization
+    of the source project becomes the visualization template of the clone.
+    """
     db: Session = next(get_database())
 
-    project = db.query(Project).filter_by(uuid=project_uuid).one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    with db.begin():
+        source = db.query(Project).filter_by(uuid=source_uuid).one_or_none()
+        if not source:
+            raise HTTPException(status_code=404, detail="Project not found")
 
-    _store_dashboard_export_on_project(project, dashboard_export_zip)
-
-    if owner_email:
-        project.owner_email = owner_email
-
-    db.commit()
-    db.refresh(project)
-
-    dashboard_import_controller.try_import_dashboard_for_project(project_uuid)
-
-    db.refresh(project)
-    return project
-
-
-def read_pending_superset_import_project_ids() -> list[UUID]:
-    db: Session = next(get_database())
-    rows = (
-        db.query(Project.uuid)
-        .filter(
-            Project.superset_import_status
-            == SupersetImportStatus.PENDING.value
+        clone_uuid = create_project(
+            db, name, current_user_uuid, owner_email=owner_email,
         )
-        .all()
-    )
-    return [row[0] for row in rows]
+        db.flush()
+
+        value_map = {
+            project_schema(source.uuid): project_schema(clone_uuid),
+        }
+        io_map: dict[UUID, InputOutput] = {}
+        block_map: dict[UUID, Block] = {}
+        has_db_outputs = False
+
+        for block in source.blocks:
+            entry = block.selected_entrypoint
+            new_entry = Entrypoint(
+                name=entry.name,
+                description=entry.description,
+                envs=dict(entry.envs or {}),
+            )
+            db.add(new_entry)
+            db.flush()
+
+            for io in entry.input_outputs:
+                config = dict(io.config or {})
+                if (io.type == InputOutputType.OUTPUT
+                        and io.data_type == DataType.FILE):
+                    for key, value in config.items():
+                        if key.endswith("FILE_NAME") and value:
+                            value_map[value] = _new_file_name(io.name)
+                if io.data_type == DataType.DBTABLE:
+                    has_db_outputs = True
+                new_io = InputOutput(
+                    type=io.type,
+                    name=io.name,
+                    data_type=io.data_type,
+                    description=io.description,
+                    config=config,
+                    entrypoint_uuid=new_entry.uuid,
+                )
+                db.add(new_io)
+                io_map[io.uuid] = new_io
+
+            new_block = Block(
+                name=block.name,
+                project_uuid=clone_uuid,
+                custom_name=block.custom_name,
+                description=block.description,
+                author=block.author,
+                docker_image=block.docker_image,
+                cbc_url=block.cbc_url,
+                x_pos=block.x_pos,
+                y_pos=block.y_pos,
+                selected_entrypoint_uuid=new_entry.uuid,
+            )
+            db.add(new_block)
+            block_map[block.uuid] = new_block
+
+        for new_io in io_map.values():
+            new_io.config = _remap_config(new_io.config, value_map)
+        db.flush()
+
+        edges = db.execute(
+            block_dependencies.select().where(
+                block_dependencies.c.upstream_block_uuid.in_(
+                    list(block_map),
+                ),
+            ),
+        ).fetchall()
+        for edge in edges:
+            db.execute(block_dependencies.insert().values(
+                upstream_block_uuid=block_map[edge.upstream_block_uuid].uuid,
+                upstream_output_uuid=io_map[edge.upstream_output_uuid].uuid,
+                downstream_block_uuid=block_map[
+                    edge.downstream_block_uuid].uuid,
+                downstream_input_uuid=io_map[edge.downstream_input_uuid].uuid,
+            ))
+
+        if has_db_outputs:
+            ensure_schema_exists(
+                data_pg_dsn_for_core(), project_schema(clone_uuid),
+            )
+
+        clone = db.query(Project).filter_by(uuid=clone_uuid).one()
+        project_sync.copy_visualization(source.uuid, clone)
+
+    logging.info(f"Project {source_uuid} cloned to {clone_uuid}")
+    return clone_uuid

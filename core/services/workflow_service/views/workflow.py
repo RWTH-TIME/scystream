@@ -17,9 +17,7 @@ from services.workflow_service.controllers import (
     project_controller as project_controller,
 )
 from services.workflow_service.controllers import workflow_controller
-from services.superset_service.dashboard_import_controller import (
-    process_pending_dashboard_imports,
-)
+from services.superset_service.project_sync import sync_finished_runs
 from services.workflow_service.schemas.workflow import (
     GetWorkflowConfigurationResponse,
     InputOutputWithBlockInfo,
@@ -209,12 +207,13 @@ async def workflow_templates():
 
 
 def _collect_project_statuses() -> dict[str, str]:
-    """Polls Airflow for the latest run of every project DAG and triggers the
-    Superset dashboard import for projects that finished.
+    """Polls Airflow for the latest run of every project DAG and syncs the
+    data of newly finished runs to Superset.
 
     This is blocking I/O and must not run on the event loop.
     """
     all_proj_status = {}
+    finished_runs = {}
 
     all_dags = workflow_controller.get_all_dags()
     dag_runs = workflow_controller.last_dag_run_overview(all_dags)
@@ -223,23 +222,10 @@ def _collect_project_statuses() -> dict[str, str]:
         project_id = workflow_controller.dag_id_to_project_id(di)
         status = WorkflowStatus.from_airflow_state(dr.state)
         all_proj_status[project_id] = status.value
+        if status == WorkflowStatus.FINISHED:
+            finished_runs[project_id] = dr.dag_run_id
 
-    finished_project_ids = {
-        project_id
-        for project_id, status in all_proj_status.items()
-        if status == WorkflowStatus.FINISHED.value
-    }
-    if finished_project_ids:
-        pending_ids = (
-            project_controller.read_pending_superset_import_project_ids()
-        )
-        eligible = [
-            project_id
-            for project_id in pending_ids
-            if str(project_id) in finished_project_ids
-        ]
-        if eligible:
-            process_pending_dashboard_imports(eligible)
+    sync_finished_runs(finished_runs)
 
     return all_proj_status
 

@@ -47,7 +47,7 @@ jobs:
         run: pytest superset/tests -v
 
   integration:
-    name: Dashboard import against Superset
+    name: Superset end to end
     needs: lint-and-unit
     runs-on: ubuntu-latest
     steps:
@@ -70,11 +70,30 @@ jobs:
           docker compose -f superset/docker-compose.test.yml
           up -d --build --wait --wait-timeout 600
 
-      - name: Run Superset integration tests
+      - name: Migrate core database
         working-directory: ./core
         env:
-          SUPERSET_INTEGRATION_URL: http://localhost:8088
-        run: pytest tests/integration/test_superset_import.py -v
+          DATABASE_HOST: localhost
+          DATABASE_PORT: '5434'
+        run: alembic upgrade head
+
+      # core runs on the runner, Superset reaches the data postgres by its
+      # service name
+      - name: Run Superset end to end tests
+        working-directory: ./core
+        env:
+          SCYSTREAM_E2E: '1'
+          DEVELOPMENT: 'true'
+          DATABASE_HOST: localhost
+          DATABASE_PORT: '5434'
+          DEFAULT_CB_CONFIG_PG_HOST: data-postgres
+          DEFAULT_CB_CONFIG_PG_PORT: '5432'
+          DEFAULT_CB_CONFIG_PG_HOST_DEV: localhost
+          DEFAULT_CB_CONFIG_PG_PORT_DEV: '5433'
+          EXTERNAL_URL_DATA_S3: http://localhost:9002
+          SUPERSET_HOST: http://localhost:8088
+          SUPERSET_PUBLIC_URL: http://localhost:8088
+        run: pytest tests/integration/test_superset_e2e.py -v
 
       - name: Superset logs
         if: failure()

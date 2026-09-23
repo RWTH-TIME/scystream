@@ -14,6 +14,7 @@ const DELETE_PROJECT_ENDPOINT = "project/"
 const UPDATE_PROJECT_ENDPOINT = "project/"
 const CREATE_PROJECT_FROM_TEMPLATE_ENDPOINT = "project/from_template"
 const UPLOAD_DASHBOARD_EXPORT_ENDPOINT = "project/"
+const PROJECT_ENDPOINT = "project/"
 
 type ProjectDTO = {
   name: string,
@@ -28,6 +29,20 @@ function buildCreateProjectFormData(data: ProjectDTO): FormData {
   const formData = new FormData()
   formData.append("name", data.name)
   return formData
+}
+
+function updateCachedProject(
+  queryClient: ReturnType<typeof useQueryClient>,
+  projectId: string,
+  project: Project
+) {
+  queryClient.setQueryData([projectId], project)
+  queryClient.setQueryData([QueryKeys.projects], (oldData: Project[] | undefined) => {
+    if (!oldData) return oldData
+    return oldData.map((item) => (
+      item.uuid === projectId ? { ...item, ...project } : item
+    ))
+  })
 }
 
 function useProjectQuery(project_id: string, enabled: boolean) {
@@ -190,14 +205,104 @@ function useUploadDashboardExportMutation(
       return response.data as Project
     },
     onSuccess: (project) => {
-      queryClient.setQueryData([projectId], project)
-      queryClient.setQueryData([QueryKeys.projects], (oldData: Project[] | undefined) => {
-        if (!oldData) return oldData
-        return oldData.map((item) => (
-          item.uuid === projectId ? { ...item, ...project } : item
-        ))
-      })
-      setAlert("Dashboard export uploaded successfully.", AlertType.SUCCESS)
+      updateCachedProject(queryClient, projectId, project)
+      setAlert("Visualization template uploaded.", AlertType.SUCCESS)
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+    },
+  })
+}
+
+/**
+ * Opens the project dashboard in Superset. The backend shares the dashboard
+ * with the logged in user before returning its url.
+ */
+function useOpenSupersetDashboardMutation(
+  projectId: string,
+  setAlert: SetAlertType
+) {
+  return useMutation({
+    mutationFn: async function openDashboard() {
+      // open the window right away, browsers block popups opened after an
+      // asynchronous request
+      const target = window.open("", "_blank")
+      try {
+        const response = await api.get(`${PROJECT_ENDPOINT}${projectId}/superset/dashboard`)
+        const url = response.data.url as string
+        if (target) {
+          target.location.href = url
+        } else {
+          window.location.href = url
+        }
+      } catch (error) {
+        target?.close()
+        throw error
+      }
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+    },
+  })
+}
+
+function useSyncSupersetMutation(projectId: string, setAlert: SetAlertType) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function syncSuperset() {
+      const response = await api.post(`${PROJECT_ENDPOINT}${projectId}/superset/sync`)
+      return response.data as Project
+    },
+    onSuccess: (project) => {
+      updateCachedProject(queryClient, projectId, project)
+      if (project.superset_import_status === SupersetImportStatus.FAILED) {
+        setAlert("Syncing with Superset failed.", AlertType.ERROR)
+      } else {
+        setAlert("Superset dashboard updated.", AlertType.SUCCESS)
+      }
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+    },
+  })
+}
+
+function useDownloadSupersetTemplateMutation(projectId: string, setAlert: SetAlertType) {
+  return useMutation({
+    mutationFn: async function downloadTemplate() {
+      const response = await api.get(
+        `${PROJECT_ENDPOINT}${projectId}/superset/template`,
+        { responseType: "blob" }
+      )
+      const url = URL.createObjectURL(response.data as Blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `superset-template-${projectId}.zip`
+      link.click()
+      URL.revokeObjectURL(url)
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+    },
+  })
+}
+
+function useCloneProjectMutation(projectId: string, setAlert: SetAlertType) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function cloneProject(name: string) {
+      const response = await api.post(
+        `${PROJECT_ENDPOINT}${projectId}/clone`,
+        buildCreateProjectFormData({ name }),
+        { headers: { "Content-Type": "multipart/form-data" } }
+      )
+      return response.data.project_uuid as string
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.projects] })
+      setAlert("Project cloned.", AlertType.SUCCESS)
     },
     onError: (error: AxiosError) => {
       displayStandardAxiosErrors(error, setAlert)
@@ -231,4 +336,8 @@ export {
   useDeleteProjectMutation,
   useCreateProjectFromTemplateMutation,
   useUploadDashboardExportMutation,
+  useOpenSupersetDashboardMutation,
+  useSyncSupersetMutation,
+  useDownloadSupersetTemplateMutation,
+  useCloneProjectMutation,
 }

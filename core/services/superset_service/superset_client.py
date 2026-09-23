@@ -205,22 +205,6 @@ class SupersetClient:
         resp.raise_for_status()
         return resp.json().get("result", {})
 
-    def set_dashboard_owners(
-        self,
-        dashboard_id: int,
-        owner_ids: list[int],
-    ) -> None:
-        dashboard = self.get_dashboard(dashboard_id)
-        resp = self.session.put(
-            f"{self.base_url}/api/v1/dashboard/{dashboard_id}",
-            json={
-                "dashboard_title": dashboard.get("dashboard_title"),
-                "slug": dashboard.get("slug"),
-                "owners": owner_ids,
-            },
-        )
-        resp.raise_for_status()
-
     def list_datasets_for_dashboard(
         self,
         dashboard_id: int,
@@ -232,39 +216,239 @@ class SupersetClient:
         resp.raise_for_status()
         return resp.json().get("result", [])
 
-    def set_dataset_owners(
+    def list_charts_for_dashboard(
         self,
-        dataset_id: int,
-        owner_ids: list[int],
-    ) -> None:
-        resp = self.session.get(f"{self.base_url}/api/v1/dataset/{dataset_id}")
+        dashboard_id: int,
+    ) -> list[dict[str, Any]]:
+        resp = self.session.get(
+            f"{self.base_url}/api/v1/dashboard/{dashboard_id}/charts"
+        )
         resp.raise_for_status()
-        dataset = resp.json().get("result", {})
+        return resp.json().get("result", [])
+
+    def export_dashboard(self, dashboard_id: int) -> bytes:
+        """Returns the Superset export bundle (zip) of a dashboard,
+        including its charts, datasets and database."""
+        resp = self.session.get(
+            f"{self.base_url}/api/v1/dashboard/export/",
+            params={"q": f"!({int(dashboard_id)})"},
+        )
+        if not resp.ok:
+            raise SupersetClientError(
+                f"Dashboard export failed ({resp.status_code}): {resp.text}"
+            )
+        return resp.content
+
+    # owners
+
+    @staticmethod
+    def _owner_ids(resource: dict[str, Any]) -> list[int]:
+        return [
+            owner["id"] if isinstance(owner, dict) else owner
+            for owner in resource.get("owners", []) or []
+        ]
+
+    def add_dashboard_owner(self, dashboard_id: int, owner_id: int) -> None:
+        owners = self._owner_ids(self.get_dashboard(dashboard_id))
+        if owner_id in owners:
+            return
+        resp = self.session.put(
+            f"{self.base_url}/api/v1/dashboard/{dashboard_id}",
+            json={"owners": [*owners, owner_id]},
+        )
+        resp.raise_for_status()
+
+    def add_dataset_owner(self, dataset_id: int, owner_id: int) -> None:
+        owners = self._owner_ids(self.get_dataset(dataset_id))
+        if owner_id in owners:
+            return
         resp = self.session.put(
             f"{self.base_url}/api/v1/dataset/{dataset_id}",
-            json={
-                "table_name": dataset.get("table_name"),
-                "schema": dataset.get("schema"),
-                "database_id": dataset.get("database", {}).get("id")
-                or dataset.get("database_id"),
-                "owners": owner_ids,
-            },
+            json={"owners": [*owners, owner_id]},
         )
         resp.raise_for_status()
 
     def grant_dashboard_access(self, dashboard_id: int, owner_id: int) -> None:
-        self.set_dashboard_owners(dashboard_id, [owner_id])
+        """Adds the user as owner of the dashboard and its datasets, owners
+        see the dashboard and may query its datasets."""
+        self.add_dashboard_owner(dashboard_id, owner_id)
         for dataset in self.list_datasets_for_dashboard(dashboard_id):
             dataset_id = dataset.get("id")
             if dataset_id:
                 try:
-                    self.set_dataset_owners(dataset_id, [owner_id])
+                    self.add_dataset_owner(dataset_id, owner_id)
                 except requests.HTTPError as exc:
                     logger.warning(
-                        "Failed to set dataset %s owners: %s",
+                        "Failed to add owner to dataset %s: %s",
                         dataset_id,
                         exc,
                     )
+
+    # databases & datasets
+
+    def _find_one(self, resource: str, filters: list[dict],
+                  columns: list[str]) -> dict[str, Any] | None:
+        query = {"filters": filters, "columns": columns, "page_size": 1}
+        resp = self.session.get(
+            f"{self.base_url}/api/v1/{resource}/",
+            params={"q": json.dumps(query)},
+        )
+        resp.raise_for_status()
+        results = resp.json().get("result", [])
+        return results[0] if results else None
+
+    def ensure_database(self, name: str, sqlalchemy_uri: str) -> dict:
+        """Creates the database connection or updates its URI. Returns the
+        connection's id and uuid."""
+        existing = self._find_one(
+            "database",
+            [{"col": "database_name", "opr": "eq", "value": name}],
+            ["id", "uuid", "database_name"],
+        )
+        payload = {
+            "sqlalchemy_uri": sqlalchemy_uri,
+            "expose_in_sqllab": True,
+        }
+        if existing:
+            resp = self.session.put(
+                f"{self.base_url}/api/v1/database/{existing['id']}",
+                json=payload,
+            )
+            if not resp.ok:
+                raise SupersetClientError(
+                    f"Updating database {name} failed "
+                    f"({resp.status_code}): {resp.text}"
+                )
+            return {"id": existing["id"], "uuid": existing["uuid"]}
+
+        resp = self.session.post(
+            f"{self.base_url}/api/v1/database/",
+            json={"database_name": name, **payload},
+        )
+        if not resp.ok:
+            raise SupersetClientError(
+                f"Creating database {name} failed "
+                f"({resp.status_code}): {resp.text}"
+            )
+        database_id = resp.json()["id"]
+        created = self._find_one(
+            "database",
+            [{"col": "database_name", "opr": "eq", "value": name}],
+            ["id", "uuid"],
+        )
+        return {"id": database_id, "uuid": created["uuid"]}
+
+    def get_dataset(self, dataset_id: int) -> dict[str, Any]:
+        resp = self.session.get(
+            f"{self.base_url}/api/v1/dataset/{dataset_id}"
+        )
+        resp.raise_for_status()
+        return resp.json().get("result", {})
+
+    def ensure_dataset(
+        self,
+        database_id: int,
+        schema: str,
+        table_name: str,
+    ) -> dict[str, Any]:
+        """Creates the dataset of a physical table if needed and refreshes
+        its columns. Returns id, uuid, schema and table_name."""
+        columns = ["id", "uuid", "schema", "table_name"]
+        filters = [
+            {"col": "table_name", "opr": "eq", "value": table_name},
+            {"col": "schema", "opr": "eq", "value": schema},
+            {"col": "database", "opr": "rel_o_m", "value": database_id},
+        ]
+        dataset = self._find_one("dataset", filters, columns)
+        if dataset is None:
+            resp = self.session.post(
+                f"{self.base_url}/api/v1/dataset/",
+                json={
+                    "database": database_id,
+                    "schema": schema,
+                    "table_name": table_name,
+                },
+            )
+            if not resp.ok:
+                raise SupersetClientError(
+                    f"Creating dataset {schema}.{table_name} failed "
+                    f"({resp.status_code}): {resp.text}"
+                )
+            dataset = self._find_one("dataset", filters, columns)
+        else:
+            # pick up columns added by later runs
+            self.session.put(
+                f"{self.base_url}/api/v1/dataset/{dataset['id']}/refresh"
+            )
+        return dataset
+
+    # charts & dashboards
+
+    def create_chart(
+        self,
+        slice_name: str,
+        dataset_id: int,
+        params: dict[str, Any],
+        dashboard_ids: list[int],
+        viz_type: str = "table",
+    ) -> int:
+        resp = self.session.post(
+            f"{self.base_url}/api/v1/chart/",
+            json={
+                "slice_name": slice_name,
+                "viz_type": viz_type,
+                "datasource_id": dataset_id,
+                "datasource_type": "table",
+                "dashboards": dashboard_ids,
+                "params": json.dumps(
+                    {"datasource": f"{dataset_id}__table",
+                     "viz_type": viz_type, **params},
+                ),
+            },
+        )
+        if not resp.ok:
+            raise SupersetClientError(
+                f"Creating chart {slice_name} failed "
+                f"({resp.status_code}): {resp.text}"
+            )
+        return resp.json()["id"]
+
+    def find_dashboard_by_slug(self, slug: str) -> dict[str, Any] | None:
+        return self._find_one(
+            "dashboard",
+            [{"col": "slug", "opr": "eq", "value": slug}],
+            ["id", "uuid", "slug", "dashboard_title"],
+        )
+
+    def create_dashboard(self, title: str, slug: str) -> int:
+        resp = self.session.post(
+            f"{self.base_url}/api/v1/dashboard/",
+            json={"dashboard_title": title, "slug": slug, "published": True},
+        )
+        if not resp.ok:
+            raise SupersetClientError(
+                f"Creating dashboard {title} failed "
+                f"({resp.status_code}): {resp.text}"
+            )
+        return resp.json()["id"]
+
+    def update_dashboard(self, dashboard_id: int, **fields: Any) -> None:
+        resp = self.session.put(
+            f"{self.base_url}/api/v1/dashboard/{dashboard_id}",
+            json=fields,
+        )
+        if not resp.ok:
+            raise SupersetClientError(
+                f"Updating dashboard {dashboard_id} failed "
+                f"({resp.status_code}): {resp.text}"
+            )
+
+    def delete_dashboard(self, dashboard_id: int) -> None:
+        resp = self.session.delete(
+            f"{self.base_url}/api/v1/dashboard/{dashboard_id}"
+        )
+        if resp.status_code not in (200, 404):
+            resp.raise_for_status()
 
     def get_dashboards_for_user(self, email: str) -> list[dict[str, Any]]:
         user_id = self.find_user_id_by_email(email)

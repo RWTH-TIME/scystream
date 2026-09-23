@@ -57,8 +57,10 @@ alembic upgrade head
 | SUPERSET_PUBLIC_URL               | (same as SUPERSET_HOST)     | Browser-facing Superset URL for dashboard links |
 | SUPERSET_KEYCLOAK_CLIENT_ID       | superset-service            | Keycloak client id for Superset API service account |
 | SUPERSET_KEYCLOAK_CLIENT_SECRET   |                             | Keycloak client secret for Superset API service account |
-| SUPERSET_EXPORT_S3_PREFIX         | projects                    | S3 key prefix for per-project Superset export zips inside the data bucket |
-| SUPERSET_USER_ROLE                | Gamma                       | Role of the Superset users core creates for project owners |
+| SUPERSET_EXPORT_S3_PREFIX         | projects                    | S3 key prefix for the per-project visualization templates inside the data bucket |
+| SUPERSET_USER_ROLE                | Gamma                       | Role of the Superset users core creates for project users |
+| SUPERSET_DATA_SQLALCHEMY_URI      | (DEFAULT_CB_CONFIG_PG_*)    | SQLAlchemy URI Superset uses to reach the data postgres, set it when Superset runs elsewhere |
+| SUPERSET_DATA_DATABASE_NAME       | scystream-data              | Name of the data postgres connection in Superset |
 | AIRFLOW_HOST                      | http://localhost:8080       | Airflow API server base URL (without `/api/v2`) |
 | AIRFLOW_USER                      | airflow                     | Airflow user core authenticates with |
 | AIRFLOW_PASS                      | airflow                     | Password of that user |

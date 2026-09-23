@@ -107,6 +107,16 @@ def _to_localhost_dsn(dsn: str) -> str:
     return make_dsn(**params)
 
 
+def data_pg_dsn_for_core() -> str:
+    """DSN core itself uses to reach the data postgres."""
+    dsn = _build_pg_dsn()
+    return _to_localhost_dsn(dsn) if ENV.DEVELOPMENT else dsn
+
+
+def project_schema(project_uuid: UUID | str) -> str:
+    return _normalize_uuid(project_uuid)
+
+
 def get_pg_cfg_defaults_dict_with_setup(
     project_uuid: UUID, io_name: str, compute_block_custom_name: str
 ) -> dict:
