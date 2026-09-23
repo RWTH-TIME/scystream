@@ -66,6 +66,12 @@ Object storage used for files and larger datasets accessed by compute blocks.
 
 Compute blocks can read from and write to both `data-postgres` and `data-minio` during execution.
 
+## Deployment
+
+For production (every service on its own instance, Docker Compose or NixOS,
+hardened), see [docs/deployment](docs/deployment/README.md) and the
+[environment variable reference](docs/deployment/env-reference.md).
+
 ## Quickstart
 
 It is recommended to use [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).

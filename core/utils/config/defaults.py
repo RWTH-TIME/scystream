@@ -82,7 +82,9 @@ def get_file_cfg_defaults_dict(io_name: str) -> dict:
 def _build_pg_dsn() -> str:
     return f"postgresql://{ENV.DEFAULT_CB_CONFIG_PG_USER}:{
         ENV.DEFAULT_CB_CONFIG_PG_PASS
-    }@{ENV.DEFAULT_CB_CONFIG_PG_HOST}:{ENV.DEFAULT_CB_CONFIG_PG_PORT}/postgres"
+    }@{ENV.DEFAULT_CB_CONFIG_PG_HOST}:{ENV.DEFAULT_CB_CONFIG_PG_PORT}/{
+        ENV.DEFAULT_CB_CONFIG_PG_DB
+    }"
 
 
 def ensure_schema_exists(dsn: str, schema: str) -> None:

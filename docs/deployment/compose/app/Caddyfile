@@ -1,0 +1,23 @@
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
+
+{$APP_DOMAIN} {
+	import security_headers
+	header X-Frame-Options DENY
+	reverse_proxy frontend:3000
+}
+
+{$API_DOMAIN} {
+	import security_headers
+	request_body {
+		# base64 uploads, keep in line with MAX_UPLOAD_SIZE_MB
+		max_size 150MB
+	}
+	reverse_proxy core:8000
+}

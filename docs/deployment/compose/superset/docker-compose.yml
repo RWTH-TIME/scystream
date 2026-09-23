@@ -1,0 +1,44 @@
+# superset host: Superset built from superset/ in this repository (Keycloak
+# login, service account API access for core). Build context: the
+# repository's superset/ directory, or use the image built by CI
+# (ghcr.io/rwth-time/scystream/superset).
+name: scystream-superset
+
+services:
+  superset:
+    image: ${SUPERSET_IMAGE:-ghcr.io/rwth-time/scystream/superset:latest}
+    restart: unless-stopped
+    command: ["sh", "-c", "/app/docker-init.sh && /app/docker/entrypoints/run-server.sh"]
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:?}
+      SUPERSET_DATABASE_URI: postgresql+psycopg2://superset:${SUPERSET_DB_PASSWORD:?}@${DB_HOST:?}:5432/superset
+      SUPERSET_AUTH_TYPE: oauth
+      KEYCLOAK_REALM: main
+      KEYCLOAK_PUBLIC_URL: https://${AUTH_DOMAIN:?}
+      KEYCLOAK_INTERNAL_URL: https://${AUTH_DOMAIN}
+      SUPERSET_OAUTH_CLIENT_ID: superset
+      SUPERSET_OAUTH_CLIENT_SECRET: ${SUPERSET_OAUTH_CLIENT_SECRET:?}
+      SUPERSET_SERVICE_CLIENT_ID: superset-service
+      SERVER_WORKER_AMOUNT: ${SERVER_WORKER_AMOUNT:-4}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8088/health"]
+      interval: 30s
+      retries: 5
+      start_period: 60s
+    security_opt: [no-new-privileges:true]
+
+  caddy:
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SUPERSET_DOMAIN: ${SUPERSET_DOMAIN:?}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  caddy-data:

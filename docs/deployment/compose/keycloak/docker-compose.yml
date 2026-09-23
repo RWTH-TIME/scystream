@@ -1,0 +1,41 @@
+# auth host: Keycloak in production mode behind Caddy. The realm is
+# imported on the first start from .keycloak-config (copy it next to this
+# file; it contains DEVELOPMENT secrets, regenerate them afterwards).
+name: scystream-keycloak
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.4
+    restart: unless-stopped
+    command: ["start", "--import-realm"]
+    environment:
+      KC_HOSTNAME: https://${AUTH_DOMAIN:?}
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://${DB_HOST:?}:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:?}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?}
+    volumes:
+      - ./keycloak-config:/opt/keycloak/data/import:ro
+    security_opt: [no-new-privileges:true]
+
+  caddy:
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      AUTH_DOMAIN: ${AUTH_DOMAIN}
+      ADMIN_ALLOWED_CIDR: ${ADMIN_ALLOWED_CIDR:?}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  caddy-data:

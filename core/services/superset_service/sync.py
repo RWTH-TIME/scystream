@@ -56,7 +56,7 @@ def data_sqlalchemy_uri() -> str:
     return str(make_url(
         "postgresql+psycopg2://"
         f"{ENV.DEFAULT_CB_CONFIG_PG_HOST}:{ENV.DEFAULT_CB_CONFIG_PG_PORT}"
-        "/postgres",
+        f"/{ENV.DEFAULT_CB_CONFIG_PG_DB}",
     ).set(
         username=ENV.DEFAULT_CB_CONFIG_PG_USER,
         password=ENV.DEFAULT_CB_CONFIG_PG_PASS,

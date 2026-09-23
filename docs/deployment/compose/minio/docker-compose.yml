@@ -1,0 +1,41 @@
+# s3 host: MinIO for uploaded documents, workflow files and visualization
+# templates. The S3 API is public via Caddy (browsers download with
+# presigned URLs), the console only on the private address.
+name: scystream-minio
+
+services:
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
+      MINIO_SERVER_URL: https://${S3_DOMAIN:?}
+      MINIO_BROWSER_REDIRECT_URL: http://${PRIVATE_IP:?}:9001
+    ports:
+      - "${PRIVATE_IP}:9001:9001"
+    volumes:
+      - minio-data:/data
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      retries: 5
+
+  caddy:
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      S3_DOMAIN: ${S3_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  minio-data:
+  caddy-data:
