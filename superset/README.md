@@ -31,24 +31,18 @@ Authentication (`pythonpath/scystream_security.py`):
 
 ## Keycloak clients
 
-The Keycloak realm needs two confidential OpenID Connect clients. They are
-not part of `.keycloak-config/main-realm.json`, create them in the Keycloak
-admin console (realm `main`):
+The realm in `.keycloak-config/main-realm.json` contains the two confidential
+OpenID Connect clients Superset needs. They are imported when Keycloak starts
+with `--import-realm`:
 
-| Client ID          | Settings                                                                                      | Secret goes to                                                     |
-| ------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `superset`         | Client authentication on, *Standard flow* on, redirect URI `http://localhost:8088/*`         | `SUPERSET_OAUTH_CLIENT_SECRET` (superset)                          |
-| `superset-service` | Client authentication on, *Standard flow* off, *Service accounts roles* on                   | `SUPERSET_KEYCLOAK_CLIENT_SECRET` (core)                           |
+| Client ID          | Settings                                                                  | Development secret            | Secret goes to                            |
+| ------------------ | ------------------------------------------------------------------------- | ----------------------------- | ----------------------------------------- |
+| `superset`         | Standard flow on, redirect URI `http://localhost:8088/*`                  | `superset-dev-secret`         | `SUPERSET_OAUTH_CLIENT_SECRET` (superset) |
+| `superset-service` | Standard flow off, service accounts on (client credentials grant)        | `superset-service-dev-secret` | `SUPERSET_KEYCLOAK_CLIENT_SECRET` (core)  |
 
-Or with `kcadm.sh` inside the keycloak container:
-
-```sh
-kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin
-kcadm.sh create clients -r main -s clientId=superset -s publicClient=false \
-  -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:8088/*"]'
-kcadm.sh create clients -r main -s clientId=superset-service -s publicClient=false \
-  -s standardFlowEnabled=false -s serviceAccountsEnabled=true
-```
+The compose files use these secrets by default. **Regenerate both secrets in
+the Keycloak admin console for any deployment that is not a local development
+setup** and pass the new values via the environment variables above.
 
 ## Configuration
 

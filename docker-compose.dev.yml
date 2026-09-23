@@ -346,7 +346,7 @@ services:
       KEYCLOAK_PUBLIC_URL: http://localhost:8090
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       SUPERSET_OAUTH_CLIENT_ID: superset
-      SUPERSET_OAUTH_CLIENT_SECRET: ${SUPERSET_OAUTH_CLIENT_SECRET:-}
+      SUPERSET_OAUTH_CLIENT_SECRET: ${SUPERSET_OAUTH_CLIENT_SECRET:-superset-dev-secret}
       SUPERSET_SERVICE_CLIENT_ID: superset-service
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8088/health"]
