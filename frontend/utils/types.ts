@@ -21,4 +21,5 @@ export type Project = {
   superset_dashboard_url?: string | null,
   superset_import_status?: SupersetImportStatus | string,
   superset_import_error?: string | null,
+  has_superset_template?: boolean,
 }

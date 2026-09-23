@@ -76,7 +76,8 @@ class RepoRegistry:
                     multi_options=[
                         "--depth=1",
                         "-c",
-                        "core.sshCommand=ssh -o StrictHostKeyChecking=no"
+                        "core.sshCommand="
+                        "ssh -o StrictHostKeyChecking=accept-new"
                     ],
                     allow_unsafe_options=True
                 )

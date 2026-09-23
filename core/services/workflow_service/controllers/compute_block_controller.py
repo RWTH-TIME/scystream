@@ -1,3 +1,5 @@
+import re
+from utils.config.environment import ENV
 from utils.database.session_injector import get_database
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Session, contains_eager
@@ -120,9 +122,10 @@ def updated_configs_with_values(
     Returns:
     - A new config dictionary with updated values.
     """
+    # configs contain credentials, only log their keys
     logging.debug(
-        f"Get update configs for source config {io.config} and \
-        values {default_values}."
+        f"Updating config keys {sorted((io.config or {}).keys())} with "
+        f"default keys {sorted(default_values.keys())}."
     )
     new_config = io.config.copy() if io.config else {}
 
@@ -139,22 +142,28 @@ def updated_configs_with_values(
             # Only replace if default_values[dk] is set
             new_config[key] = default_values[dk]
 
-    logging.debug(f"Update config: {new_config}.")
     return new_config
 
 
+FILE_EXT_PATTERN = re.compile(r"^[A-Za-z0-9]{1,10}$")
+
+
 def _upload_file_to_bucket(file_b64: str, file_ext: str):
-    # TODO: Create Bucket if not avail
+    file_ext = file_ext.lstrip(".")
+    if not FILE_EXT_PATTERN.match(file_ext):
+        raise HTTPException(status_code=422,
+                            detail=f"Invalid file type: {file_ext!r}")
+    # base64 is 4/3 of the file size
+    if len(file_b64) * 3 / 4 > ENV.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Files may be at most {ENV.MAX_UPLOAD_SIZE_MB} MB",
+        )
+
     file_uuid = uuid4()
     configs = get_file_cfg_defaults_dict(file_uuid)
     target_file_name = f"{configs['FILE_NAME']}.{file_ext}"
-
-    s3_url = fh.get_minio_url(configs["S3_HOST"], configs["S3_PORT"])
-    client = fh.get_s3_client(
-        s3_url=s3_url,
-        access_key=configs["S3_ACCESS_KEY"],
-        secret_key=configs["S3_SECRET_KEY"],
-    )
+    client = fh.get_default_data_s3_client()
 
     # Decode and upload
     file_bytes = base64.b64decode(file_b64)

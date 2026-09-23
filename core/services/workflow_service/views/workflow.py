@@ -7,6 +7,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Response,
     WebSocket,
     WebSocketDisconnect,
 )
@@ -16,16 +17,18 @@ from services.workflow_service.controllers import (
 from services.workflow_service.controllers import (
     project_controller as project_controller,
 )
-from services.workflow_service.controllers import workflow_controller
-from services.superset_service.dashboard_import_controller import (
-    process_pending_dashboard_imports,
+from services.workflow_service.controllers import (
+    shared_template_controller,
+    workflow_controller,
 )
+from services.superset_service.project_sync import sync_finished_runs
 from services.workflow_service.schemas.workflow import (
     GetWorkflowConfigurationResponse,
     InputOutputWithBlockInfo,
     UpdateWorkflowConfigurations,
     WorkflowStatus,
     WorkflowTemplateMetaData,
+    CreateSharedTemplateRequest,
 )
 from utils.database.session_injector import get_database
 from utils.errors.error import handle_error
@@ -189,23 +192,109 @@ def pause_dag(
     "/workflow_templates",
     response_model=dict[str, list[WorkflowTemplateMetaData]],
 )
-async def workflow_templates():
+def workflow_templates(user: User = Depends(get_user)):
     try:
+        shared = {
+            shared_template_controller.shared_identifier(r.uuid): r
+            for r in shared_template_controller.list_shared_templates()
+        }
         grouped_templates = workflow_controller.get_tagged_workflow_templates()
 
         result = defaultdict(list)
         for tag, templates in grouped_templates.items():
             for tpl in templates:
+                record = shared.get(tpl.file_identifier)
                 result[tag].append(
                     WorkflowTemplateMetaData(
                         file_identifier=tpl.file_identifier,
                         name=tpl.pipeline.name,
                         description=tpl.pipeline.description,
+                        shared=record is not None,
+                        created_by_email=record.created_by_email
+                        if record else None,
+                        can_delete=record is not None
+                        and record.created_by == user.uuid,
                     ),
                 )
         return dict(result)
     except Exception as e:
         raise handle_error(e)
+
+
+@router.post("/workflow_templates", response_model=WorkflowTemplateMetaData)
+def create_workflow_template(
+    data: CreateSharedTemplateRequest,
+    user: User = Depends(get_user),
+):
+    """Saves a project as template for all users."""
+    try:
+        record = shared_template_controller.create_shared_template(
+            data.project_uuid,
+            data.name,
+            data.description,
+            data.tags,
+            user.uuid,
+            user.email,
+            include_settings=data.include_settings,
+        )
+        return WorkflowTemplateMetaData(
+            file_identifier=shared_template_controller.shared_identifier(
+                record.uuid,
+            ),
+            name=record.name,
+            description=record.description,
+            shared=True,
+            created_by_email=record.created_by_email,
+            can_delete=True,
+        )
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.get("/workflow_templates/{identifier}/yaml")
+def workflow_template_yaml(identifier: str, _: User = Depends(get_user)):
+    """A shared template in the format of the template repository."""
+    try:
+        return Response(
+            content=shared_template_controller.template_yaml(identifier),
+            media_type="application/yaml",
+        )
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.delete("/workflow_templates/{identifier}", status_code=200)
+def delete_workflow_template(identifier: str, user: User = Depends(get_user)):
+    try:
+        shared_template_controller.delete_shared_template(
+            identifier, user.uuid,
+        )
+    except Exception as e:
+        raise handle_error(e)
+
+
+def _collect_project_statuses() -> dict[str, str]:
+    """Polls Airflow for the latest run of every project DAG and syncs the
+    data of newly finished runs to Superset.
+
+    This is blocking I/O and must not run on the event loop.
+    """
+    all_proj_status = {}
+    finished_runs = {}
+
+    all_dags = workflow_controller.get_all_dags()
+    dag_runs = workflow_controller.last_dag_run_overview(all_dags)
+
+    for di, dr in dag_runs.items():
+        project_id = workflow_controller.dag_id_to_project_id(di)
+        status = WorkflowStatus.from_airflow_state(dr.state)
+        all_proj_status[project_id] = status.value
+        if status == WorkflowStatus.FINISHED:
+            finished_runs[project_id] = dr.dag_run_id
+
+    sync_finished_runs(finished_runs)
+
+    return all_proj_status
 
 
 @router.websocket("/ws/project_status")
@@ -221,34 +310,9 @@ async def ws_project_status(
             all_proj_status = {}
 
             try:
-                all_dags = workflow_controller.get_all_dags()
-                dag_runs = workflow_controller.last_dag_run_overview(all_dags)
-
-                for di, dr in dag_runs.items():
-                    project_id = workflow_controller.dag_id_to_project_id(di)
-                    status = WorkflowStatus.from_airflow_state(
-                        dr.state,
-                    )
-
-                    all_proj_status[project_id] = status.value
-
-                finished_project_ids = {
-                    project_id
-                    for project_id, status in all_proj_status.items()
-                    if status == WorkflowStatus.FINISHED.value
-                }
-                if finished_project_ids:
-                    pending_ids = (
-                        project_controller
-                        .read_pending_superset_import_project_ids()
-                    )
-                    eligible = [
-                        project_id
-                        for project_id in pending_ids
-                        if str(project_id) in finished_project_ids
-                    ]
-                    if eligible:
-                        process_pending_dashboard_imports(eligible)
+                all_proj_status = await asyncio.to_thread(
+                    _collect_project_statuses,
+                )
             except Exception as e:
                 logging.exception("Error polling project status: %s", e)
 
@@ -272,7 +336,10 @@ async def ws_workflow_status(
 
     try:
         while True:
-            status = workflow_controller.dag_status(project_id)
+            status = await asyncio.to_thread(
+                workflow_controller.dag_status,
+                project_id,
+            )
             await websocket.send_json(status)
             await asyncio.sleep(2)
     except WebSocketDisconnect:

@@ -9,10 +9,14 @@ import ConfigBox, { ConfigBoxVariant } from "./ConfigBox"
 import LoadingAndError from "./LoadingAndError"
 import { encodeFileToBase64, type InputOutput, type RecordValueType } from "./CreateComputeBlockModal"
 import ConfigEnvsInputs from "./inputs/ConfigEnvsInputs"
-import { Save } from "@mui/icons-material"
+import { BookmarkAdd, ContentCopy, Save } from "@mui/icons-material"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import { CircularProgress } from "@mui/material"
 import SupersetDashboardUpload from "./SupersetDashboardUpload"
+import CreateProjectModal from "./CreateProjectModal"
+import SaveAsTemplateModal from "./SaveAsTemplateModal"
+import { useCloneProjectMutation } from "@/mutations/projectMutation"
+import { useRouter } from "next/navigation"
 
 type ProjectDetailProps = {
   deleteProject: (project_id: string) => void,
@@ -51,10 +55,19 @@ export default function ProjectDetail({
   project
 }: ProjectDetailProps) {
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
+  const [cloneOpen, setCloneOpen] = useState(false)
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
+  const router = useRouter()
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(false)
   const { setAlert } = useAlert()
 
   const { data, isLoading, isError } = useGetComputeBlocksConfigurationByProjectQuery(project.uuid)
+  const { mutateAsync: cloneProject, isPending: isCloneLoading } = useCloneProjectMutation(project.uuid, setAlert)
+
+  async function onProjectClone(name: string) {
+    const cloneId = await cloneProject(name)
+    router.push(`/project/${cloneId}`)
+  }
   const { mutateAsync, isPending: loadingUpdateConfigs } = useUpdateWorkflowConfigurationsMutation(setAlert, project.uuid)
 
   const [projectDetailForm, setProjectDetailForm] = useState<ProjectDetailFormType>(emptyProjectDetailForm)
@@ -281,6 +294,21 @@ export default function ProjectDetail({
         header="Delete Project"
         desc={`Are you sure you want to delete the project: ${project.name}?`}
       />
+      <CreateProjectModal
+        isOpen={cloneOpen}
+        onClose={() => setCloneOpen(false)}
+        onSubmit={onProjectClone}
+        loading={isCloneLoading}
+        title={`Clone ${project.name}`}
+      />
+      {saveTemplateOpen && (
+        <SaveAsTemplateModal
+          projectId={project.uuid}
+          projectName={project.name}
+          isOpen={saveTemplateOpen}
+          onClose={() => setSaveTemplateOpen(false)}
+        />
+      )}
 
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -299,6 +327,21 @@ export default function ProjectDetail({
             className={`flex items-center justify-center w-12 h-12 ${hasChanged ? "bg-blue-500 hover:bg-blue-400" : "bg-gray-400"} text-white rounded-full transition-all duration-200 cursor-pointer disabled:cursor-not-allowed`}
           >
             {loadingUpdateConfigs ? <CircularProgress /> : <Save />}
+          </button>
+          <button
+            disabled={isCloneLoading}
+            onClick={() => setCloneOpen(true)}
+            title="Clone project with its compute blocks and Superset visualization"
+            className="flex items-center justify-center w-12 h-12 bg-blue-500 hover:bg-blue-400 text-white rounded-full transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
+          >
+            {isCloneLoading ? <CircularProgress /> : <ContentCopy />}
+          </button>
+          <button
+            onClick={() => setSaveTemplateOpen(true)}
+            title="Save as template for all users"
+            className="flex items-center justify-center w-12 h-12 bg-blue-500 hover:bg-blue-400 text-white rounded-full transition-all duration-200 cursor-pointer"
+          >
+            <BookmarkAdd />
           </button>
           <ActionButtons
             onPlayClick={() => triggerWorkflow(project.uuid)}

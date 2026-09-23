@@ -58,7 +58,7 @@ export default function MultiSelectInput<T extends string | number | boolean>({
       inputValue={inputValue}
       isOptionEqualToValue={() => false}
       onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
-      renderTags={(value) =>
+      renderValue={(value) =>
         value.map((option, idx) => {
           return <Chip key={idx} label={getValue(option)} />
         })

@@ -40,6 +40,21 @@
             "enabled": false
         },
         {
+            "description": "The Airflow API client has to match the Airflow version (checked in the airflow CI workflow)",
+            "groupName": "airflow",
+            "matchPackageNames": [
+                "apache/airflow",
+                "apache-airflow-client"
+            ]
+        },
+        {
+            "description": "The Superset image is extended in superset/Dockerfile and tested in the superset CI workflow",
+            "groupName": "superset",
+            "matchPackageNames": [
+                "apache/superset"
+            ]
+        },
+        {
             "description": "Prevent updates for postgres-airflow because of dependencies",
             "matchPackageNames": [
                 "postgres-airflow"

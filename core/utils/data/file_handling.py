@@ -14,6 +14,7 @@ from botocore.exceptions import (
     BotoCoreError
 )
 from botocore.client import BaseClient, ClientError
+from botocore.config import Config as BotoConfig
 
 
 def get_s3_client(
@@ -26,7 +27,12 @@ def get_s3_client(
             "s3",
             endpoint_url=s3_url,
             aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key
+            aws_secret_access_key=secret_key,
+            region_name=ENV.S3_REGION,
+            config=BotoConfig(
+                signature_version="s3v4",
+                s3={"addressing_style": "path"},
+            ),
         )
     except EndpointConnectionError as e:
         logging.warning(f"Cannot reach S3 endpoint {s3_url}: {e}")
@@ -47,7 +53,10 @@ def find_file(
     file_name: str,
     file_ext: str,
 ) -> str | None:
-    object_key = f"{file_path.strip('/')}/{file_name}.{file_ext}"
+    object_key = "/".join(
+        part for part in (file_path.strip("/"), f"{file_name}.{file_ext}")
+        if part
+    )
 
     try:
         client.head_object(Bucket=bucket_name, Key=object_key)
@@ -64,7 +73,7 @@ def generate_presigned_url(
     client,
     bucket_name: str,
     file_path: str,
-    expiration: int = 86400  # 1 day
+    expiration: int = 3600  # regenerated whenever the frontend asks
 ):
     try:
         url = client.generate_presigned_url(
@@ -149,7 +158,10 @@ def bulk_presigned_urls_from_ios(ios: list[InputOutput]) -> dict[UUID, str]:
     for (host, port, access, secret, bucket, ext), group in io_groups.items():
         s3_url = get_minio_url(host, port)
         client = get_s3_client(s3_url, access, secret)
-        if not client:
+        # URLs for the browser must be signed for the host the browser uses
+        # (SigV4 signs the host), signing needs no connection
+        signer = get_s3_client(public_s3_url(host, port), access, secret)
+        if not client or not signer:
             logging.warning(f"Could not create S3 client for {host}:{port}")
             continue
 
@@ -166,7 +178,7 @@ def bulk_presigned_urls_from_ios(ios: list[InputOutput]) -> dict[UUID, str]:
                 continue
 
             presigned_url = generate_presigned_url(
-                client,
+                signer,
                 bucket_name=cfg["BUCKET_NAME"],
                 file_path=full_file_path
             )
@@ -179,22 +191,29 @@ def bulk_presigned_urls_from_ios(ios: list[InputOutput]) -> dict[UUID, str]:
     return result
 
 
-def get_presigned_post_url(
-    client,
-    bucket_name: str,
-    file_name: str,
-    expiration: int = 86400  # 1 day
-) -> str:
-    """
-    This function generates and returns a put url for a file to be
-    uploaded to our default minio bucket.
-    """
-    url = client.generate_presigned_post(
-        bucket_name,
-        file_name,
-        ExpiresIn=expiration
-    )
-    return url
+def public_s3_url(s3_host: str, s3_port: int) -> str:
+    """S3 endpoint as reachable by browsers: EXTERNAL_URL_DATA_S3 for the
+    default data MinIO, other endpoints as configured."""
+    defaults = get_file_cfg_defaults_dict("placeholder")
+    if (s3_host == defaults.get("S3_HOST")
+            and s3_port == defaults.get("S3_PORT")):
+        return ENV.EXTERNAL_URL_DATA_S3
+    return f"{s3_host}:{s3_port}"
+
+
+def ensure_default_bucket() -> None:
+    """Creates the default data bucket if it does not exist. Best effort, a
+    least privilege MinIO user may not be allowed to create buckets."""
+    client = get_default_data_s3_client()
+    bucket = ENV.DEFAULT_CB_CONFIG_S3_BUCKET_NAME
+    try:
+        client.head_bucket(Bucket=bucket)
+    except ClientError as e:
+        if e.response["Error"]["Code"] not in ("404", "NoSuchBucket"):
+            logging.warning(f"Cannot access S3 bucket {bucket}: {e}")
+            return
+        client.create_bucket(Bucket=bucket)
+        logging.info(f"Created S3 bucket {bucket}")
 
 
 def get_default_data_s3_client() -> BaseClient:

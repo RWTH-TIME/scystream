@@ -18,6 +18,7 @@ class Project(BaseModel):
     superset_dashboard_url: str | None = None
     superset_import_status: str = SupersetImportStatusSchema.NONE
     superset_import_error: str | None = None
+    has_superset_template: bool = False
 
     class Config:
         from_attributes = True
@@ -25,6 +26,10 @@ class Project(BaseModel):
 
 class CreateProjectRequest(BaseModel):
     name: str = Field(..., max_length=30)
+
+
+class SupersetDashboardResponse(BaseModel):
+    url: str
 
 
 class CreateProjectResponse(BaseModel):

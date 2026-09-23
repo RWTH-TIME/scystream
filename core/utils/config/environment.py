@@ -24,10 +24,20 @@ class Settings(BaseSettings):
     CATAPULTE_SENDER: str = "mailing@scystream"
     CATAPULTE_SSL_ENABLED: bool = False
 
-    # This has to reach the internal minio, provided by the defaults
+    # The data MinIO as reachable by browsers (presigned URLs are signed for
+    # this host), e.g. https://s3.example.org
     EXTERNAL_URL_DATA_S3: str = "http://localhost:9000"
+    S3_REGION: str = "us-east-1"
+    # max. size of files uploaded through the API
+    MAX_UPLOAD_SIZE_MB: int = 100
 
     CB_NETWORK_MODE: str = "scystream_data_processing"
+    # Pull compute block images on every run, so updated tags (e.g. latest)
+    # are used. Cheap when a registry mirror is configured.
+    CB_IMAGE_FORCE_PULL: bool = True
+    # Registry -> pull-through cache, e.g. {"ghcr.io": "registry.lan:5001"},
+    # compute block images of these registries are pulled via the cache
+    CB_IMAGE_REGISTRY_MIRRORS: dict[str, str] = {}
 
     DEFAULT_CB_CONFIG_S3_HOST: str = "http://data-minio"
     DEFAULT_CB_CONFIG_S3_PORT: int = 9000
@@ -40,6 +50,7 @@ class Settings(BaseSettings):
     DEFAULT_CB_CONFIG_PG_PASS: str = "postgres"
     DEFAULT_CB_CONFIG_PG_HOST: str = "data-postgres"
     DEFAULT_CB_CONFIG_PG_PORT: int = 5432
+    DEFAULT_CB_CONFIG_PG_DB: str = "postgres"
 
     DEFAULT_CB_CONFIG_PG_HOST_DEV: str = "localhost"
     DEFAULT_CB_CONFIG_PG_PORT_DEV: int = 9999
@@ -48,6 +59,8 @@ class Settings(BaseSettings):
     AIRFLOW_USER: str = "airflow"
     AIRFLOW_PASS: str = "airflow"
     AIRFLOW_DAG_DIR: str = "../airflow-dags"
+    # Airflow JWTs are valid for 24h by default, refresh well before that
+    AIRFLOW_TOKEN_TTL_SECONDS: int = 300
 
     REPO_CACHE_DIR: str = "repos"
     WORKFLOW_TEMPLATE_REPO: str = (
@@ -65,6 +78,13 @@ class Settings(BaseSettings):
     SUPERSET_KEYCLOAK_CLIENT_ID: str = "superset-service"
     SUPERSET_KEYCLOAK_CLIENT_SECRET: str = ""
     SUPERSET_EXPORT_S3_PREFIX: str = "projects"
+    # Role of Superset users that are provisioned by core
+    SUPERSET_USER_ROLE: str = "Gamma"
+    # Name of the Superset database connection to the data postgres
+    SUPERSET_DATA_DATABASE_NAME: str = "scystream-data"
+    # SQLAlchemy URI Superset uses to reach the data postgres. Superset may
+    # run elsewhere, defaults to the DEFAULT_CB_CONFIG_PG_* connection.
+    SUPERSET_DATA_SQLALCHEMY_URI: str = ""
 
     @property
     def superset_public_url(self) -> str:

@@ -1,0 +1,10 @@
+{$S3_DOMAIN} {
+	# presigned URLs are signed for this host: pass Host through unchanged
+	reverse_proxy minio:9000 {
+		header_up Host {host}
+	}
+	request_body {
+		max_size 5GB
+	}
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+}

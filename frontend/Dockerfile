@@ -1,33 +1,29 @@
-FROM node:22.22.3-alpine AS installer
+# syntax=docker/dockerfile:1
+ARG NODE_IMAGE=node:24.21.0-alpine
 
+# dependencies only change with the lockfile, so this layer is cached
+FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
-
 COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 
-RUN npm install
-
-FROM node:22.22.3-alpine AS builder
-
+FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
-
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-COPY --from=installer /app/node_modules ./node_modules
-
 RUN npm run build
 
-FROM node:22.22.3-alpine
-
+# standalone output: only the files the server needs, no dev dependencies
+FROM ${NODE_IMAGE}
 WORKDIR /app
-
-ENV PORT=80 \
-    NODE_ENV=production
-
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-
-EXPOSE ${PORT}
-
-CMD ["sh", "-c", "npm start -- -p $PORT"]
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/public ./public
+USER node
+EXPOSE 3000
+CMD ["node", "server.js"]

@@ -33,6 +33,12 @@ class Project(Base):
         default=SupersetImportStatus.NONE.value,
     )
     superset_import_error = Column(String(2048), nullable=True)
+    # Airflow run whose data was last synced to Superset
+    superset_synced_run_id = Column(String(250), nullable=True)
+
+    @property
+    def has_superset_template(self) -> bool:
+        return bool(self.superset_export_s3_key)
 
     blocks = relationship(
         Block,

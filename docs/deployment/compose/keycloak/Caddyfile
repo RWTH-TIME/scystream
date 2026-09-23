@@ -1,0 +1,11 @@
+{$AUTH_DOMAIN} {
+	# the admin console only from the private/admin network
+	@admin {
+		path /admin*
+		not remote_ip {$ADMIN_ALLOWED_CIDR}
+	}
+	respond @admin 403
+
+	reverse_proxy keycloak:8080
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+}
