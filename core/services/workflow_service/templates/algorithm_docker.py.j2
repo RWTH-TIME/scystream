@@ -11,7 +11,7 @@
             extra_hosts={
                 "host.containers.internal": "host-gateway"
             },
-            force_pull=False,
+            force_pull={{ force_pull }},
             mount_tmp_dir=True,
         )
 

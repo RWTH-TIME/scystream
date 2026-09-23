@@ -24,10 +24,20 @@ class Settings(BaseSettings):
     CATAPULTE_SENDER: str = "mailing@scystream"
     CATAPULTE_SSL_ENABLED: bool = False
 
-    # This has to reach the internal minio, provided by the defaults
+    # The data MinIO as reachable by browsers (presigned URLs are signed for
+    # this host), e.g. https://s3.example.org
     EXTERNAL_URL_DATA_S3: str = "http://localhost:9000"
+    S3_REGION: str = "us-east-1"
+    # max. size of files uploaded through the API
+    MAX_UPLOAD_SIZE_MB: int = 100
 
     CB_NETWORK_MODE: str = "scystream_data_processing"
+    # Pull compute block images on every run, so updated tags (e.g. latest)
+    # are used. Cheap when a registry mirror is configured.
+    CB_IMAGE_FORCE_PULL: bool = True
+    # Registry -> pull-through cache, e.g. {"ghcr.io": "registry.lan:5001"},
+    # compute block images of these registries are pulled via the cache
+    CB_IMAGE_REGISTRY_MIRRORS: dict[str, str] = {}
 
     DEFAULT_CB_CONFIG_S3_HOST: str = "http://data-minio"
     DEFAULT_CB_CONFIG_S3_PORT: int = 9000

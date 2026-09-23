@@ -367,6 +367,21 @@ def validate_dag_code(dag_code: str) -> None:
         ) from e
 
 
+def resolve_image(image: str) -> str:
+    """Returns the image reference workers pull: images of registries with a
+    configured mirror (pull-through cache) are pulled via the mirror."""
+    first, _, rest = image.partition("/")
+    if rest and ("." in first or ":" in first or first == "localhost"):
+        registry, path = first, rest
+    else:
+        registry = "docker.io"
+        path = image if rest else f"library/{image}"
+    mirror = ENV.CB_IMAGE_REGISTRY_MIRRORS.get(registry)
+    if not mirror:
+        return image
+    return f"{mirror.rstrip('/')}/{path}"
+
+
 def generate_dag_code(graph, templates, dag_id, project_uuid):
     parts = [templates["dag"].render(dag_id=dag_id)]
 
@@ -376,7 +391,8 @@ def generate_dag_code(graph, templates, dag_id, project_uuid):
         parts.append(
             templates["algorithm"].render(
                 task_id=task_id,
-                image=data["image"],
+                image=resolve_image(data["image"]),
+                force_pull=ENV.CB_IMAGE_FORCE_PULL,
                 name=data["name"],
                 uuid=data["uuid"],
                 entry_name=data["entry_name"],

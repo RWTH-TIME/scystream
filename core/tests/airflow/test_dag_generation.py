@@ -99,3 +99,27 @@ def test_filesystem_dag_listing(tmp_path, monkeypatch):
         (tmp_path / name).write_text("")
 
     assert sorted(wc._get_all_dags_from_filesystem()) == ["dag_a", "dag_b"]
+
+
+@pytest.mark.parametrize(
+    ("image", "expected"),
+    [
+        ("ghcr.io/rwth-time/topic-modeling:latest",
+         "registry.lan:5001/rwth-time/topic-modeling:latest"),
+        ("rwthtime/block:1", "hub-cache.lan/rwthtime/block:1"),
+        ("python:3.13", "hub-cache.lan/library/python:3.13"),
+        ("quay.io/org/img:1", "quay.io/org/img:1"),
+    ],
+)
+def test_images_are_pulled_via_mirrors(monkeypatch, image, expected):
+    monkeypatch.setattr(wc.ENV, "CB_IMAGE_REGISTRY_MIRRORS", {
+        "ghcr.io": "registry.lan:5001", "docker.io": "hub-cache.lan/",
+    })
+    assert wc.resolve_image(image) == expected
+
+
+def test_force_pull_is_rendered(monkeypatch):
+    monkeypatch.setattr(wc.ENV, "CB_IMAGE_FORCE_PULL", True)
+    assert "force_pull=True" in _render()
+    monkeypatch.setattr(wc.ENV, "CB_IMAGE_FORCE_PULL", False)
+    assert "force_pull=False" in _render()

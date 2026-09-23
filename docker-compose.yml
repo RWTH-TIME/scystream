@@ -238,7 +238,7 @@ services:
     build: frontend
     restart: always
     ports:
-      - "8000:80"
+      - "8000:3000"
     environment:
       NEXT_PUBLIC_OIDC_PROVIDER: http://localhost:8090,
       NEXT_PUBLIC_CLIENT_ID: "scystream-frontend"
@@ -251,7 +251,7 @@ services:
     build: core
     restart: always
     ports:
-      - "4000:80"
+      - "4000:8000"
     environment:
       SSH_AUTH_SOCK: /ssh-agent
       EXTERNAL_URL: "http://localhost:8000"
