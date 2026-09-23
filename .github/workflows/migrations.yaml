@@ -7,11 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
       
       - name: Changes in models directories
         id: model-changes
-        uses: tj-actions/changed-files@v47
+        uses: tj-actions/changed-files@v47.0.6
         with:
           path: "core/services"
           files: "./*/models/**"
@@ -26,7 +26,7 @@ jobs:
 
       - name: Changes in migrations
         id: migration-changes
-        uses: tj-actions/changed-files@v47
+        uses: tj-actions/changed-files@v47.0.6
         with:
           path: "core/alembic/versions"
           files: "*.py"
@@ -88,10 +88,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
 
       - name: Setup python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.0.0
         with:
           cache: 'pip'
 
