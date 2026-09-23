@@ -103,10 +103,31 @@ def create_project_from_template(
                 block_outputs_by_name,
                 block_inputs_by_name,
             )
+        _apply_shared_visualization(template_identifier, project_id)
         return project_id
     except Exception as e:
         logging.exception(f"Error creating project from template: {e}")
         raise e
+
+
+def _apply_shared_visualization(
+    template_identifier: str,
+    project_id: UUID,
+) -> None:
+    """Projects created from a shared template use the Superset
+    visualization of the template's source project."""
+    from services.workflow_service.controllers import (
+        shared_template_controller,
+    )
+    if not shared_template_controller.is_shared_identifier(
+        template_identifier,
+    ):
+        return
+    visualization = shared_template_controller.superset_template(
+        template_identifier,
+    )
+    if visualization:
+        project_sync.upload_template(project_id, visualization)
 
 
 def read_project(project_uuid: UUID) -> Project:

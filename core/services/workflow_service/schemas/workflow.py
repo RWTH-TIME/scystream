@@ -1,5 +1,5 @@
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from enum import Enum
 
 from services.workflow_service.schemas.compute_block import (
@@ -91,6 +91,19 @@ class WorkflowTemplateMetaData(BaseModel):
     file_identifier: str
     name: str
     description: str
+    # templates shared from projects
+    shared: bool = False
+    created_by_email: str | None = None
+    can_delete: bool = False
+
+
+class CreateSharedTemplateRequest(BaseModel):
+    project_uuid: UUID
+    name: str = Field(..., min_length=2, max_length=100)
+    description: str = Field("", max_length=1000)
+    tags: list[str] = Field(default_factory=list, max_length=10)
+    # include the configured settings (secrets are always left out)
+    include_settings: bool = True
 
 
 class DependsOn(BaseModel):

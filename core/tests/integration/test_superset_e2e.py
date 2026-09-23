@@ -530,3 +530,62 @@ def test_http_api(admin):
         assert resp.json()["superset_import_status"] == "pending"
     finally:
         app.dependency_overrides.clear()
+
+
+def test_project_as_shared_template(admin):
+    from services.workflow_service.controllers import (
+        shared_template_controller as shared,
+        template_controller,
+    )
+
+    suffix = uuid4().hex[:8]
+    project_uuid = _create_project(f"tpl {suffix}", "t@example.com")
+    db = _db()
+    entry = (
+        db.query(Block).filter_by(project_uuid=project_uuid,
+                                  custom_name="crawler").one()
+        .selected_entrypoint
+    )
+    entry.envs = {"N": "5", "API_TOKEN": "secret", "EMPTY": ""}
+    db.commit()
+    db.close()
+    _write_run_output(project_uuid, ["tpl"])
+    project_sync.sync_project(project_uuid)
+
+    creator = uuid4()
+    record = shared.create_shared_template(
+        project_uuid, f"Topic pipeline {suffix}", "LDA on papers",
+        ["nlp"], creator, "t@example.com",
+    )
+    blocks = {b["name"]: b for b in record.definition["blocks"]}
+    assert blocks["crawler"]["settings"] == {"N": "5"}  # no secrets
+    assert blocks["crawler"]["outputs"] == [{"identifier": "papers"}]
+    model = blocks["topic_model"]
+    assert model["inputs"] == [{
+        "identifier": "papers",
+        "depends_on": {"block": "crawler", "output": "papers"},
+    }]
+    # generated locations are not part of the template
+    assert model["outputs"] == [{"identifier": "topics"}]
+    assert record.superset_template_s3_key  # visualization snapshot
+    read_bundle(shared.superset_template(shared.shared_identifier(
+        record.uuid)))
+
+    # visible to everybody next to the repository templates
+    identifier = shared.shared_identifier(record.uuid)
+    listed = [t.file_identifier
+              for t in template_controller.get_workflow_templates()]
+    assert identifier in listed
+    template = template_controller.get_workflow_template_by_identifier(
+        identifier,
+    )
+    assert template.pipeline.tags == ["nlp"]
+    assert "depends_on" in shared.template_yaml(identifier)
+
+    # only the creator may delete it
+    with pytest.raises(HTTPException) as exc:
+        shared.delete_shared_template(identifier, uuid4())
+    assert exc.value.status_code == 403
+    shared.delete_shared_template(identifier, creator)
+    with pytest.raises(HTTPException):
+        shared.get_shared_template(identifier)

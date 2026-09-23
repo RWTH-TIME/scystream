@@ -9,11 +9,12 @@ import ConfigBox, { ConfigBoxVariant } from "./ConfigBox"
 import LoadingAndError from "./LoadingAndError"
 import { encodeFileToBase64, type InputOutput, type RecordValueType } from "./CreateComputeBlockModal"
 import ConfigEnvsInputs from "./inputs/ConfigEnvsInputs"
-import { ContentCopy, Save } from "@mui/icons-material"
+import { BookmarkAdd, ContentCopy, Save } from "@mui/icons-material"
 import { AlertType, useAlert } from "@/hooks/useAlert"
 import { CircularProgress } from "@mui/material"
 import SupersetDashboardUpload from "./SupersetDashboardUpload"
 import CreateProjectModal from "./CreateProjectModal"
+import SaveAsTemplateModal from "./SaveAsTemplateModal"
 import { useCloneProjectMutation } from "@/mutations/projectMutation"
 import { useRouter } from "next/navigation"
 
@@ -55,6 +56,7 @@ export default function ProjectDetail({
 }: ProjectDetailProps) {
   const [deleteApproveOpen, setDeleteApproveOpen] = useState(false)
   const [cloneOpen, setCloneOpen] = useState(false)
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
   const router = useRouter()
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(false)
   const { setAlert } = useAlert()
@@ -299,6 +301,14 @@ export default function ProjectDetail({
         loading={isCloneLoading}
         title={`Clone ${project.name}`}
       />
+      {saveTemplateOpen && (
+        <SaveAsTemplateModal
+          projectId={project.uuid}
+          projectName={project.name}
+          isOpen={saveTemplateOpen}
+          onClose={() => setSaveTemplateOpen(false)}
+        />
+      )}
 
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -325,6 +335,13 @@ export default function ProjectDetail({
             className="flex items-center justify-center w-12 h-12 bg-blue-500 hover:bg-blue-400 text-white rounded-full transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
           >
             {isCloneLoading ? <CircularProgress /> : <ContentCopy />}
+          </button>
+          <button
+            onClick={() => setSaveTemplateOpen(true)}
+            title="Save as template for all users"
+            className="flex items-center justify-center w-12 h-12 bg-blue-500 hover:bg-blue-400 text-white rounded-full transition-all duration-200 cursor-pointer"
+          >
+            <BookmarkAdd />
           </button>
           <ActionButtons
             onPlayClick={() => triggerWorkflow(project.uuid)}

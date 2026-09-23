@@ -7,6 +7,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Response,
     WebSocket,
     WebSocketDisconnect,
 )
@@ -16,7 +17,10 @@ from services.workflow_service.controllers import (
 from services.workflow_service.controllers import (
     project_controller as project_controller,
 )
-from services.workflow_service.controllers import workflow_controller
+from services.workflow_service.controllers import (
+    shared_template_controller,
+    workflow_controller,
+)
 from services.superset_service.project_sync import sync_finished_runs
 from services.workflow_service.schemas.workflow import (
     GetWorkflowConfigurationResponse,
@@ -24,6 +28,7 @@ from services.workflow_service.schemas.workflow import (
     UpdateWorkflowConfigurations,
     WorkflowStatus,
     WorkflowTemplateMetaData,
+    CreateSharedTemplateRequest,
 )
 from utils.database.session_injector import get_database
 from utils.errors.error import handle_error
@@ -187,21 +192,83 @@ def pause_dag(
     "/workflow_templates",
     response_model=dict[str, list[WorkflowTemplateMetaData]],
 )
-async def workflow_templates():
+def workflow_templates(user: User = Depends(get_user)):
     try:
+        shared = {
+            shared_template_controller.shared_identifier(r.uuid): r
+            for r in shared_template_controller.list_shared_templates()
+        }
         grouped_templates = workflow_controller.get_tagged_workflow_templates()
 
         result = defaultdict(list)
         for tag, templates in grouped_templates.items():
             for tpl in templates:
+                record = shared.get(tpl.file_identifier)
                 result[tag].append(
                     WorkflowTemplateMetaData(
                         file_identifier=tpl.file_identifier,
                         name=tpl.pipeline.name,
                         description=tpl.pipeline.description,
+                        shared=record is not None,
+                        created_by_email=record.created_by_email
+                        if record else None,
+                        can_delete=record is not None
+                        and record.created_by == user.uuid,
                     ),
                 )
         return dict(result)
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.post("/workflow_templates", response_model=WorkflowTemplateMetaData)
+def create_workflow_template(
+    data: CreateSharedTemplateRequest,
+    user: User = Depends(get_user),
+):
+    """Saves a project as template for all users."""
+    try:
+        record = shared_template_controller.create_shared_template(
+            data.project_uuid,
+            data.name,
+            data.description,
+            data.tags,
+            user.uuid,
+            user.email,
+            include_settings=data.include_settings,
+        )
+        return WorkflowTemplateMetaData(
+            file_identifier=shared_template_controller.shared_identifier(
+                record.uuid,
+            ),
+            name=record.name,
+            description=record.description,
+            shared=True,
+            created_by_email=record.created_by_email,
+            can_delete=True,
+        )
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.get("/workflow_templates/{identifier}/yaml")
+def workflow_template_yaml(identifier: str, _: User = Depends(get_user)):
+    """A shared template in the format of the template repository."""
+    try:
+        return Response(
+            content=shared_template_controller.template_yaml(identifier),
+            media_type="application/yaml",
+        )
+    except Exception as e:
+        raise handle_error(e)
+
+
+@router.delete("/workflow_templates/{identifier}", status_code=200)
+def delete_workflow_template(identifier: str, user: User = Depends(get_user)):
+    try:
+        shared_template_controller.delete_shared_template(
+            identifier, user.uuid,
+        )
     except Exception as e:
         raise handle_error(e)
 
