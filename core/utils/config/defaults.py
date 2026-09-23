@@ -82,7 +82,9 @@ def get_file_cfg_defaults_dict(io_name: str) -> dict:
 def _build_pg_dsn() -> str:
     return f"postgresql://{ENV.DEFAULT_CB_CONFIG_PG_USER}:{
         ENV.DEFAULT_CB_CONFIG_PG_PASS
-    }@{ENV.DEFAULT_CB_CONFIG_PG_HOST}:{ENV.DEFAULT_CB_CONFIG_PG_PORT}/postgres"
+    }@{ENV.DEFAULT_CB_CONFIG_PG_HOST}:{ENV.DEFAULT_CB_CONFIG_PG_PORT}/{
+        ENV.DEFAULT_CB_CONFIG_PG_DB
+    }"
 
 
 def ensure_schema_exists(dsn: str, schema: str) -> None:
@@ -105,6 +107,16 @@ def _to_localhost_dsn(dsn: str) -> str:
     params["host"] = ENV.DEFAULT_CB_CONFIG_PG_HOST_DEV
     params["port"] = ENV.DEFAULT_CB_CONFIG_PG_PORT_DEV
     return make_dsn(**params)
+
+
+def data_pg_dsn_for_core() -> str:
+    """DSN core itself uses to reach the data postgres."""
+    dsn = _build_pg_dsn()
+    return _to_localhost_dsn(dsn) if ENV.DEVELOPMENT else dsn
+
+
+def project_schema(project_uuid: UUID | str) -> str:
+    return _normalize_uuid(project_uuid)
 
 
 def get_pg_cfg_defaults_dict_with_setup(

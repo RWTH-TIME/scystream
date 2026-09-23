@@ -1,0 +1,58 @@
+# app host: frontend, core and Caddy (TLS). Needs the Airflow DAG folder
+# mounted at /srv/scystream/airflow-dags (NFS, see ../airflow/README.md).
+name: scystream-app
+
+services:
+  core:
+    image: ${CORE_IMAGE:-ghcr.io/rwth-time/scystream/core:latest}
+    restart: unless-stopped
+    env_file: core.env
+    environment:
+      AIRFLOW_DAG_DIR: /airflow-dags
+      FORWARDED_ALLOW_IPS: "*"   # only reachable through caddy
+    volumes:
+      - /srv/scystream/airflow-dags:/airflow-dags
+      - core-repos:/app/repos
+      # private compute block repositories via SSH (optional):
+      # - ./ssh/id_ed25519:/home/core/.ssh/id_ed25519:ro
+      # - ./ssh/known_hosts:/home/core/.ssh/known_hosts:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/core
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 30s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/rwth-time/scystream/frontend:latest}
+    restart: unless-stopped
+    env_file: frontend.env
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache:uid=1000
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  caddy:
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?}
+      API_DOMAIN: ${API_DOMAIN:?}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  core-repos:
+  caddy-data:

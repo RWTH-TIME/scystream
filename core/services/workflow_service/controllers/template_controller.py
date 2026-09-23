@@ -45,8 +45,14 @@ def get_workflow_template_by_identifier(identifier: str) -> WorkflowTemplate:
     """
     Fetches a workflow template YAML file from the Template repo specified in
     ENV finds it by its identifier, which is the file name
-    (e.g., 'template.yaml').
+    (e.g., 'template.yaml'). Templates shared from projects are identified by
+    'shared:<uuid>'.
     """
+    from services.workflow_service.controllers import (
+        shared_template_controller,
+    )
+    if shared_template_controller.is_shared_identifier(identifier):
+        return shared_template_controller.get_shared_template(identifier)
     try:
         registry = RepoRegistry()
         repo_path = registry.get_repo(ENV.WORKFLOW_TEMPLATE_REPO)
@@ -72,6 +78,24 @@ def get_workflow_template_by_identifier(identifier: str) -> WorkflowTemplate:
 
 
 def get_workflow_templates() -> list[WorkflowTemplate]:
+    """Templates of the template repository and templates shared from
+    projects."""
+    from services.workflow_service.controllers import (
+        shared_template_controller,
+    )
+    shared = [
+        shared_template_controller.to_workflow_template(record)
+        for record in shared_template_controller.list_shared_templates()
+    ]
+    try:
+        return _get_repository_templates() + shared
+    except Exception:
+        logging.exception("Could not load the templates of the template "
+                          "repository")
+        return shared
+
+
+def _get_repository_templates() -> list[WorkflowTemplate]:
     templates: list[WorkflowTemplate] = []
 
     registry = RepoRegistry()

@@ -7,11 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       
       - name: Changes in models directories
         id: model-changes
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v47
         with:
           path: "core/services"
           files: "./*/models/**"
@@ -20,13 +20,13 @@ jobs:
         env:
           CHANGED_MODEL_FILES: ${{ steps.model-changes.outputs.all_changed_files }}
         run: |
-          for file in "${CHANGED_MODEL_FILES}"; do
+          for file in ${CHANGED_MODEL_FILES}; do
             echo "$file was changed"
           done
 
       - name: Changes in migrations
         id: migration-changes
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v47
         with:
           path: "core/alembic/versions"
           files: "*.py"
@@ -50,7 +50,7 @@ jobs:
 #    needs: detect-diffs
 #    steps:
 #      - name: Checkout Repository 
-#        uses: actions/checkout@v4
+#        uses: actions/checkout@v7
 #        with:
 #          fetch-depth: 0
 #          ref: ${{ github.base_ref }}
@@ -88,10 +88,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           cache: 'pip'
 

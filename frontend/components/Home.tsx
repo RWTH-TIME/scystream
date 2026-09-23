@@ -1,4 +1,4 @@
-import { useWorkflowTemplatesQuery } from "@/mutations/workflowMutations"
+import { useDeleteSharedTemplateMutation, useWorkflowTemplatesQuery } from "@/mutations/workflowMutations"
 import Button, { ButtonSentiment } from "./Button"
 import ProjectList from "./ProjectList"
 import LoadingAndError from "./LoadingAndError"
@@ -14,6 +14,7 @@ export default function Home() {
 
   const { data: templatesByTag, isLoading, isError } = useWorkflowTemplatesQuery()
   const { mutate: createProjectMutate, isPending: createLoading } = useCreateProjectFromTemplateMutation(setAlert)
+  const { mutate: deleteTemplate, isPending: deleteLoading } = useDeleteSharedTemplateMutation(setAlert)
 
   return (
     <div className="flex flex-col h-full p-6 overflow-hidden">
@@ -54,10 +55,16 @@ export default function Home() {
                     <div>
                       <h4 className="text-md font-semibold text-gray-900">{template.name}</h4>
                       <p className="text-sm text-gray-600 mt-1">{template.description}</p>
+                      {template.shared && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Shared{template.created_by_email ? ` by ${template.created_by_email}` : ""}
+                        </p>
+                      )}
                     </div>
+                    <div className="mt-6 flex gap-2">
                     <Button
                       sentiment={ButtonSentiment.POSITIVE}
-                      className="mt-6 self-start"
+                      className="self-start"
                       onClick={() => {
                         setSelectedTemplate(template.file_identifier)
                         setCreateProjectOpen(true)
@@ -70,6 +77,16 @@ export default function Home() {
                         Create from Template
                       </LoadingAndError>
                     </Button>
+                    {template.can_delete && (
+                      <Button
+                        sentiment={ButtonSentiment.NEGATIVE}
+                        onClick={() => deleteTemplate(template.file_identifier)}
+                        disabled={deleteLoading}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                    </div>
                   </article>
                 ))}
               </div>

@@ -1,6 +1,6 @@
 import type { DragEvent } from "react"
 import { useState, useCallback, useMemo, useEffect } from "react"
-import type { Edge, Connection } from "@xyflow/react"
+import type { Edge, Connection, OnNodeDrag } from "@xyflow/react"
 import {
   ReactFlow,
   Controls,
@@ -182,8 +182,8 @@ export function Workbench({
     event.dataTransfer.effectAllowed = "move"
   }
 
-  const onNodeDragStop = useCallback(
-    (_: React.SyntheticEvent, node: ComputeBlockNodeType) => {
+  const onNodeDragStop: OnNodeDrag<ComputeBlockNodeType> = useCallback(
+    (_, node) => {
       if (!node.position) return
       updateBlockMutate({
         id: node.id,

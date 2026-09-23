@@ -12,6 +12,7 @@ from utils.config.environment import ENV
 from utils.database.connection import engine
 from utils.security.token import authenticate_user, keycloak_openid
 from utils.config.registry import RepoRegistry
+from utils.data.file_handling import ensure_default_bucket
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -25,6 +26,10 @@ async def lifespan(_: FastAPI):
     try:
         engine.connect()
         RepoRegistry()  # loads repos initially
+        try:
+            ensure_default_bucket()
+        except Exception:
+            logging.exception("Could not check the default S3 bucket")
     except OperationalError:
         logging.exception("Connection to database failed.")
         raise RuntimeError("Shutdown, database connection failed.")

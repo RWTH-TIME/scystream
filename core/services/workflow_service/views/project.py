@@ -1,10 +1,19 @@
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Response,
+    UploadFile,
+)
 from sqlalchemy.orm import Session
 
-from services.superset_service.export_adapter import ExportAdapterError
+from services.superset_service import project_sync
+from services.superset_service.template import TemplateError
 from services.workflow_service.controllers import (
     project_controller,
     workflow_controller,
@@ -16,6 +25,7 @@ from services.workflow_service.schemas.project import (
     ReadAllResponse,
     ReadByUserResponse,
     RenameProjectRequest,
+    SupersetDashboardResponse,
 )
 from utils.database.session_injector import get_database
 from utils.errors.error import handle_error
@@ -32,10 +42,12 @@ async def _read_dashboard_export(
     if dashboard_export is None or not dashboard_export.filename:
         return None
 
-    if not dashboard_export.filename.lower().endswith(".zip"):
+    if not dashboard_export.filename.lower().endswith(
+        (".zip", ".tar.gz", ".tgz"),
+    ):
         raise HTTPException(
             status_code=422,
-            detail="Dashboard export must be a .zip file",
+            detail="Dashboard export must be a .zip or .tar.gz file",
         )
 
     content = await dashboard_export.read()
@@ -68,7 +80,7 @@ async def create_project(
                 owner_email=user.email,
             )
         return CreateProjectResponse(project_uuid=project_uuid)
-    except ExportAdapterError as e:
+    except TemplateError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logging.exception(f"Error creating project: {e}")
@@ -91,7 +103,7 @@ async def create_project_from_template(
             owner_email=user.email,
         )
         return CreateProjectResponse(project_uuid=project_id)
-    except ExportAdapterError as e:
+    except TemplateError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logging.error(f"Error creating project from template: {e}")
@@ -134,13 +146,8 @@ async def upload_dashboard_export(
                 detail="Dashboard export is required",
             )
 
-        project = project_controller.upload_dashboard_export(
-            project_id,
-            export_bytes,
-            owner_email=user.email,
-        )
-        return project
-    except ExportAdapterError as e:
+        return project_sync.upload_template(project_id, export_bytes)
+    except TemplateError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logging.exception(
@@ -148,6 +155,75 @@ async def upload_dashboard_export(
             project_id,
             e,
         )
+        raise handle_error(e)
+
+
+@router.get(
+    "/{project_id}/superset/dashboard",
+    response_model=SupersetDashboardResponse,
+)
+def superset_dashboard(
+    project_id: UUID,
+    user: User = Depends(get_user),
+):
+    """Link to the project dashboard, shared with the requesting user."""
+    try:
+        return SupersetDashboardResponse(
+            url=project_sync.dashboard_url_for_user(project_id, user.email),
+        )
+    except Exception as e:
+        logging.exception(f"Error sharing dashboard of {project_id}: {e}")
+        raise handle_error(e)
+
+
+@router.get("/{project_id}/superset/template")
+def download_superset_template(
+    project_id: UUID,
+    _: User = Depends(get_user),
+):
+    """The project's visualization as Superset export, usable as template
+    for other projects."""
+    try:
+        content = project_sync.export_template(project_id)
+        return Response(
+            content=content,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition":
+                f'attachment; filename="superset-template-{project_id}.zip"',
+            },
+        )
+    except Exception as e:
+        logging.exception(f"Error exporting template of {project_id}: {e}")
+        raise handle_error(e)
+
+
+@router.post("/{project_id}/superset/sync", response_model=Project)
+def sync_superset(
+    project_id: UUID,
+    _: User = Depends(get_user),
+):
+    """Syncs the project's data and dashboard to Superset now."""
+    try:
+        return project_sync.sync_project(project_id)
+    except Exception as e:
+        logging.exception(f"Error syncing {project_id} to Superset: {e}")
+        raise handle_error(e)
+
+
+@router.post("/{project_id}/clone", response_model=CreateProjectResponse)
+def clone_project(
+    project_id: UUID,
+    name: str = Form(..., max_length=30),
+    user: User = Depends(get_user),
+):
+    try:
+        clone_uuid = project_controller.clone_project(
+            project_id, name, user.uuid, owner_email=user.email,
+        )
+        return CreateProjectResponse(project_uuid=clone_uuid)
+    except Exception as e:
+        logging.exception(f"Error cloning project {project_id}: {e}")
         raise handle_error(e)
 
 

@@ -1,5 +1,5 @@
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from enum import Enum
 
 from services.workflow_service.schemas.compute_block import (
@@ -14,20 +14,24 @@ from airflow_client.client.models.dag_run_state import DagRunState
 
 class WorkflowStatus(Enum):
     RUNNING = "RUNNING"
-    IDLE = "IDLE",
+    IDLE = "IDLE"
     FINISHED = "FINISHED"
     FAILED = "FAILED"
 
     @classmethod
     def from_airflow_state(
             cls,
-            airflow_state: DagRunState
+            airflow_state: DagRunState | str | None
     ) -> "WorkflowStatus":
+        if airflow_state is None:
+            return cls.IDLE
         state_mapping = {
-            airflow_state.RUNNING: cls.RUNNING,
-            airflow_state.SUCCESS: cls.FINISHED,
-            airflow_state.FAILED: cls.FAILED
+            DagRunState.RUNNING.value: cls.RUNNING,
+            DagRunState.SUCCESS.value: cls.FINISHED,
+            DagRunState.FAILED.value: cls.FAILED
         }
+        if isinstance(airflow_state, DagRunState):
+            airflow_state = airflow_state.value
         return state_mapping.get(airflow_state.lower(), cls.IDLE)
 
 
@@ -87,6 +91,19 @@ class WorkflowTemplateMetaData(BaseModel):
     file_identifier: str
     name: str
     description: str
+    # templates shared from projects
+    shared: bool = False
+    created_by_email: str | None = None
+    can_delete: bool = False
+
+
+class CreateSharedTemplateRequest(BaseModel):
+    project_uuid: UUID
+    name: str = Field(..., min_length=2, max_length=100)
+    description: str = Field("", max_length=1000)
+    tags: list[str] = Field(default_factory=list, max_length=10)
+    # include the configured settings (secrets are always left out)
+    include_settings: bool = True
 
 
 class DependsOn(BaseModel):

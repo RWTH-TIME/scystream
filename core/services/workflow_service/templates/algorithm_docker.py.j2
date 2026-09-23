@@ -1,6 +1,6 @@
     {{task_id}} = DockerOperator(
             task_id='{{task_id}}',
-            image='{{image}}',
+            image={{ image | tojson }},
             api_version='auto',
             auto_remove='force',
             command = "sh -c 'python -c \"import main; from scystream.sdk.scheduler import Scheduler; \
@@ -11,7 +11,7 @@
             extra_hosts={
                 "host.containers.internal": "host-gateway"
             },
-            force_pull=False,
+            force_pull={{ force_pull }},
             mount_tmp_dir=True,
         )
 

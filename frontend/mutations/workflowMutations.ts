@@ -26,6 +26,53 @@ export type WorkflowTemplateMetaData = {
   file_identifier: string,
   name: string,
   description: string,
+  shared?: boolean,
+  created_by_email?: string | null,
+  can_delete?: boolean,
+}
+
+export type CreateSharedTemplateDTO = {
+  project_uuid: string,
+  name: string,
+  description: string,
+  tags: string[],
+  include_settings: boolean,
+}
+
+/** Saves a project as template, visible to all users. */
+export function useCreateSharedTemplateMutation(setAlert: SetAlertType) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function createSharedTemplate(data: CreateSharedTemplateDTO) {
+      const response = await api.post(GET_WORKFLOW_TEMPLATES, data)
+      return response.data as WorkflowTemplateMetaData
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.workflowTemplates] })
+      setAlert("Template saved, it is now available to all users.", AlertType.SUCCESS)
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+    },
+  })
+}
+
+export function useDeleteSharedTemplateMutation(setAlert: SetAlertType) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async function deleteSharedTemplate(identifier: string) {
+      await api.delete(`${GET_WORKFLOW_TEMPLATES}/${encodeURIComponent(identifier)}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.workflowTemplates] })
+      setAlert("Template deleted.", AlertType.SUCCESS)
+    },
+    onError: (error: AxiosError) => {
+      displayStandardAxiosErrors(error, setAlert)
+    },
+  })
 }
 
 export type TemplatesByTag = Record<string, WorkflowTemplateMetaData[]>

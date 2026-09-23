@@ -32,6 +32,14 @@ Handles integration with Apache Superset, including:
 - dashboard configuration
 - linking dashboards to workflows and projects
 
+After every successful run, all tables the workflow wrote are available as
+Superset datasets and shown on the project dashboard. The dashboard is built
+from an uploaded visualization template (a Superset dashboard export) or, if
+there is none, a standard dashboard. The project page links to it and shares
+it with the logged-in user. Cloning a project also clones its visualization.
+Superset itself is built from [`superset/`](superset/README.md), which
+documents the setup, including Superset hosted elsewhere.
+
 Compute blocks are implemented using the [scystream-sdk](https://github.com/RWTH-TIME/scystream-sdk).
 
 Each compute block is packaged as a Docker container and includes a `cbc.yaml` file that defines:
@@ -58,6 +66,12 @@ Object storage used for files and larger datasets accessed by compute blocks.
 
 Compute blocks can read from and write to both `data-postgres` and `data-minio` during execution.
 
+## Deployment
+
+For production (every service on its own instance, Docker Compose or NixOS,
+hardened), see [docs/deployment](docs/deployment/README.md) and the
+[environment variable reference](docs/deployment/env-reference.md).
+
 ## Quickstart
 
 It is recommended to use [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
@@ -67,7 +81,7 @@ It is recommended to use [Docker](https://docs.docker.com/get-docker/) and [Dock
 To start all services, run the following command in the project root directory:
 
 ```sh
-docker compose -f docker-compose.dev.yaml up -d
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 You might be required to setup the keycloak environment correctly.
@@ -90,3 +104,20 @@ Compute Blocks, when pulled initially, are stored within `core/repos/`. For deve
 compute blocks, you should also pull these changes into your `core/repos/` directory (Dont forget to update the image, using the correct tag (e.g. `pr-14`).
 
 The Airflow Container uses the docker-images downloaded to your own device. Make sure to keep them up to date accordingly.
+
+## Continuous Integration
+
+| Workflow     | What it checks                                                                                                                                              |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CI`         | Lints frontend, core and the workflow files, runs the core unit tests, validates the compose files and builds the frontend, core and superset images      |
+| `Migrations` | Runs the alembic migrations up and down and checks that the models match them                                                                              |
+| `Airflow`    | Checks that the Airflow image and `apache-airflow-client` versions match, loads DAGs rendered by core in the Airflow image and runs the workflow lifecycle (register, trigger, status, delete) against a real Airflow |
+| `Superset`   | Unit tests the Keycloak token validation and runs the project visualization end to end against a real Superset: data sync, standard dashboard, sharing, template export, clone and uploaded templates |
+
+Run the core unit tests locally with:
+
+```sh
+cd core
+pip install -r requirements-dev.txt
+pytest
+```

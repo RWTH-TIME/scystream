@@ -1,0 +1,104 @@
+name: Superset
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    paths:
+      - 'superset/**'
+      - 'core/services/superset_service/**'
+      - 'core/tests/**'
+      - 'core/requirements*.txt'
+      - 'docker-compose*.yml'
+      - '.github/workflows/superset.yaml'
+
+concurrency:
+  group: superset-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-unit:
+    name: Lint and unit test superset config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+          cache: 'pip'
+          cache-dependency-path: core/requirements*.txt
+
+      - name: Install requirements
+        run: pip install -r core/requirements-dev.txt
+
+      - name: Run flake8
+        run: flake8 superset
+
+      - name: Run shellcheck
+        run: shellcheck superset/docker-init.sh
+
+      - name: Run unit tests
+        run: pytest superset/tests -v
+
+  integration:
+    name: Superset end to end
+    needs: lint-and-unit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+          cache: 'pip'
+          cache-dependency-path: core/requirements*.txt
+
+      - name: Install requirements
+        working-directory: ./core
+        run: pip install -r requirements-dev.txt
+
+      - name: Build and start Superset
+        run: >-
+          docker compose -f superset/docker-compose.test.yml
+          up -d --build --wait --wait-timeout 600
+
+      - name: Migrate core database
+        working-directory: ./core
+        env:
+          DATABASE_HOST: localhost
+          DATABASE_PORT: '5434'
+        run: alembic upgrade head
+
+      # core runs on the runner, Superset reaches the data postgres by its
+      # service name
+      - name: Run Superset end to end tests
+        working-directory: ./core
+        env:
+          SCYSTREAM_E2E: '1'
+          DEVELOPMENT: 'true'
+          DATABASE_HOST: localhost
+          DATABASE_PORT: '5434'
+          DEFAULT_CB_CONFIG_PG_HOST: data-postgres
+          DEFAULT_CB_CONFIG_PG_PORT: '5432'
+          DEFAULT_CB_CONFIG_PG_HOST_DEV: localhost
+          DEFAULT_CB_CONFIG_PG_PORT_DEV: '5433'
+          EXTERNAL_URL_DATA_S3: http://localhost:9002
+          SUPERSET_HOST: http://localhost:8088
+          SUPERSET_PUBLIC_URL: http://localhost:8088
+        run: pytest tests/integration/test_superset_e2e.py -v
+
+      - name: Superset logs
+        if: failure()
+        run: docker compose -f superset/docker-compose.test.yml logs --tail 300
+
+      - name: Stop Superset
+        if: always()
+        run: docker compose -f superset/docker-compose.test.yml down -v
