@@ -1,6 +1,6 @@
 import { ProjectStatus } from "@/utils/types"
 import type { JSX } from "@emotion/react/jsx-runtime"
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline"
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlineOutlined"
 
 export function ProjectStatusIndicator({ s }: { s: ProjectStatus }) {
   const baseClasses =

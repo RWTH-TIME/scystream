@@ -7,6 +7,7 @@ Usage:
     python check_dagbag.py <dag-dir>
 """
 
+import inspect
 import json
 import sys
 from pathlib import Path
@@ -17,7 +18,12 @@ from airflow.providers.docker.operators.docker import DockerOperator
 
 def main(dag_dir: Path) -> int:
     expectations = json.loads((dag_dir / "expectations.json").read_text())
-    dagbag = DagBag(dag_folder=str(dag_dir), include_examples=False)
+    kwargs = {"dag_folder": str(dag_dir)}
+    # removed in Airflow 3.3, examples are disabled via
+    # AIRFLOW__CORE__LOAD_EXAMPLES there
+    if "include_examples" in inspect.signature(DagBag).parameters:
+        kwargs["include_examples"] = False
+    dagbag = DagBag(**kwargs)
 
     errors = []
     for path, error in dagbag.import_errors.items():
