@@ -6,7 +6,7 @@ SQLAlchemy==2.0.54
 psycopg2-binary==2.9.13
 alembic==1.20.0
 bcrypt==5.0.0
-pyjwt==2.14.0
+pyjwt==2.15.0
 requests==2.34.2
 PyYAML==6.0.3
 apache-airflow-client==3.3.2
