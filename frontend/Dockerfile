@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG NODE_IMAGE=node:24.21.0-alpine
+ARG NODE_IMAGE=node:24.22.1-alpine
 
 # dependencies only change with the lockfile, so this layer is cached
 FROM ${NODE_IMAGE} AS deps
