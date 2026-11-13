@@ -6,7 +6,7 @@
 name: scystream-airflow
 
 x-airflow-common: &airflow-common
-  image: ${AIRFLOW_IMAGE:-apache/airflow:3.3.2}
+  image: ${AIRFLOW_IMAGE:-apache/airflow:3.4.0}
   restart: unless-stopped
   user: "50000:0"
   env_file: .env
